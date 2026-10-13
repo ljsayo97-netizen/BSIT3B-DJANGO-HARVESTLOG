@@ -80,3 +80,31 @@ class SaleForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+
+class YieldFilterForm(forms.Form):
+    crop = forms.ModelChoiceField(
+        queryset=Crop.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+    )
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+    )
+
+    def __init__(self, *args, owner, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['crop'].queryset = Crop.objects.filter(owner=owner)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and start_date > end_date:
+            self.add_error('end_date', 'End date must be on or after the start date.')
+        return cleaned_data

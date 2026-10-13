@@ -16,7 +16,7 @@
         {% for field in form %}
         <div class="mb-3">
           <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
-          {% if field.name == "unit_price" %}<div class="form-hint">Price per selected measurement unit.</div>{% endif %}
+          {% if field.name == "unit_price" %}<div class="form-hint">Price per selected measurement unit. Use the same currency for all sales.</div>{% endif %}
           {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
         </div>
         {% endfor %}

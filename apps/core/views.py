@@ -160,7 +160,7 @@ def home(request):
         total=Sum(
             ExpressionWrapper(
                 F('quantity') * F('unit_price'),
-                output_field=DecimalField(max_digits=14, decimal_places=2),
+                output_field=DecimalField(max_digits=24, decimal_places=5),
             )
         )
     )['total'] or Decimal('0.00')
