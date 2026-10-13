@@ -3,10 +3,10 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django import forms
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -20,6 +20,23 @@ MAX_FAILED_ATTEMPTS = 5
 LOCK_DURATION = timedelta(minutes=1)
 INVALID_LOGIN_MESSAGE = 'Invalid username or password.'
 LOCKED_MESSAGE = 'Too many failed attempts. Locked for 1 minute.'
+
+
+class DashboardPeriodForm(forms.Form):
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and start_date > end_date:
+            self.add_error('end_date', 'End date must be on or after the start date.')
+        return cleaned_data
 
 
 def _reset_lock_state(request):
@@ -139,24 +156,35 @@ def login_view(request):
 
 def logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect('dashboard')
 
 
-@login_required(login_url='login')
 def home(request):
     today = timezone.localdate()
-    harvests = Harvest.objects.filter(crop__owner=request.user)
-    sales = Sale.objects.filter(harvest__crop__owner=request.user)
-    monthly_quantity = list(
-        harvests.filter(harvest_date__year=today.year, harvest_date__month=today.month)
+    default_period = {
+        'start_date': today.replace(day=1),
+        'end_date': today,
+    }
+    has_period_query = 'start_date' in request.GET or 'end_date' in request.GET
+    period_form = DashboardPeriodForm(request.GET if has_period_query else None, initial=default_period)
+    period_is_valid = period_form.is_valid() if has_period_query else True
+    period = period_form.cleaned_data if has_period_query and period_is_valid else default_period
+
+    crops = Crop.objects.all()
+    harvests = Harvest.objects.all()
+    sales = Sale.objects.all()
+
+    selected_harvests = harvests.filter(
+        harvest_date__gte=period['start_date'],
+        harvest_date__lte=period['end_date'],
+    )
+    selected_quantity = list(
+        selected_harvests
         .values('unit')
         .annotate(quantity=Sum('quantity'))
         .order_by('unit')
     )
-    monthly_revenue = sales.filter(
-        sold_on__year=today.year,
-        sold_on__month=today.month,
-    ).aggregate(
+    total_revenue = sales.aggregate(
         total=Sum(
             ExpressionWrapper(
                 F('quantity') * F('unit_price'),
@@ -166,10 +194,18 @@ def home(request):
     )['total'] or Decimal('0.00')
 
     return render(request, 'home.html', {
+        'total_crops': crops.count(),
         'total_harvests': harvests.count(),
-        'crop_types': Crop.objects.filter(owner=request.user).values('name').distinct().count(),
-        'monthly_quantity': monthly_quantity,
-        'monthly_revenue': monthly_revenue,
+        'period_form': period_form,
+        'period_is_valid': period_is_valid,
+        'period_start': period['start_date'],
+        'period_end': period['end_date'],
+        'selected_quantity': selected_quantity,
+        'latest_harvests': harvests.select_related('crop')[:5],
+        'upcoming_harvests': crops.filter(
+            expected_harvest_date__gte=today,
+        ).order_by('expected_harvest_date', 'name')[:5],
+        'total_revenue': total_revenue,
     })
 
 

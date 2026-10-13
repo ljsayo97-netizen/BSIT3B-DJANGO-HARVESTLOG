@@ -1,5 +1,4 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,11 +8,10 @@ from .forms import CropForm, HarvestForm, SaleForm, YieldFilterForm
 from .models import Crop, Harvest, Sale
 
 
-@login_required(login_url='login')
 def crop_list(request):
-    crops = Crop.objects.filter(owner=request.user)
+    crops = Crop.objects.all()
     form = CropForm(request.POST or None)
-    form.instance.owner = request.user
+    form.instance.owner = request.user if request.user.is_authenticated else None
     if request.method == 'POST' and form.is_valid():
         crop = form.save(commit=False)
         crop.save()
@@ -26,9 +24,8 @@ def crop_list(request):
     })
 
 
-@login_required(login_url='login')
 def crop_edit(request, pk):
-    crop = get_object_or_404(Crop, pk=pk, owner=request.user)
+    crop = get_object_or_404(Crop, pk=pk)
     form = CropForm(request.POST or None, instance=crop)
     if request.method == 'POST' and form.is_valid():
         form.save()
@@ -37,20 +34,18 @@ def crop_edit(request, pk):
     return render(request, 'crops/crop_form.html', {'form': form, 'crop': crop})
 
 
-@login_required(login_url='login')
 @require_POST
 def crop_delete(request, pk):
-    crop = get_object_or_404(Crop, pk=pk, owner=request.user)
+    crop = get_object_or_404(Crop, pk=pk)
     name = crop.name
     crop.delete()
     messages.success(request, f'{name} and its related harvest and sales records were deleted.')
     return redirect('crops:crop_list')
 
 
-@login_required(login_url='login')
 def harvest_list(request):
-    harvests = Harvest.objects.filter(crop__owner=request.user).select_related('crop')
-    form = HarvestForm(request.POST or None, owner=request.user)
+    harvests = Harvest.objects.select_related('crop')
+    form = HarvestForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         form.save()
         messages.success(request, 'Harvest recorded.')
@@ -61,10 +56,9 @@ def harvest_list(request):
     })
 
 
-@login_required(login_url='login')
 def sale_list(request):
-    sales = Sale.objects.filter(harvest__crop__owner=request.user).select_related('harvest__crop')
-    form = SaleForm(request.POST or None, owner=request.user)
+    sales = Sale.objects.select_related('harvest__crop')
+    form = SaleForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         form.save()
         messages.success(request, 'Sale recorded.')
@@ -75,10 +69,9 @@ def sale_list(request):
     })
 
 
-@login_required(login_url='login')
 def yield_report(request):
-    harvests = Harvest.objects.filter(crop__owner=request.user).select_related('crop')
-    filter_form = YieldFilterForm(request.GET or None, owner=request.user)
+    harvests = Harvest.objects.select_related('crop')
+    filter_form = YieldFilterForm(request.GET or None)
     if filter_form.is_valid():
         crop = filter_form.cleaned_data.get('crop')
         start_date = filter_form.cleaned_data.get('start_date')

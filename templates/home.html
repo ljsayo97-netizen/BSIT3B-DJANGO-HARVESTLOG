@@ -1,61 +1,134 @@
 {% extends "theme/base.html" %}
 {% block content %}
 <div class="container-xl">
-  <div class="page-header d-print-none" aria-label="Page header">
-    <div class="container-xl">
-      <div class="row align-items-center">
-        <div class="col">
-          <div class="page-pretitle">Overview</div>
-          <div class="d-flex align-items-center gap-3 flex-wrap d-none d-md-flex">
-            <h2 class="page-title mb-0">Dashboard</h2>
-          </div>
-          <h2 class="page-title mb-0 d-md-none">Dashboard</h2>
+  <div class="page-header d-print-none mb-4">
+    <div class="page-pretitle">Farm management</div>
+    <h2 class="page-title">Dashboard</h2>
+  </div>
+
+  <div class="row row-cards mb-4">
+    <div class="col-sm-6 col-xl-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="subheader">Registered crops</div>
+          <div class="h1 mb-0">{{ total_crops }}</div>
         </div>
       </div>
     </div>
-  </div>
-  <br>
-
-  <div class="row row-cards">
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-xl-4">
       <div class="card">
         <div class="card-body">
-          <div class="subheader">Total harvests</div>
+          <div class="subheader">Recorded harvests</div>
           <div class="h1 mb-0">{{ total_harvests }}</div>
         </div>
       </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-xl-4">
       <div class="card">
         <div class="card-body">
-          <div class="subheader">Crop types</div>
-          <div class="h1 mb-0">{{ crop_types }}</div>
+          <div class="subheader">Total recorded harvest revenue</div>
+          <div class="h1 mb-0">{{ total_revenue|floatformat:2 }}</div>
+          <div class="text-muted">From all recorded sales</div>
         </div>
       </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
-      <div class="card">
-        <div class="card-body">
-          <div class="subheader">Harvested this month</div>
-          {% for item in monthly_quantity %}
-          <div class="h3 mb-1">{{ item.quantity|floatformat:3 }} {{ item.unit }}</div>
-          {% empty %}
-          <div class="h1 mb-0">0</div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-      <div class="card">
-        <div class="card-body">
-          <div class="subheader">Harvest revenue this month</div>
-          <div class="h1 mb-0">{{ monthly_revenue|floatformat:2 }}</div>
-          <div class="text-muted">Recorded sales, in the currency used for prices</div>
-        </div>
-      </div>
-    </div>
+  </div>
+
+  <div class="row row-cards">
     <div class="col-12">
       <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Harvested quantity by period</h3>
+        </div>
+        <div class="card-body">
+          <form method="get" class="row g-3 align-items-end">
+            <div class="col-sm-5 col-md-4">
+              <label class="form-label" for="{{ period_form.start_date.id_for_label }}">From</label>
+              {{ period_form.start_date }}
+              {% for error in period_form.start_date.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-sm-5 col-md-4">
+              <label class="form-label" for="{{ period_form.end_date.id_for_label }}">To</label>
+              {{ period_form.end_date }}
+              {% for error in period_form.end_date.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-sm-2">
+              <button type="submit" class="btn btn-primary">Apply</button>
+            </div>
+          </form>
+          {% if not period_is_valid %}
+          <div class="alert alert-warning mt-3 mb-0" role="alert">
+            Enter a valid date range (start date must be on or before end date). Showing this month's results instead.
+          </div>
+          {% endif %}
+          <div class="mt-4">
+            <div class="text-muted mb-2">{{ period_start|date:"M j, Y" }} – {{ period_end|date:"M j, Y" }}</div>
+            <div class="d-flex flex-wrap gap-4">
+              {% for item in selected_quantity %}
+              <div>
+                <div class="subheader">{{ item.unit }}</div>
+                <div class="h2 mb-0">{{ item.quantity|floatformat:3 }}</div>
+              </div>
+              {% empty %}
+              <div class="text-muted">No harvests recorded in this period.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <h3 class="card-title">Latest harvest records</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table">
+            <thead><tr><th>Crop</th><th>Date</th><th class="text-end">Quantity</th></tr></thead>
+            <tbody>
+              {% for harvest in latest_harvests %}
+              <tr>
+                <td>{{ harvest.crop.name }}{% if harvest.crop.variety %}<div class="text-muted">{{ harvest.crop.variety }}</div>{% endif %}</td>
+                <td>{{ harvest.harvest_date|date:"M j, Y" }}</td>
+                <td class="text-end text-nowrap">{{ harvest.quantity|floatformat:3 }} {{ harvest.unit }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center text-muted py-4">No harvest records yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <h3 class="card-title">Upcoming expected harvests</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table">
+            <thead><tr><th>Crop</th><th>Farm</th><th>Date</th></tr></thead>
+            <tbody>
+              {% for crop in upcoming_harvests %}
+              <tr>
+                <td>{{ crop.name }}{% if crop.variety %}<div class="text-muted">{{ crop.variety }}</div>{% endif %}</td>
+                <td>{{ crop.farm_name }}</td>
+                <td class="text-nowrap">{{ crop.expected_harvest_date|date:"M j, Y" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center text-muted py-4">No upcoming dates recorded.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Quick actions</h3></div>
         <div class="card-body d-flex flex-wrap gap-2">
           <a class="btn btn-primary" href="{% url 'crops:crop_list' %}">Manage crops</a>
           <a class="btn btn-outline-primary" href="{% url 'crops:harvest_list' %}">Record harvest</a>
@@ -65,6 +138,5 @@
       </div>
     </div>
   </div>
-
 </div>
 {% endblock %}

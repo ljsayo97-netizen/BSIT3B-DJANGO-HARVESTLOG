@@ -12,6 +12,8 @@ class Crop(models.Model):
         settings.AUTH_USER_MODEL,
         related_name='crops',
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
     name = models.CharField(max_length=120)
     variety = models.CharField(max_length=120, blank=True)
@@ -25,6 +27,7 @@ class Crop(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))],
     )
     farm_size_unit = models.CharField(max_length=30, blank=True)
+    expected_harvest_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

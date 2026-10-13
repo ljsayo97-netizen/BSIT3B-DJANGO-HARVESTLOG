@@ -16,6 +16,7 @@ class CropForm(forms.ModelForm):
             'farm_location',
             'farm_size',
             'farm_size_unit',
+            'expected_harvest_date',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -24,6 +25,7 @@ class CropForm(forms.ModelForm):
             'farm_location': forms.TextInput(attrs={'class': 'form-control'}),
             'farm_size': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'farm_size_unit': forms.TextInput(attrs={'class': 'form-control'}),
+            'expected_harvest_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
 
 
@@ -39,10 +41,6 @@ class HarvestForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
-    def __init__(self, *args, owner, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['crop'].queryset = Crop.objects.filter(owner=owner)
-
 
 class SaleForm(forms.ModelForm):
     class Meta:
@@ -56,9 +54,9 @@ class SaleForm(forms.ModelForm):
             'buyer': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-    def __init__(self, *args, owner, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['harvest'].queryset = Harvest.objects.filter(crop__owner=owner).select_related('crop')
+        self.fields['harvest'].queryset = Harvest.objects.select_related('crop')
         self.fields['harvest'].label_from_instance = (
             lambda harvest: (
                 f'{harvest.crop.name} ({harvest.crop.variety or "no variety"}) — '
@@ -97,9 +95,9 @@ class YieldFilterForm(forms.Form):
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
     )
 
-    def __init__(self, *args, owner, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['crop'].queryset = Crop.objects.filter(owner=owner)
+        self.fields['crop'].queryset = Crop.objects.all()
 
     def clean(self):
         cleaned_data = super().clean()

@@ -108,7 +108,7 @@
             <a href="{% url 'users:user_list' %}" class="d-flex align-items-center gap-2 text-decoration-none text-white min-w-0 w-100">
               <span class="dh-avatar">{{ user.username|first|upper }}</span>
               <span class="min-w-0 flex-grow-1">
-                <span class="dh-user-name">{{ user.username }}</span>
+                <span class="dh-user-name">{% if user.is_authenticated %}{{ user.username }}{% else %}Guest{% endif %}</span>
                 <span class="dh-user-role">
                   {% if user.is_superuser %}Administrator{% elif user.is_authenticated %}Instructor{% endif %}
                 </span>
