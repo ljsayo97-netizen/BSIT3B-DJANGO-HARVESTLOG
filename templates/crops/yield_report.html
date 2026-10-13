@@ -1,0 +1,45 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col"><div class="page-pretitle">Farm management</div><h2 class="page-title">Yield Monitoring</h2></div>
+  </div>
+</div>
+<br>
+<form method="get" class="card card-body mb-3">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label" for="crop-filter">Crop</label>
+      <select class="form-select" id="crop-filter" name="crop">
+        <option value="">All crops</option>
+        {% for crop in crops %}
+        <option value="{{ crop.pk }}" {% if selected_crop == crop.pk|stringformat:"s" %}selected{% endif %}>{{ crop.name }}{% if crop.variety %} — {{ crop.variety }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label" for="start-date">From</label><input class="form-control" id="start-date" type="date" name="start_date" value="{{ start_date }}"></div>
+    <div class="col-md-3"><label class="form-label" for="end-date">To</label><input class="form-control" id="end-date" type="date" name="end_date" value="{{ end_date }}"></div>
+    <div class="col-md-2 d-flex gap-2"><button class="btn btn-primary" type="submit">Filter</button><a class="btn btn-outline-secondary" href="{% url 'crops:yield_report' %}">Clear</a></div>
+  </div>
+</form>
+<div class="card">
+  <div class="card-header"><h3 class="card-title">Harvest quantities by crop and date</h3></div>
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th>Harvest date</th><th>Crop</th><th>Total quantity</th><th>Records</th></tr></thead>
+      <tbody>
+        {% for row in report %}
+        <tr>
+          <td>{{ row.harvest_date|date:"M j, Y" }}</td>
+          <td>{{ row.crop__name }}{% if row.crop__variety %}<br><span class="text-muted">{{ row.crop__variety }}</span>{% endif %}</td>
+          <td>{{ row.quantity|floatformat:3 }} {{ row.unit }}</td>
+          <td>{{ row.harvest_count }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">No harvest data matches these filters.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer text-muted">Quantities are grouped by unit. Compare rows only when they use the same measurement unit.</div>
+</div>
+{% endblock %}

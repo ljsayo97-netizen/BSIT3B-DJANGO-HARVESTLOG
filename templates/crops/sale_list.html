@@ -1,0 +1,59 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col"><div class="page-pretitle">Farm management</div><h2 class="page-title">Sales Recording</h2></div>
+  </div>
+</div>
+<br>
+{% for message in messages %}<div class="alert alert-success" role="alert">{{ message }}</div>{% endfor %}
+<div class="row row-cards">
+  <div class="col-lg-4">
+    <form method="post" class="card">
+      {% csrf_token %}
+      <div class="card-header"><h3 class="card-title">Record a sale</h3></div>
+      <div class="card-body">
+        {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+          {% if field.name == "unit_price" %}<div class="form-hint">Price per selected measurement unit.</div>{% endif %}
+          {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+        {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="card-footer"><button class="btn btn-primary" type="submit" {% if not form.fields.harvest.queryset.exists %}disabled{% endif %}>Save sale</button></div>
+    </form>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Sales history</h3></div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead><tr><th>Date</th><th>Crop</th><th>Quantity sold</th><th>Price / unit</th><th>Revenue</th><th>Buyer</th></tr></thead>
+          <tbody>
+            {% for sale in sales %}
+            <tr>
+              <td>{{ sale.sold_on|date:"M j, Y" }}</td>
+              <td>{{ sale.harvest.crop.name }}</td>
+              <td>{{ sale.quantity|floatformat:3 }} {{ sale.harvest.unit }}</td>
+              <td>{{ sale.unit_price|floatformat:2 }}</td>
+              <td>{{ sale.total_revenue|floatformat:2 }}</td>
+              <td>{{ sale.buyer|default:"—" }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No sales recorded yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if sales.has_other_pages %}
+      <div class="card-footer d-flex justify-content-between">
+        {% if sales.has_previous %}<a href="?page={{ sales.previous_page_number }}">Previous</a>{% else %}<span></span>{% endif %}
+        <span>Page {{ sales.number }} of {{ sales.paginator.num_pages }}</span>
+        {% if sales.has_next %}<a href="?page={{ sales.next_page_number }}">Next</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
@@ -6,9 +7,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db.models import DecimalField, ExpressionWrapper, F, Sum
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
+
+from apps.crops.models import Crop, Harvest, Sale
 
 User = get_user_model()
 
@@ -140,7 +144,33 @@ def logout_view(request):
 
 @login_required(login_url='login')
 def home(request):
-    return render(request, 'home.html')
+    today = timezone.localdate()
+    harvests = Harvest.objects.filter(crop__owner=request.user)
+    sales = Sale.objects.filter(harvest__crop__owner=request.user)
+    monthly_quantity = list(
+        harvests.filter(harvest_date__year=today.year, harvest_date__month=today.month)
+        .values('unit')
+        .annotate(quantity=Sum('quantity'))
+        .order_by('unit')
+    )
+    monthly_revenue = sales.filter(
+        sold_on__year=today.year,
+        sold_on__month=today.month,
+    ).aggregate(
+        total=Sum(
+            ExpressionWrapper(
+                F('quantity') * F('unit_price'),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            )
+        )
+    )['total'] or Decimal('0.00')
+
+    return render(request, 'home.html', {
+        'total_harvests': harvests.count(),
+        'crop_types': Crop.objects.filter(owner=request.user).values('name').distinct().count(),
+        'monthly_quantity': monthly_quantity,
+        'monthly_revenue': monthly_revenue,
+    })
 
 
 @require_http_methods(['GET', 'POST'])

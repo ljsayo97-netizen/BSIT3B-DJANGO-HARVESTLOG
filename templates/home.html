@@ -16,9 +16,53 @@
   </div>
   <br>
 
-  <div class="card">
-    <div class="card-body text-muted">
-      Dashboard
+  <div class="row row-cards">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="subheader">Total harvests</div>
+          <div class="h1 mb-0">{{ total_harvests }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="subheader">Crop types</div>
+          <div class="h1 mb-0">{{ crop_types }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="subheader">Harvested this month</div>
+          {% for item in monthly_quantity %}
+          <div class="h3 mb-1">{{ item.quantity|floatformat:3 }} {{ item.unit }}</div>
+          {% empty %}
+          <div class="h1 mb-0">0</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="subheader">Harvest revenue this month</div>
+          <div class="h1 mb-0">{{ monthly_revenue|floatformat:2 }}</div>
+          <div class="text-muted">Recorded sale total</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body d-flex flex-wrap gap-2">
+          <a class="btn btn-primary" href="{% url 'crops:crop_list' %}">Manage crops</a>
+          <a class="btn btn-outline-primary" href="{% url 'crops:harvest_list' %}">Record harvest</a>
+          <a class="btn btn-outline-primary" href="{% url 'crops:yield_report' %}">View yield report</a>
+          <a class="btn btn-outline-primary" href="{% url 'crops:sale_list' %}">Record sale</a>
+        </div>
+      </div>
     </div>
   </div>
 

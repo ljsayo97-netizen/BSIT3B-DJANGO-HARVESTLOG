@@ -1,0 +1,57 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col"><div class="page-pretitle">Farm management</div><h2 class="page-title">Harvest Recording</h2></div>
+    <div class="col-auto"><a class="btn btn-outline-primary" href="{% url 'crops:yield_report' %}">Yield monitoring</a></div>
+  </div>
+</div>
+<br>
+{% for message in messages %}<div class="alert alert-success" role="alert">{{ message }}</div>{% endfor %}
+<div class="row row-cards">
+  <div class="col-lg-4">
+    <form method="post" class="card">
+      {% csrf_token %}
+      <div class="card-header"><h3 class="card-title">Record a harvest</h3></div>
+      <div class="card-body">
+        {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+          {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+        {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="card-footer"><button class="btn btn-primary" type="submit" {% if not form.fields.crop.queryset.exists %}disabled{% endif %}>Save harvest</button></div>
+    </form>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Harvest history</h3></div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead><tr><th>Date</th><th>Crop</th><th>Quantity</th><th>Notes</th></tr></thead>
+          <tbody>
+            {% for harvest in harvests %}
+            <tr>
+              <td>{{ harvest.harvest_date|date:"M j, Y" }}</td>
+              <td>{{ harvest.crop.name }}{% if harvest.crop.variety %}<br><span class="text-muted">{{ harvest.crop.variety }}</span>{% endif %}</td>
+              <td>{{ harvest.quantity|floatformat:3 }} {{ harvest.get_unit_display }}</td>
+              <td>{{ harvest.notes|default:"—" }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">No harvests recorded yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if harvests.has_other_pages %}
+      <div class="card-footer d-flex justify-content-between">
+        {% if harvests.has_previous %}<a href="?page={{ harvests.previous_page_number }}">Previous</a>{% else %}<span></span>{% endif %}
+        <span>Page {{ harvests.number }} of {{ harvests.paginator.num_pages }}</span>
+        {% if harvests.has_next %}<a href="?page={{ harvests.next_page_number }}">Next</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

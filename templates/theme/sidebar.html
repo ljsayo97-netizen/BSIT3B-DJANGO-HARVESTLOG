@@ -41,6 +41,39 @@
           </a>
         </li>
 
+        <li class="nav-item mb-1">
+          <a class="nav-link {% if request.resolver_match.app_name == 'crops' and request.resolver_match.url_name == 'crop_list' or request.resolver_match.url_name == 'crop_edit' %}active{% endif %}" href="{% url 'crops:crop_list' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="fa-solid fa-seedling"></i>
+            </span>
+            <span class="nav-link-title">Crop Records</span>
+          </a>
+        </li>
+        <li class="nav-item mb-1">
+          <a class="nav-link {% if request.resolver_match.app_name == 'crops' and request.resolver_match.url_name == 'harvest_list' %}active{% endif %}" href="{% url 'crops:harvest_list' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="fa-solid fa-wheat-awn"></i>
+            </span>
+            <span class="nav-link-title">Harvests</span>
+          </a>
+        </li>
+        <li class="nav-item mb-1">
+          <a class="nav-link {% if request.resolver_match.app_name == 'crops' and request.resolver_match.url_name == 'yield_report' %}active{% endif %}" href="{% url 'crops:yield_report' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="fa-solid fa-chart-column"></i>
+            </span>
+            <span class="nav-link-title">Yield Monitoring</span>
+          </a>
+        </li>
+        <li class="nav-item mb-1">
+          <a class="nav-link {% if request.resolver_match.app_name == 'crops' and request.resolver_match.url_name == 'sale_list' %}active{% endif %}" href="{% url 'crops:sale_list' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="fa-solid fa-coins"></i>
+            </span>
+            <span class="nav-link-title">Sales</span>
+          </a>
+        </li>
+
         <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}" href="{% url 'users:user_list' %}">
             <span class="nav-link-icon d-md-none d-lg-inline-block">

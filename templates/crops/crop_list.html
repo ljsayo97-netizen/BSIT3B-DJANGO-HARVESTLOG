@@ -1,0 +1,64 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <div class="page-pretitle">Farm management</div>
+      <h2 class="page-title">Crop Records</h2>
+    </div>
+  </div>
+</div>
+<br>
+
+{% for message in messages %}
+<div class="alert alert-success" role="alert">{{ message }}</div>
+{% endfor %}
+
+<div class="row row-cards">
+  <div class="col-lg-4">
+    <form method="post" class="card">
+      {% csrf_token %}
+      <div class="card-header"><h3 class="card-title">Add a crop</h3></div>
+      <div class="card-body">
+        {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+        {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="card-footer"><button class="btn btn-primary" type="submit">Save crop</button></div>
+    </form>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Your crops</h3></div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead><tr><th>Crop / variety</th><th>Farm</th><th>Location / size</th><th></th></tr></thead>
+          <tbody>
+            {% for crop in crops %}
+            <tr>
+              <td><strong>{{ crop.name }}</strong><br><span class="text-muted">{{ crop.variety|default:"Variety not specified" }}</span></td>
+              <td>{{ crop.farm_name }}</td>
+              <td>{{ crop.farm_location|default:"—" }}<br><span class="text-muted">{% if crop.farm_size %}{{ crop.farm_size|floatformat:2 }} {{ crop.farm_size_unit }}{% else %}Size not specified{% endif %}</span></td>
+              <td class="text-nowrap">
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'crops:crop_edit' crop.pk %}">Edit</a>
+                <form method="post" action="{% url 'crops:crop_delete' crop.pk %}" class="d-inline" onsubmit="return confirm('Delete this crop and its harvest and sales records?');">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No crop records yet. Add your first crop using the form.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
