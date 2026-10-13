@@ -13,9 +13,9 @@ from .models import Crop, Harvest, Sale
 def crop_list(request):
     crops = Crop.objects.filter(owner=request.user)
     form = CropForm(request.POST or None)
+    form.instance.owner = request.user
     if request.method == 'POST' and form.is_valid():
         crop = form.save(commit=False)
-        crop.owner = request.user
         crop.save()
         messages.success(request, f'{crop.name} was added to your crop records.')
         return redirect('crops:crop_list')
