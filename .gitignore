@@ -18,3 +18,17 @@ db.sqlite3
 
 # Temporary files
 *.tmp
+
+# MySQL installation and database files
+projectv3/mysql/
+
+# Python virtual environments
+venv/
+projectv3/venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Log files
+*.log
