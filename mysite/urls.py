@@ -24,6 +24,10 @@ urlpatterns = [
     path('', include('apps.core.urls')),
     path('users/', include('apps.users.urls')),
     path('info/', include('apps.info.urls')),
+    path('farms/', include('apps.farms.urls')),
+    path('crops/', include('apps.crops.urls')),
+    path('harvests/', include('apps.harvests.urls')),
+    path('inventory/', include('apps.inventory.urls')),
 ]
 
 if settings.DEBUG:

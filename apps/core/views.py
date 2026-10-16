@@ -9,6 +9,12 @@ from django.core.validators import validate_email
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
+from django.db.models import F, Sum
+
+from apps.crops.models import Crop
+from apps.farms.models import Farm
+from apps.harvests.models import Harvest
+from apps.inventory.models import InventoryItem
 
 User = get_user_model()
 
@@ -140,7 +146,56 @@ def logout_view(request):
 
 @login_required(login_url='login')
 def home(request):
-    return render(request, 'home.html')
+    users = User.objects.all()
+
+    # Farm summary for the signed-in user's dashboard
+    user_farms = Farm.objects.filter(user=request.user).order_by('name')
+    total_farms = user_farms.count()
+    active_farms = user_farms.filter(status=Farm.Status.ACTIVE).count()
+    inactive_farms = user_farms.filter(status=Farm.Status.INACTIVE).count()
+    archived_farms = user_farms.filter(status=Farm.Status.ARCHIVED).count()
+    recent_farms = user_farms.order_by('-date_registered')[:5]
+
+    # Harvest summary for the signed-in user's dashboard
+    user_harvests = Harvest.objects.filter(user=request.user)
+    total_harvests = user_harvests.count()
+    total_quantity = user_harvests.aggregate(total=Sum('quantity_harvested'))['total'] or 0
+    recent_harvests = user_harvests.select_related('farm', 'crop').order_by('-harvest_date')[:5]
+
+    # Crops and farms for the harvest modal dropdowns
+    crops = Crop.objects.filter(user=request.user).order_by('name')
+
+    # Inventory summary for the signed-in user's dashboard
+    user_inventory = InventoryItem.objects.filter(user=request.user)
+    total_inventory_items = user_inventory.count()
+    low_stock_count = user_inventory.filter(
+        quantity__lte=F('minimum_stock_level'),
+        quantity__gt=0,
+    ).count()
+    out_of_stock_count = user_inventory.filter(quantity__lte=0).count()
+    in_stock_count = user_inventory.filter(
+        quantity__gt=F('minimum_stock_level'),
+    ).count()
+    recent_inventory = user_inventory.order_by('-created_at')[:5]
+
+    return render(request, 'home.html', {
+        'users': users,
+        'farms': user_farms,
+        'crops': crops,
+        'total_farms': total_farms,
+        'active_farms': active_farms,
+        'inactive_farms': inactive_farms,
+        'archived_farms': archived_farms,
+        'recent_farms': recent_farms,
+        'total_harvests': total_harvests,
+        'total_quantity': total_quantity,
+        'recent_harvests': recent_harvests,
+        'total_inventory_items': total_inventory_items,
+        'low_stock_count': low_stock_count,
+        'out_of_stock_count': out_of_stock_count,
+        'in_stock_count': in_stock_count,
+        'recent_inventory': recent_inventory,
+    })
 
 
 @require_http_methods(['GET', 'POST'])

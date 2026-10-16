@@ -3,7 +3,7 @@
     <div class="navbar-brand navbar-brand-autodark dh-brand">
       <a href="." class="d-flex align-items-center gap-2 text-decoration-none">
         <span class="dh-brand-mark">
-          <i class="fa-solid fa-shield-halved"></i>
+          <i class="fas fa-tractor"></i>
         </span>
         <span class="lh-1">
           <span class="dh-brand-name">Harvest<span class="text-warning">Log</span></span>
@@ -38,6 +38,42 @@
               <i class="fa fa-dashboard"></i>
             </span>
             <span class="nav-link-title">Dashboard</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'farms' %}active{% endif %}" href="{% url 'farms:farm_list' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="nav-icon fas fa-seedling"></i>
+            </span>
+            <span class="nav-link-title">Farms</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'crops' %}active{% endif %}" href="{% url 'crops:crop_list' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="nav-icon fas fa-leaf"></i>
+            </span>
+            <span class="nav-link-title">Crops</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'harvests' %}active{% endif %}" href="{% url 'harvests:harvest_list' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="nav-icon fas fa-coins"></i>
+            </span>
+            <span class="nav-link-title">Harvests</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}" href="{% url 'inventory:inventory_list' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="nav-icon fas fa-box"></i>
+            </span>
+            <span class="nav-link-title">Inventory</span>
           </a>
         </li>
 

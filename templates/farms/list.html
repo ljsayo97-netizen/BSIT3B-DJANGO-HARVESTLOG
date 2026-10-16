@@ -1,0 +1,542 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none" aria-label="Page header">
+    <div class="container-xl">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Overview</div>
+          <div class="d-flex align-items-center gap-3 flex-wrap d-none d-md-flex">
+            <h2 class="page-title mb-0">Farm Management</h2>
+          </div>
+          <h2 class="page-title mb-0 d-md-none">Farm Management</h2>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <button type="button"
+               class="btn btn-primary"
+               data-bs-toggle="modal"
+               data-bs-target="#farmModal"
+               data-mode="create">
+              <i class='fas fa-plus-circle me-2'></i> Register Farm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br>
+
+  <!-- Toast container (AJAX success messages from JS) -->
+  <div class="toast-container position-fixed top-0 end-0 p-3" id="farmToastContainer" aria-live="polite" aria-atomic="true">
+    {% for message in messages %}
+    <div class="toast bg-info-lt" role="status" aria-atomic="true" data-bs-delay="4000" style="--tblr-toast-color: #000;">
+      <div class="d-flex">
+        <div class="toast-body">{{ message }}</div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="farmAlert" class="alert alert-danger d-none" role="alert"></div>
+
+  <!-- Search + filter toolbar -->
+  <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-1">
+    <form method="GET" class="w-100" style="max-width: 520px;">
+      <div class="input-group">
+        <span class="input-group-text"><i class="ti ti-search"></i></span>
+        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by name, owner, location, or description...">
+        <select name="status" class="form-select" style="max-width: 160px;">
+          <option value="">All statuses</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if query or status %}
+        <a href="{% url 'farms:farm_list' %}" class="btn btn-outline-secondary">Clear</a>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">Search</button>
+      </div>
+    </form>
+
+    <div class="btn-group mt-n4" role="group" aria-label="View mode">
+      <button type="button" class="btn btn-outline-primary view-mode-btn active" data-view="table" title="List view">
+        <i class="ti ti-layout-list"></i>
+      </button>
+      <button type="button" class="btn btn-outline-primary view-mode-btn" data-view="grid" title="Grid view">
+        <i class="ti ti-layout-grid"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        Registered Farms
+        {% if query or status %}
+        <span class="text-muted fw-normal">— {{ farms.paginator.count }} result{{ farms.paginator.count|pluralize }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- TABLE VIEW -->
+    <div id="farmTableView" class="table-responsive">
+      <table class="table table-vcenter table-hover card-table text-nowrap" id="farmsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Farm ID</th>
+            <th>Farm Name</th>
+            <th>Owner / Manager</th>
+            <th>Location</th>
+            <th>Size (ha)</th>
+            <th>Date Registered</th>
+            <th>Status</th>
+            <th class="w-1">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="farmsTableBody">
+        {% for farm in farms %}
+        <tr data-row-id="{{ farm.id }}">
+            <td class="text-muted">{{ forloop.counter0|add:farms.start_index }}</td>
+            <td class="text-muted fw-normal">#{{ farm.id }}</td>
+            <td class="fw-semibold">{{ farm.name }}</td>
+            <td class="text-muted">{{ farm.owner }}</td>
+            <td class="text-muted">{{ farm.location }}</td>
+            <td class="text-muted">{{ farm.size_hectares }}</td>
+            <td class="text-muted">{{ farm.date_registered|date:"M j, Y" }}</td>
+            <td>
+              {% if farm.status == 'active' %}
+              <span class="badge bg-success-lt text-success">{{ farm.get_status_display }}</span>
+              {% elif farm.status == 'inactive' %}
+              <span class="badge bg-warning-lt text-warning">{{ farm.get_status_display }}</span>
+              {% else %}
+              <span class="badge bg-danger-lt text-danger">{{ farm.get_status_display }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="view" data-id="{{ farm.id }}" title="View details">
+                  <i class="fas fa-eye text-info"></i>
+                </button>
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="edit" data-id="{{ farm.id }}" title="Edit farm">
+                  <i class="fas fa-edit text-primary"></i>
+                </button>
+                {% if farm.status != 'archived' %}
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-action="archive" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Archive farm">
+                  <i class="fas fa-box-archive text-warning"></i>
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#deleteFarmModal" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Delete farm">
+                  <i class="fas fa-trash-alt text-danger"></i>
+                </button>
+              </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="9">
+                <div class="empty py-5">
+                    <div class="empty-icon">
+                        <i class="fas fa-seedling fa-2x text-muted"></i>
+                    </div>
+                    <p class="empty-title">No farms found</p>
+                    <p class="empty-subtitle">Try adjusting your search or register a new farm.</p>
+                    <div class="empty-action">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="create">
+                            <i class="fas fa-plus-circle me-2"></i> Register Farm
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- GRID VIEW -->
+    <div id="farmGridView" class="row g-3 d-none">
+      {% for farm in farms %}
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="card-title mb-1">{{ farm.name }}</h5>
+              <span class="badge
+                {% if farm.status == 'active' %}bg-success-lt text-success
+                {% elif farm.status == 'inactive' %}bg-warning-lt text-warning
+                {% else %}bg-danger-lt text-danger{% endif %}">
+                {{ farm.get_status_display }}
+              </span>
+            </div>
+            <p class="card-text text-muted small mb-3">
+              <i class="fas fa-user me-1"></i> {{ farm.owner }}<br>
+              <i class="fas fa-map-marker-alt me-1"></i> {{ farm.location }}<br>
+              <i class="fas fa-hashtag me-1"></i> Farm ID #{{ farm.id }}<br>
+              <i class="fas fa-layer-group me-1"></i> {{ farm.size_hectares }} hectares<br>
+              <i class="fas fa-calendar me-1"></i> Registered {{ farm.date_registered|date:"M j, Y" }}
+            </p>
+            {% if farm.description %}
+            <p class="card-text text-muted small">{{ farm.description }}</p>
+            {% endif %}
+          </div>
+          <div class="card-footer d-flex gap-1">
+            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="view" data-id="{{ farm.id }}" title="View details">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="edit" data-id="{{ farm.id }}" title="Edit farm">
+              <i class="fas fa-edit"></i>
+            </button>
+            {% if farm.status != 'archived' %}
+            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-action="archive" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Archive farm">
+              <i class="fas fa-box-archive text-warning"></i>
+            </button>
+            {% else %}
+            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1 disabled" title="Already archived">
+              <i class="fas fa-box-archive text-muted"></i>
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#deleteFarmModal" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Delete farm">
+              <i class="fas fa-trash-alt text-danger"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="empty py-5 text-center">
+          <div class="empty-icon"><i class="fas fa-seedling fa-2x text-muted"></i></div>
+          <p class="empty-title">No farms found</p>
+          <p class="empty-subtitle">Try adjusting your search or register a new farm.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if farms.paginator.num_pages > 1 %}
+    <div class="card-footer d-flex align-items-center">
+      <p class="m-0 text-muted">
+        Showing <span class="fw-medium">{{ farms.start_index }}</span>
+        to <span class="fw-medium">{{ farms.end_index }}</span>
+        of <span class="fw-medium">{{ farms.paginator.count }}</span> farm{{ farms.paginator.count|pluralize }}
+      </p>
+      <ul class="pagination m-0 ms-auto">
+        {% if farms.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ farms.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+            <i class="ti ti-chevron-left"></i> prev
+          </a>
+        </li>
+        {% endif %}
+        {% for num in farms.paginator.page_range %}
+        <li class="page-item {% if farms.number == num %}active{% endif %}">
+          <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if farms.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ farms.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+            next <i class="ti ti-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Farm Modal (View / Create / Edit) -->
+<div class="modal modal-blur fade" id="farmModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="farmModalTitle">Register Farm</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="farmForm">
+        {% csrf_token %}
+        <input type="hidden" name="id" id="farm_id">
+        <div class="modal-body">
+          <div id="farmFormError" class="alert alert-danger d-none"></div>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Farm Name <span class="text-danger">*</span></label>
+              <input type="text" name="name" id="farm_name" class="form-control" required placeholder="e.g. Sunny Fields Farm">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Owner / Manager <span class="text-danger">*</span></label>
+              <input type="text" name="owner" id="farm_owner" class="form-control" required placeholder="e.g. Juan Dela Cruz">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Location <span class="text-danger">*</span></label>
+              <input type="text" name="location" id="farm_location" class="form-control" required placeholder="e.g. Cauayan, Isabela">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Farm Size (hectares) <span class="text-danger">*</span></label>
+              <input type="number" name="size_hectares" id="farm_size_hectares" class="form-control" step="0.01" min="0" required placeholder="0.00">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Date Registered <span class="text-danger">*</span></label>
+              <input type="datetime-local" name="date_registered" id="farm_date_registered" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea name="description" id="farm_description" class="form-control" rows="3" placeholder="Brief description of the farm..."></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Farm Status <span class="text-danger">*</span></label>
+              <select name="status" id="farm_status" class="form-select" required>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="farmSubmitBtn">Save Farm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Farm Modal -->
+<div class="modal modal-blur fade" id="deleteFarmModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">Delete Farm</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Are you sure you want to delete <strong id="deleteFarmName"></strong>? This cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteFarmBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const LIST_URL    = '{% url "farms:farm_list_ajax" %}';
+  const GET_URL     = '{% url "farms:farm_get_ajax" 0 %}'.replace('/0/', '/');
+  const SAVE_URL    = '{% url "farms:farm_save_ajax" %}';
+  const DELETE_BASE = '{% url "farms:farm_delete_ajax" 0 %}'.replace('/0/', '/');
+  const ARCHIVE_BASE= '{% url "farms:farm_archive_ajax" 0 %}'.replace('/0/', '/');
+
+  const tableView   = document.getElementById('farmTableView');
+  const gridView    = document.getElementById('farmGridView');
+  const modalEl     = document.getElementById('farmModal');
+  const deleteModal = document.getElementById('deleteFarmModal');
+  const form        = document.getElementById('farmForm');
+  const alertBox    = document.getElementById('farmAlert');
+  const title       = document.getElementById('farmModalTitle');
+  const submitBtn   = document.getElementById('farmSubmitBtn');
+  const deleteBtn   = document.getElementById('confirmDeleteFarmBtn');
+  const deleteName  = document.getElementById('deleteFarmName');
+  const bodyRows    = document.getElementById('farmsTableBody');
+  let currentId     = null;
+  let currentMode   = 'create';
+
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return m ? decodeURIComponent(m[2]) : null;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  function showFormError(msg) {
+    alertBox.textContent = msg;
+    alertBox.classList.remove('d-none');
+  }
+  function clearFormError() {
+    alertBox.textContent = '';
+    alertBox.classList.add('d-none');
+  }
+
+  // Show server-rendered toasts
+  document.querySelectorAll('#farmToastContainer .toast').forEach(function (el) {
+    bootstrap.Toast.getOrCreateInstance(el).show();
+  });
+
+  // View mode toggle
+  document.querySelectorAll('.view-mode-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.view-mode-btn').forEach(function (b) {
+        b.classList.remove('active');
+        b.classList.add('btn-outline-primary');
+        b.classList.remove('btn-primary');
+      });
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-primary', 'active');
+      const view = btn.dataset.view;
+      if (view === 'table') {
+        tableView.classList.remove('d-none');
+        gridView.classList.add('d-none');
+      } else {
+        tableView.classList.add('d-none');
+        gridView.classList.remove('d-none');
+      }
+    });
+  });
+
+  function resetForm() {
+    form.reset();
+    document.getElementById('farm_id').value = '';
+    currentId = null;
+    currentMode = 'create';
+    title.textContent = 'Register Farm';
+    submitBtn.textContent = 'Save Farm';
+    clearFormError();
+    // Default status to Active, date to now
+    document.getElementById('farm_status').value = 'active';
+    document.getElementById('farm_date_registered').value = new Date().toISOString().slice(0, 16);
+  }
+
+  modalEl.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (!button) {
+      resetForm();
+      return;
+    }
+    const mode = button.getAttribute('data-mode');
+    currentMode = mode;
+
+    if (mode === 'edit' || mode === 'view') {
+      const id = button.getAttribute('data-id');
+      currentId = id;
+      document.getElementById('farm_id').value = id;
+
+      title.textContent = mode === 'edit' ? 'Edit Farm' : 'Farm Details';
+      submitBtn.textContent = mode === 'edit' ? 'Update Farm' : 'View Details';
+      submitBtn.disabled = mode === 'view';
+      form.querySelectorAll('input, select, textarea').forEach(function (el) {
+        el.disabled = mode === 'view';
+      });
+
+      fetch(`${GET_URL}${id}/`, {
+        method: 'GET',
+        headers: { 'X-CSRFToken': csrftoken },
+      })
+      .then((r) => r.json())
+      .then((data) => {
+        document.getElementById('farm_name').value        = data.name || '';
+        document.getElementById('farm_owner').value       = data.owner || '';
+        document.getElementById('farm_location').value    = data.location || '';
+        document.getElementById('farm_size_hectares').value = data.size_hectares || '';
+        document.getElementById('farm_date_registered').value = data.date_registered ? data.date_registered.slice(0, 16) : '';
+        document.getElementById('farm_description').value = data.description || '';
+        document.getElementById('farm_status').value      = data.status || 'active';
+      })
+      .catch(() => { showFormError('Could not load farm details.'); });
+    } else {
+      resetForm();
+    }
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', function () {
+    form.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.disabled = false;
+    });
+    resetForm();
+  });
+
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (button) {
+      currentId = button.getAttribute('data-id');
+      deleteName.textContent = button.getAttribute('data-name');
+    }
+  });
+
+  // Handle inline archive button (table + grid)
+  document.body.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-action="archive"]');
+    if (!btn) return;
+    e.preventDefault();
+    const id = btn.dataset.id;
+    const name = btn.dataset.name;
+    if (!confirm(`Archive farm "${name}"?`)) return;
+    fetch(`${ARCHIVE_BASE}${id}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+    })
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.status === 'archived') {
+        location.reload();
+      }
+    });
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearFormError();
+    submitBtn.disabled = true;
+
+    const formData = new FormData(form);
+    fetch(SAVE_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+      body: formData,
+    })
+    .then(async (resp) => {
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || 'Something went wrong.');
+      }
+      return data;
+    })
+    .then(() => {
+      bootstrap.Modal.getInstance(modalEl).hide();
+      location.reload();
+    })
+    .catch((err) => {
+      showFormError(err.message);
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+    });
+  });
+
+  deleteBtn.addEventListener('click', function () {
+    if (!currentId) return;
+    const btn = this;
+    btn.disabled = true;
+    fetch(`${DELETE_BASE}${currentId}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+    })
+    .then(async (resp) => {
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || 'Could not delete farm.');
+      }
+      return data;
+    })
+    .then(() => {
+      bootstrap.Modal.getInstance(deleteModal).hide();
+      const row = document.querySelector(`tr[data-row-id="${currentId}"]`);
+      if (row) row.remove();
+      location.reload();
+    })
+    .catch((err) => {
+      alert(err.message);
+    })
+    .finally(() => {
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
+{% endblock %}

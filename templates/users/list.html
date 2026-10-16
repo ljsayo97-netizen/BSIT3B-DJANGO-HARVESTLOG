@@ -24,7 +24,7 @@
       </div>
 
         <!-- RIGHT -->
-        <!-- <div class="col-auto">
+        <div class="col-auto">
         <div class="btn-list">
           <button type="button"
              class="btn btn-primary"
@@ -34,7 +34,7 @@
             <i class="ti ti-plus me-1"></i> Add User
           </button>
         </div>
-      </div> -->
+      </div>
 
     </div>
   </div>
@@ -286,7 +286,7 @@
 <script>
 (function () {
     const SAVE_URL   = "{% url 'users:user_save_ajax' %}";
-    const DELETE_URL_BASE = "/users/ajax/delete/";
+    const DELETE_URL_BASE = "{% url 'users:user_delete_ajax' 0 %}".replace('/0/', '/');
 
     const editModal      = document.getElementById('editUserModal');
     const editForm        = document.getElementById('editUserForm');

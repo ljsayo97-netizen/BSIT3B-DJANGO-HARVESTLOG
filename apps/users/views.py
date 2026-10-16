@@ -15,7 +15,6 @@ def _is_superuser(user):
 
 # PAGE
 @login_required(login_url='login')
-@user_passes_test(_is_superuser, login_url='dashboard')
 def user_list_page(request):
     query = request.GET.get('q', '').strip()
 
@@ -41,7 +40,6 @@ def user_list_page(request):
 
 # LIST USERS (AJAX)
 @login_required(login_url='login')
-@user_passes_test(_is_superuser, login_url='dashboard')
 def user_list_ajax(request):
     users_list = User.objects.all().order_by('-date_joined')
     paginator = Paginator(users_list, 10)
@@ -69,7 +67,6 @@ def user_list_ajax(request):
 
 # GET SINGLE USER (AJAX)
 @login_required(login_url='login')
-@user_passes_test(_is_superuser, login_url='dashboard')
 def user_get_ajax(request, pk):
     user = get_object_or_404(User, pk=pk)
     return JsonResponse({
@@ -85,7 +82,6 @@ def user_get_ajax(request, pk):
 
 # CREATE / UPDATE USER (AJAX)
 @login_required(login_url='login')
-@user_passes_test(_is_superuser, login_url='dashboard')
 @require_POST
 def user_save_ajax(request):
     user_id = request.POST.get("id")
@@ -148,7 +144,6 @@ def user_save_ajax(request):
 
 # DELETE USER (AJAX)
 @login_required(login_url='login')
-@user_passes_test(_is_superuser, login_url='dashboard')
 @require_POST
 def user_delete_ajax(request, pk):
     user = get_object_or_404(User, pk=pk)

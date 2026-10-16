@@ -1,0 +1,460 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none" aria-label="Page header">
+    <div class="container-xl">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Overview</div>
+          <div class="d-flex align-items-center gap-3 flex-wrap d-none d-md-flex">
+            <h2 class="page-title mb-0">Crop Management</h2>
+          </div>
+          <h2 class="page-title mb-0 d-md-none">Crop Management</h2>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <button type="button"
+               class="btn btn-primary"
+               data-bs-toggle="modal"
+               data-bs-target="#cropModal"
+               data-mode="create">
+              <i class='fas fa-plus-circle me-2'></i> Add Crop
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br>
+
+  <div class="toast-container position-fixed top-0 end-0 p-3" id="cropToastContainer" aria-live="polite" aria-atomic="true">
+    {% for message in messages %}
+    <div class="toast bg-info-lt" role="status" aria-atomic="true" data-bs-delay="4000" style="--tblr-toast-color: #000;">
+      <div class="d-flex">
+        <div class="toast-body">{{ message }}</div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="cropAlert" class="alert alert-danger d-none" role="alert"></div>
+
+  <!-- Search + filter toolbar -->
+  <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-1">
+    <form method="GET" class="w-100" style="max-width: 620px;">
+      <div class="input-group">
+        <span class="input-group-text"><i class="ti ti-search"></i></span>
+        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by crop, variety, farm, or notes...">
+        <select name="status" class="form-select" style="max-width: 150px;">
+          <option value="">All statuses</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="farm" class="form-select" style="max-width: 170px;">
+          <option value="">All farms</option>
+          {% for farm in farms %}
+          <option value="{{ farm.id }}" {% if farm_id == farm.id|stringformat:"s" %}selected{% endif %}>{{ farm.name }}</option>
+          {% endfor %}
+        </select>
+        {% if query or status or farm_id %}
+        <a href="{% url 'crops:crop_list' %}" class="btn btn-outline-secondary">Clear</a>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">Search</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        Planted Crops
+        {% if query or status or farm_id %}
+        <span class="text-muted fw-normal">— {{ crops.paginator.count }} result{{ crops.paginator.count|pluralize }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-vcenter table-hover card-table text-nowrap" id="cropsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Farm</th>
+            <th>Crop Name</th>
+            <th>Variety</th>
+            <th>Planting Date</th>
+            <th>Expected Harvest</th>
+            <th>Area (ha)</th>
+            <th>Status</th>
+            <th class="w-1">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="cropsTableBody">
+        {% for crop in crops %}
+        <tr data-row-id="{{ crop.id }}">
+            <td class="text-muted">{{ forloop.counter0|add:crops.start_index }}</td>
+            <td class="text-muted">{{ crop.farm.name }}</td>
+            <td class="fw-semibold">{{ crop.name }}</td>
+            <td class="text-muted">{{ crop.variety|default:"—" }}</td>
+            <td class="text-muted">{{ crop.planting_date|date:"M j, Y" }}</td>
+            <td class="text-muted">
+              {% if crop.expected_harvest_date %}
+              {{ crop.expected_harvest_date|date:"M j, Y" }}
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ crop.area_hectares }}</td>
+            <td>
+              {% if crop.status == 'planting' %}
+              <span class="badge bg-info-lt text-info">{{ crop.get_status_display }}</span>
+              {% elif crop.status == 'growing' %}
+              <span class="badge bg-primary-lt text-primary">{{ crop.get_status_display }}</span>
+              {% elif crop.status == 'ready_for_harvest' %}
+              <span class="badge bg-warning-lt text-warning">{{ crop.get_status_display }}</span>
+              {% elif crop.status == 'harvested' %}
+              <span class="badge bg-success-lt text-success">{{ crop.get_status_display }}</span>
+              {% else %}
+              <span class="badge bg-danger-lt text-danger">{{ crop.get_status_display }}</span>
+              {% endif %}
+              {% if crop.days_to_harvest is not None and crop.status == 'growing' %}
+              <br><span class="text-muted small">{{ crop.days_to_harvest }} days to harvest</span>
+              {% elif crop.days_since_planting is not None %}
+              <br><span class="text-muted small">{{ crop.days_since_planting }} days since planting</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#cropModal" data-mode="view" data-id="{{ crop.id }}" title="View details">
+                  <i class="fas fa-eye text-info"></i>
+                </button>
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#cropModal" data-mode="edit" data-id="{{ crop.id }}" title="Edit crop">
+                  <i class="fas fa-edit text-primary"></i>
+                </button>
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#deleteCropModal" data-id="{{ crop.id }}" data-name="{{ crop.name|escape }}" title="Delete crop">
+                  <i class="fas fa-trash-alt text-danger"></i>
+                </button>
+              </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="9">
+                <div class="empty py-5">
+                    <div class="empty-icon">
+                        <i class="fas fa-leaf fa-2x text-muted"></i>
+                    </div>
+                    <p class="empty-title">No crops found</p>
+                    <p class="empty-subtitle">Register a farm first, then add a crop.</p>
+                    <div class="empty-action">
+                        <a href="{% url 'farms:farm_list' %}" class="btn btn-primary" style="margin-right: .5rem;">
+                            <i class="fas fa-seedling me-1"></i> Register Farm
+                        </a>
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#cropModal" data-mode="create">
+                            <i class="fas fa-plus-circle me-1"></i> Add Crop
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if crops.paginator.num_pages > 1 %}
+    <div class="card-footer d-flex align-items-center">
+      <p class="m-0 text-muted">
+        Showing <span class="fw-medium">{{ crops.start_index }}</span>
+        to <span class="fw-medium">{{ crops.end_index }}</span>
+        of <span class="fw-medium">{{ crops.paginator.count }}</span> crop{{ crops.paginator.count|pluralize }}
+      </p>
+      <ul class="pagination m-0 ms-auto">
+        {% if crops.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ crops.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}">
+            <i class="ti ti-chevron-left"></i> prev
+          </a>
+        </li>
+        {% endif %}
+        {% for num in crops.paginator.page_range %}
+        <li class="page-item {% if crops.number == num %}active{% endif %}">
+          <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if crops.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ crops.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}">
+            next <i class="ti ti-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Crop Modal (View / Create / Edit) -->
+<div class="modal modal-blur fade" id="cropModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cropModalTitle">Add Crop</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="cropForm">
+        {% csrf_token %}
+        <input type="hidden" name="id" id="crop_id">
+        <div class="modal-body">
+          <div id="cropFormError" class="alert alert-danger d-none"></div>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Farm <span class="text-danger">*</span></label>
+              <select name="farm_id" id="crop_farm_id" class="form-select" required>
+                <option value="">Select a farm</option>
+                {% for farm in farms %}
+                <option value="{{ farm.id }}">{{ farm.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Crop Name <span class="text-danger">*</span></label>
+              <input type="text" name="name" id="crop_name" class="form-control" required placeholder="e.g. Rice">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Variety</label>
+              <input type="text" name="variety" id="crop_variety" class="form-control" placeholder="e.g. IR64">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Planting Date <span class="text-danger">*</span></label>
+              <input type="date" name="planting_date" id="crop_planting_date" class="form-control" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Expected Harvest Date</label>
+              <input type="date" name="expected_harvest_date" id="crop_expected_harvest_date" class="form-control">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Actual Harvest Date</label>
+              <input type="date" name="actual_harvest_date" id="crop_actual_harvest_date" class="form-control">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Area (hectares) <span class="text-danger">*</span></label>
+              <input type="number" name="area_hectares" id="crop_area_hectares" class="form-control" step="0.01" min="0" required placeholder="0.00">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Status <span class="text-danger">*</span></label>
+              <select name="status" id="crop_status" class="form-select" required>
+                <option value="planting">Planting</option>
+                <option value="growing">Growing</option>
+                <option value="ready_for_harvest">Ready for Harvest</option>
+                <option value="harvested">Harvested</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Notes</label>
+              <textarea name="notes" id="crop_notes" class="form-control" rows="3" placeholder="Observations, treatments, etc..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="cropSubmitBtn">Save Crop</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Crop Modal -->
+<div class="modal modal-blur fade" id="deleteCropModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">Delete Crop</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Are you sure you want to delete <strong id="deleteCropName"></strong>? This cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteCropBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const LIST_URL    = '{% url "crops:crop_list_ajax" %}';
+  const SAVE_URL    = '{% url "crops:crop_save_ajax" %}';
+  const GET_URL     = '{% url "crops:crop_get_ajax" 0 %}'.replace('/0/', '/');
+  const DELETE_BASE = '{% url "crops:crop_delete_ajax" 0 %}'.replace('/0/', '/');
+
+  const modalEl     = document.getElementById('cropModal');
+  const deleteModal = document.getElementById('deleteCropModal');
+  const form        = document.getElementById('cropForm');
+  const alertBox    = document.getElementById('cropAlert');
+  const title       = document.getElementById('cropModalTitle');
+  const submitBtn   = document.getElementById('cropSubmitBtn');
+  const deleteBtn   = document.getElementById('confirmDeleteCropBtn');
+  const deleteName  = document.getElementById('deleteCropName');
+  let currentId     = null;
+  let currentMode   = 'create';
+
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return m ? decodeURIComponent(m[2]) : null;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  function showFormError(msg) {
+    alertBox.textContent = msg;
+    alertBox.classList.remove('d-none');
+  }
+  function clearFormError() {
+    alertBox.textContent = '';
+    alertBox.classList.add('d-none');
+  }
+
+  document.querySelectorAll('#cropToastContainer .toast').forEach(function (el) {
+    bootstrap.Toast.getOrCreateInstance(el).show();
+  });
+
+  function resetForm() {
+    form.reset();
+    document.getElementById('crop_id').value = '';
+    currentId = null;
+    currentMode = 'create';
+    title.textContent = 'Add Crop';
+    submitBtn.textContent = 'Save Crop';
+    clearFormError();
+    document.getElementById('crop_status').value = 'planting';
+    document.getElementById('crop_planting_date').value = new Date().toISOString().split('T')[0];
+  }
+
+  modalEl.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (!button) {
+      resetForm();
+      return;
+    }
+    const mode = button.getAttribute('data-mode');
+    currentMode = mode;
+
+    if (mode === 'edit' || mode === 'view') {
+      const id = button.getAttribute('data-id');
+      currentId = id;
+      document.getElementById('crop_id').value = id;
+
+      title.textContent = mode === 'edit' ? 'Edit Crop' : 'Crop Details';
+      submitBtn.textContent = mode === 'edit' ? 'Update Crop' : 'View Details';
+      submitBtn.disabled = mode === 'view';
+      form.querySelectorAll('input, select, textarea').forEach(function (el) {
+        el.disabled = mode === 'view';
+      });
+
+      fetch(`${GET_URL}${id}/`, {
+        method: 'GET',
+        headers: { 'X-CSRFToken': csrftoken },
+      })
+      .then((r) => r.json())
+      .then((data) => {
+        document.getElementById('crop_farm_id').value      = data.farm_id || '';
+        document.getElementById('crop_name').value         = data.name || '';
+        document.getElementById('crop_variety').value      = data.variety || '';
+        document.getElementById('crop_planting_date').value = data.planting_date ? data.planting_date.slice(0, 10) : '';
+        document.getElementById('crop_expected_harvest_date').value = data.expected_harvest_date ? data.expected_harvest_date.slice(0, 10) : '';
+        document.getElementById('crop_actual_harvest_date').value = data.actual_harvest_date ? data.actual_harvest_date.slice(0, 10) : '';
+        document.getElementById('crop_area_hectares').value = data.area_hectares || '';
+        document.getElementById('crop_status').value       = data.status || 'planting';
+        document.getElementById('crop_notes').value        = data.notes || '';
+      })
+      .catch(() => { showFormError('Could not load crop details.'); });
+    } else {
+      resetForm();
+    }
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', function () {
+    form.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.disabled = false;
+    });
+    resetForm();
+  });
+
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (button) {
+      currentId = button.getAttribute('data-id');
+      deleteName.textContent = button.getAttribute('data-name');
+    }
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearFormError();
+    submitBtn.disabled = true;
+
+    const formData = new FormData(form);
+    fetch(SAVE_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+      body: formData,
+    })
+    .then(async (resp) => {
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || 'Something went wrong.');
+      }
+      return data;
+    })
+    .then(() => {
+      bootstrap.Modal.getInstance(modalEl).hide();
+      location.reload();
+    })
+    .catch((err) => {
+      showFormError(err.message);
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+    });
+  });
+
+  deleteBtn.addEventListener('click', function () {
+    if (!currentId) return;
+    const btn = this;
+    btn.disabled = true;
+    fetch(`${DELETE_BASE}${currentId}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+    })
+    .then(async (resp) => {
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || 'Could not delete crop.');
+      }
+      return data;
+    })
+    .then(() => {
+      bootstrap.Modal.getInstance(deleteModal).hide();
+      const row = document.querySelector(`tr[data-row-id="${currentId}"]`);
+      if (row) row.remove();
+      location.reload();
+    })
+    .catch((err) => {
+      alert(err.message);
+    })
+    .finally(() => {
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
+{% endblock %}
