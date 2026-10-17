@@ -84,6 +84,7 @@ def user_get_ajax(request, pk):
 @login_required(login_url='login')
 @require_POST
 def user_save_ajax(request):
+    """Validate and create or update a user, returning its data as JSON."""
     user_id = request.POST.get("id")
 
     if user_id:
@@ -138,6 +139,7 @@ def user_save_ajax(request):
         "last_name": user.last_name,
         "email": user.email,
         "is_staff": user.is_staff,
+        "is_superuser": user.is_superuser,
         "is_active": user.is_active,
     })
 
@@ -146,6 +148,7 @@ def user_save_ajax(request):
 @login_required(login_url='login')
 @require_POST
 def user_delete_ajax(request, pk):
+    """Delete the specified user and confirm as JSON."""
     user = get_object_or_404(User, pk=pk)
     if request.user == user:
         return JsonResponse({"error": "You cannot delete yourself"}, status=400)
@@ -154,4 +157,25 @@ def user_delete_ajax(request, pk):
     return JsonResponse({
         "status": "deleted",
         "message": f'User "{username}" has been deleted successfully.',
+    })
+
+
+# TOGGLE USER ACTIVE STATUS (AJAX)
+@login_required(login_url='login')
+@require_POST
+def user_toggle_active_ajax(request, pk):
+    """Activate or deactivate the specified user and confirm as JSON."""
+    user = get_object_or_404(User, pk=pk)
+    user.is_active = not user.is_active
+    user.save(update_fields=['is_active'])
+    messages.success(
+        request,
+        f'User "{user.username}" has been '
+        f'{"reactivated" if user.is_active else "deactivated"} successfully.',
+    )
+    return JsonResponse({
+        "status": "success",
+        "is_active": user.is_active,
+        "message": f'User "{user.username}" has been '
+                   f'{"reactivated" if user.is_active else "deactivated"} successfully.',
     })
