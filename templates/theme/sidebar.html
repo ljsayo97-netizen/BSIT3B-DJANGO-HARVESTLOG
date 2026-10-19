@@ -113,7 +113,7 @@
               <span class="min-w-0 flex-grow-1">
                 <span class="dh-user-name">{{ user.username }}</span>
                 <span class="dh-user-role">
-                  {% if user.is_superuser %}Administrator{% elif user.is_authenticated %}Instructor{% endif %}
+                  {% if user.is_superuser %}{% elif user.is_authenticated %}Log-out{% endif %}
                 </span>
               </span>
             </a>

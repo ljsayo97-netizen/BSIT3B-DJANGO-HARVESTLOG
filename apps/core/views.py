@@ -165,9 +165,8 @@ def home(request):
     # Crops and farms for the harvest modal dropdowns
     crops = Crop.objects.filter(user=request.user).order_by('name')
 
-    # Inventory summary for the signed-in user's dashboard
+    # Inventory stock-status for the donut chart
     user_inventory = InventoryItem.objects.filter(user=request.user)
-    total_inventory_items = user_inventory.count()
     low_stock_count = user_inventory.filter(
         quantity__lte=F('minimum_stock_level'),
         quantity__gt=0,
@@ -176,7 +175,6 @@ def home(request):
     in_stock_count = user_inventory.filter(
         quantity__gt=F('minimum_stock_level'),
     ).count()
-    recent_inventory = user_inventory.order_by('-created_at')[:5]
 
     return render(request, 'home.html', {
         'users': users,
@@ -190,11 +188,12 @@ def home(request):
         'total_harvests': total_harvests,
         'total_quantity': total_quantity,
         'recent_harvests': recent_harvests,
-        'total_inventory_items': total_inventory_items,
+        'in_stock_count': in_stock_count,
         'low_stock_count': low_stock_count,
         'out_of_stock_count': out_of_stock_count,
-        'in_stock_count': in_stock_count,
-        'recent_inventory': recent_inventory,
+        # Inventory stock-status donut chart data
+        'inventory_status_labels': ['In Stock', 'Low Stock', 'Out of Stock'],
+        'inventory_status_data': [in_stock_count, low_stock_count, out_of_stock_count],
     })
 
 
