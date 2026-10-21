@@ -33,9 +33,6 @@
             <a href="{% url 'harvests:harvest_list' %}" class="btn btn-outline-secondary btn-sm ms-2">
               <i class="fas fa-coins me-1"></i> Harvest History
             </a>
-            <a href="{% url 'inventory:inventory_list' %}" class="btn btn-outline-secondary btn-sm ms-2">
-              <i class="fas fa-box me-1"></i> Inventory
-            </a>
           </div>
         </div>
       </div>
@@ -142,20 +139,6 @@
               <i class="fas fa-money-bill-wave fa-2x text-success"></i>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Inventory stock status chart -->
-  <div class="row">
-    <div class="col-lg-4">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="card-title mb-0">Inventory Stock Status</h5>
-        </div>
-        <div class="card-body">
-          <div id="chart-inventory-stock" style="height: 320px;"></div>
         </div>
       </div>
     </div>
@@ -423,7 +406,10 @@
       </form>
     </div>
   </div>
+</div>
 {% endblock %}
+
+{% block extra_js %}
 <script>
 (function () {
   const FARM_LIST_URL  = '{% url "farms:farm_list_ajax" %}';
@@ -538,71 +524,5 @@
     });
   });
 })();
-</script>
-{% block extra_js %}
-{{ inventory_status_labels|json_script:"inventory-status-labels" }}
-{{ inventory_status_data|json_script:"inventory-status-data" }}
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    window.tabler_chart = window.tabler_chart || {};
-
-    const statusLabels = JSON.parse(
-      document.getElementById("inventory-status-labels").textContent
-    );
-    const statusData = JSON.parse(
-      document.getElementById("inventory-status-data").textContent
-    );
-
-    window.ApexCharts &&
-      (window.tabler_chart["chart-inventory-stock"] = new ApexCharts(
-        document.getElementById("chart-inventory-stock"),
-        {
-          chart: {
-            type: "donut",
-            fontFamily: "inherit",
-            height: 320,
-            toolbar: { show: true },
-            animations: { enabled: true },
-          },
-          series: statusData,
-          labels: statusLabels,
-          dataLabels: {
-            enabled: true,
-            formatter: (val) => val.toFixed(0),
-          },
-          tooltip: {
-            theme: "dark",
-          },
-          colors: [
-            "color-mix(in srgb, transparent, var(--tblr-success) 100%)",
-            "color-mix(in srgb, transparent, var(--tblr-warning) 100%)",
-            "color-mix(in srgb, transparent, var(--tblr-danger) 100%)",
-          ],
-          legend: {
-            show: true,
-            position: "bottom",
-          },
-          plotOptions: {
-            pie: {
-              donut: {
-                labels: {
-                  show: true,
-                  total: {
-                    show: true,
-                    label: "Total Items",
-                  },
-                },
-              },
-            },
-          },
-        },
-      )).render();
-
-    window.addEventListener("resize", () => {
-      if (window.tabler_chart["chart-inventory-stock"]) {
-        window.tabler_chart["chart-inventory-stock"].windowResize();
-      }
-    });
-  });
 </script>
 {% endblock %}

@@ -9,12 +9,11 @@ from django.core.validators import validate_email
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
-from django.db.models import F, Sum
+from django.db.models import Sum
 
 from apps.crops.models import Crop
 from apps.farms.models import Farm
 from apps.harvests.models import Harvest
-from apps.inventory.models import InventoryItem
 
 User = get_user_model()
 
@@ -162,19 +161,8 @@ def home(request):
     total_quantity = user_harvests.aggregate(total=Sum('quantity_harvested'))['total'] or 0
     recent_harvests = user_harvests.select_related('farm', 'crop').order_by('-harvest_date')[:5]
 
-    # Crops and farms for the harvest modal dropdowns
+    # Crops for the harvest modal dropdown
     crops = Crop.objects.filter(user=request.user).order_by('name')
-
-    # Inventory stock-status for the donut chart
-    user_inventory = InventoryItem.objects.filter(user=request.user)
-    low_stock_count = user_inventory.filter(
-        quantity__lte=F('minimum_stock_level'),
-        quantity__gt=0,
-    ).count()
-    out_of_stock_count = user_inventory.filter(quantity__lte=0).count()
-    in_stock_count = user_inventory.filter(
-        quantity__gt=F('minimum_stock_level'),
-    ).count()
 
     return render(request, 'home.html', {
         'users': users,
@@ -188,12 +176,6 @@ def home(request):
         'total_harvests': total_harvests,
         'total_quantity': total_quantity,
         'recent_harvests': recent_harvests,
-        'in_stock_count': in_stock_count,
-        'low_stock_count': low_stock_count,
-        'out_of_stock_count': out_of_stock_count,
-        # Inventory stock-status donut chart data
-        'inventory_status_labels': ['In Stock', 'Low Stock', 'Out of Stock'],
-        'inventory_status_data': [in_stock_count, low_stock_count, out_of_stock_count],
     })
 
 
