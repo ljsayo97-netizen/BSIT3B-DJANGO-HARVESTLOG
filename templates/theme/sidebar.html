@@ -6,7 +6,7 @@
           <i class="fas fa-tractor"></i>
         </span>
         <span class="lh-1">
-          <span class="dh-brand-name">Harvest<span class="text-warning">Log</span></span>
+          <span class="dh-brand-name">Harvest<span class="text-warning">PH</span></span>
           <span class="dh-brand-sub">Management System</span>
         </span>
       </a>
@@ -35,16 +35,21 @@
         <li class="nav-item mb-1">
           <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
             <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="fa fa-dashboard"></i>
+              <i class="fa fa-chart-pie"></i>
             </span>
             <span class="nav-link-title">Dashboard</span>
           </a>
         </li>
-
+        
+        <li class="nav-item">
+          <span class="dh-nav-section">
+            Farm Section
+          </span>
+        </li>
         <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.app_name == 'farms' %}active{% endif %}" href="{% url 'farms:farm_list' %}">
             <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-seedling"></i>
+              <i class="nav-icon fas fa-map-marker-alt"></i>
             </span>
             <span class="nav-link-title">Farms</span>
           </a>
@@ -53,7 +58,7 @@
         <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.app_name == 'crops' %}active{% endif %}" href="{% url 'crops:crop_list' %}">
             <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-leaf"></i>
+              <i class="nav-icon fas fa-seedling"></i>
             </span>
             <span class="nav-link-title">Crops</span>
           </a>
@@ -62,12 +67,17 @@
         <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.app_name == 'harvests' %}active{% endif %}" href="{% url 'harvests:harvest_list' %}">
             <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-coins"></i>
+              <i class="nav-icon fas fa-clipboard-list"></i>
             </span>
             <span class="nav-link-title">Harvests</span>
           </a>
         </li>
-
+        <br>  
+        <li class="nav-item">
+          <span class="dh-nav-section">
+            Admin
+          </span>
+        </li>
         <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}" href="{% url 'users:user_list' %}">
             <span class="nav-link-icon d-md-none d-lg-inline-block">
@@ -77,14 +87,14 @@
           </a>
         </li>
 
-        <li class="nav-item">
+        {% comment %} <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.app_name == 'info' %}active{% endif %}" href="{% url 'info:info_list' %}">
             <span class="nav-link-icon d-md-none d-lg-inline-block">
               <i class="nav-icon fas fa-address-card"></i>
             </span>
             <span class="nav-link-title">Info</span>
           </a>
-        </li>
+        </li> {% endcomment %}
 
         {% if user.is_authenticated %}
         <li class="nav-item d-lg-none">

@@ -54,7 +54,7 @@ rel="stylesheet"
                 </div>
                 {% endif %}
 
-                <form method="POST" action="{% url 'register' %}">
+                <form method="POST" action="{% url 'register' %}" autocomplete="off">
                     {% csrf_token %}
 
                     <!-- First Name & Last Name -->
@@ -134,6 +134,7 @@ rel="stylesheet"
                             type="password"
                             name="password"
                             id="password"
+                            autocomplete="new-password"
                             class="form-control {% if errors.password %}is-invalid{% endif %}"
                             placeholder="Min. 8 characters">
                             <button class="btn btn-outline-secondary" type="button" id="togglePassword">
@@ -156,6 +157,7 @@ rel="stylesheet"
                             type="password"
                             name="confirm_password"
                             id="confirm_password"
+                            autocomplete="new-password"
                             class="form-control {% if errors.confirm_password %}is-invalid{% endif %}"
                             placeholder="Repeat your password">
                             <button class="btn btn-outline-secondary" type="button" id="toggleConfirm">

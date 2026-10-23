@@ -28,11 +28,11 @@
       <div class="card-body">
 
         <center class="mt-n4">
-        <i class='fas fa-tractor' style='font-size:40px'></i>
+        <i class='fas fa-tractor' style='font-size:50px'></i>
         </center>
-        <h2 class="h3 text-center mb-4">HarvestLog System</h2>
+        <h2 class="h3 text-center mb-4">Harvest System</h2>
 
-        <form method="post">
+        <form method="post" id="login-form" autocomplete="off">
           {% csrf_token %}
 
           {% if messages %}
@@ -44,17 +44,20 @@
           {% endif %}
           <div class="mb-3">
             <label class="form-label">Username</label>
-            <input type="text" class="form-control" name="username" autocomplete="off" {% if locked %}disabled{% endif %}>
+            <input type="text" class="form-control" name="username" id="login-username" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" {% if locked %}disabled{% endif %}>
           </div>
           <div class="mb-2">
             <label class="form-label">
               Password
             </label>
             <div class="input-group input-group-flat">
-              <input type="password" class="form-control" name="password" autocomplete="off" {% if locked %}disabled{% endif %}>
+              <input type="password" class="form-control" name="password" id="login-password" autocomplete="new-password" {% if locked %}disabled{% endif %}>
+              <button type="button" class="input-group-text" id="toggleLoginPassword" aria-label="Show password" style="cursor: pointer;" {% if locked %}disabled{% endif %}>
+                <i class="fas fa-eye" id="loginEyeIcon"></i>
+              </button>
             </div>
           </div>
-          <div class="form-footer d-flex justify-content-end">
+          <div class="form-footer d-flex justify-content-center">
             <button type="submit" class="btn btn-primary w-50">
               <i class="fas fa-sign-in-alt me-1"></i> Sign in
             </button>
@@ -154,6 +157,41 @@
 
     checkItems();
   });
+</script>
+<script>
+  (function () {
+    var form = document.getElementById("login-form");
+    if (!form) return;
+
+    var username = document.getElementById("login-username");
+    var password = document.getElementById("login-password");
+    var toggle = document.getElementById("toggleLoginPassword");
+    var eyeIcon = document.getElementById("loginEyeIcon");
+
+    function clearCredentials() {
+      if (username) username.value = "";
+      if (password) password.value = "";
+    }
+
+    // Clear anything the browser restored or auto-filled, including
+    // values kept in the back/forward cache.
+    document.addEventListener("DOMContentLoaded", clearCredentials);
+    window.addEventListener("pageshow", clearCredentials);
+    window.addEventListener("load", function () {
+      setTimeout(clearCredentials, 100);
+    });
+
+    if (toggle && password && eyeIcon) {
+      toggle.addEventListener("click", function () {
+        var show = password.type === "password";
+        password.type = show ? "text" : "password";
+
+        eyeIcon.classList.toggle("fa-eye", !show);
+        eyeIcon.classList.toggle("fa-eye-slash", show);
+        toggle.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      });
+    }
+  })();
 </script>
 </body>
 </html>
