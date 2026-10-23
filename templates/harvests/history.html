@@ -1,0 +1,479 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none" aria-label="Page header">
+    <div class="container-xl">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Harvests &amp; Monitoring</div>
+          <div class="d-flex align-items-center gap-3 flex-wrap d-none d-md-flex">
+            <h2 class="page-title mb-0">Harvest History</h2>
+          </div>
+          <h2 class="page-title mb-0 d-md-none">Harvest History</h2>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{% url 'harvests:harvest_list' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i> Back to Harvests
+            </a>
+            <a href="{% url 'harvests:harvest_history_export' %}{% if query_string %}?{{ query_string }}{% endif %}"
+               class="btn btn-primary">
+              <i class="fas fa-file-csv me-2"></i> Export CSV
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br>
+
+  <!-- Filters -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="GET" class="row g-3 align-items-end">
+        <div class="col-lg-4">
+          <label class="form-label">Search</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text"
+                   name="q"
+                   value="{{ query }}"
+                   class="form-control"
+                   placeholder="Harvest ID, crop, field, farm, or person">
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">From</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">To</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Farm</label>
+          <select name="farm" class="form-select">
+            <option value="">All farms</option>
+            {% for farm in farms %}
+            <option value="{{ farm.id }}" {% if farm_id == farm.id|stringformat:"s" %}selected{% endif %}>
+              {{ farm.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Crop</label>
+          <select name="crop" class="form-select">
+            <option value="">All crops</option>
+            {% for crop in crops %}
+            <option value="{{ crop.id }}" {% if crop_id == crop.id|stringformat:"s" %}selected{% endif %}>
+              {{ crop.name }} — {{ crop.farm.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Quality</label>
+          <select name="quality" class="form-select">
+            <option value="">All grades</option>
+            {% for value, label in quality_choices %}
+            <option value="{{ value }}" {% if quality == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Sort</label>
+          <select name="sort" class="form-select">
+            <option value="-harvest_date" {% if sort == '-harvest_date' %}selected{% endif %}>Date (newest)</option>
+            <option value="harvest_date" {% if sort == 'harvest_date' %}selected{% endif %}>Date (oldest)</option>
+            <option value="harvest_code" {% if sort == 'harvest_code' %}selected{% endif %}>Harvest ID (A-Z)</option>
+            <option value="crop_type" {% if sort == 'crop_type' %}selected{% endif %}>Crop (A-Z)</option>
+            <option value="-quantity" {% if sort == '-quantity' %}selected{% endif %}>Quantity (high-low)</option>
+            <option value="-workers" {% if sort == '-workers' %}selected{% endif %}>Workers (high-low)</option>
+            <option value="farm" {% if sort == 'farm' %}selected{% endif %}>Farm (A-Z)</option>
+          </select>
+        </div>
+        <div class="col-lg-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-filter me-1"></i> Apply filters
+          </button>
+          <a href="{% url 'harvests:harvest_history' %}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="row row-cards mb-3">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-primary-lt text-primary rounded-pill">Harvest records</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.total_harvests }}</h2>
+              <p class="text-muted small mb-0">Matching this history view</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-clipboard-list fa-2x text-primary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-success-lt text-success rounded-pill">Quantity</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.total_quantity|floatformat:2 }}</h2>
+              <p class="text-muted small mb-0">
+                {% for unit in unit_totals %}
+                  {{ unit.total|floatformat:2 }} {{ unit.unit }}{% if not forloop.last %} &middot; {% endif %}
+                {% empty %}
+                  No quantity recorded
+                {% endfor %}
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-weight-hanging fa-2x text-success"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-warning-lt text-warning rounded-pill">Workers</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.total_workers }}</h2>
+              <p class="text-muted small mb-0">Total workers across these harvests</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-users fa-2x text-warning"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-info-lt text-info rounded-pill">Farms</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.farm_count }}</h2>
+              <p class="text-muted small mb-0">Farms represented in this history</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-map-marker-alt fa-2x text-info"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monitoring panels -->
+  <div class="row row-cards mb-3">
+    <div class="col-lg-8">
+      <div class="card h-100">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Monthly Harvest Activity</h3>
+            <div class="text-muted small">Harvest records per month over the last 12 months.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="harvest-history-chart"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h3 class="card-title">Quality Mix</h3>
+        </div>
+        <div class="card-body">
+          {% for row in quality_rows %}
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="text-muted">{{ row.label }}</span>
+            <span class="fw-semibold">{{ row.records }} <span class="text-muted small">({{ row.percent }}%)</span></span>
+          </div>
+          <div class="progress progress-sm mb-3">
+            <div class="progress-bar bg-primary" style="width: {{ row.percent }}%"></div>
+          </div>
+          {% empty %}
+          <p class="text-muted mb-0">No quality data for this view.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-cards mb-3">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <h3 class="card-title">History by Farm</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="table card-table table-vcenter">
+            <thead>
+              <tr>
+                <th>Farm</th>
+                <th class="text-end">Records</th>
+                <th class="text-end">Workers</th>
+                <th class="text-end">Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in farm_rows %}
+              <tr>
+                <td class="fw-semibold">{{ row.farm__name }}</td>
+                <td class="text-end text-muted">{{ row.records }}</td>
+                <td class="text-end text-muted">{{ row.workers|default:0 }}</td>
+                <td class="text-end text-muted">{{ row.quantity|floatformat:2 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">No farm activity for this view.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <h3 class="card-title">History by Crop</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="table card-table table-vcenter">
+            <thead>
+              <tr>
+                <th>Crop</th>
+                <th class="text-end">Records</th>
+                <th class="text-end">Workers</th>
+                <th class="text-end">Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in crop_rows %}
+              <tr>
+                <td class="fw-semibold">{{ row.crop_type }}</td>
+                <td class="text-end text-muted">{{ row.records }}</td>
+                <td class="text-end text-muted">{{ row.workers|default:0 }}</td>
+                <td class="text-end text-muted">{{ row.quantity|floatformat:2 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">No crop activity for this view.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed history -->
+  <div class="card" id="history-records">
+    <div class="card-header">
+      <div class="card-title">
+        Historical Harvest Records
+        <span class="text-muted fw-normal">— {{ harvests.paginator.count }} record{{ harvests.paginator.count|pluralize }}</span>
+      </div>
+      <div class="card-actions">
+        <a href="{% url 'harvests:harvest_list' %}" class="btn btn-sm btn-outline-primary">
+          <i class="fas fa-clipboard-check me-1"></i> Manage Harvests
+        </a>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter table-hover card-table text-nowrap">
+        <thead>
+          <tr>
+            <th>Harvest ID</th>
+            <th>Date</th>
+            <th>Farm</th>
+            <th>Field</th>
+            <th>Crop</th>
+            <th>Quantity</th>
+            <th>Quality</th>
+            <th>Workers</th>
+            <th>Team Lead</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for harvest in harvests %}
+          <tr>
+            <td>
+              <a href="{% url 'harvests:harvest_list' %}?q={{ harvest.harvest_code|urlencode }}"
+                 class="fw-semibold text-primary">{{ harvest.harvest_code|default:"—" }}</a>
+              {% if harvest.schedule_id %}
+              <div class="text-muted small"><i class="fas fa-calendar-check me-1"></i>Scheduled harvest</div>
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ harvest.harvest_date|date:"M j, Y" }}</td>
+            <td class="fw-semibold">{{ harvest.farm.name }}</td>
+            <td class="text-muted">{{ harvest.location }}</td>
+            <td>
+              <div>{{ harvest.crop_type }}</div>
+              {% if harvest.crop %}
+              <div class="text-muted small">{{ harvest.crop.name }}</div>
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ harvest.quantity_harvested }} {{ harvest.unit }}</td>
+            <td>
+              {% if harvest.quality_grade == 'premium' %}
+              <span class="badge bg-success-lt text-success">{{ harvest.get_quality_grade_display }}</span>
+              {% elif harvest.quality_grade == 'grade_a' %}
+              <span class="badge bg-primary-lt text-primary">{{ harvest.get_quality_grade_display }}</span>
+              {% elif harvest.quality_grade == 'grade_b' %}
+              <span class="badge bg-info-lt text-info">{{ harvest.get_quality_grade_display }}</span>
+              {% elif harvest.quality_grade == 'grade_c' %}
+              <span class="badge bg-warning-lt text-warning">{{ harvest.get_quality_grade_display }}</span>
+              {% elif harvest.quality_grade == 'fair' %}
+              <span class="badge bg-secondary-lt text-secondary">{{ harvest.get_quality_grade_display }}</span>
+              {% else %}
+              <span class="badge bg-dark-lt text-dark">{{ harvest.get_quality_grade_display }}</span>
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ harvest.workers_count }}</td>
+            <td class="text-muted">
+              {{ harvest.harvested_by }}
+              {% if harvest.supervised_by %}
+              <div class="small">Supervisor: {{ harvest.supervised_by }}</div>
+              {% endif %}
+            </td>
+            <td class="text-muted" style="max-width: 240px; white-space: normal;">
+              {{ harvest.notes|default:"—"|truncatechars:100 }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10">
+              <div class="empty py-5">
+                <div class="empty-icon">
+                  <i class="fas fa-history fa-2x text-muted"></i>
+                </div>
+                <p class="empty-title">No harvest history found</p>
+                <p class="empty-subtitle">Try adjusting the filters or record a harvest first.</p>
+                <div class="empty-action">
+                  <a href="{% url 'harvests:harvest_history' %}" class="btn btn-outline-secondary me-2">Reset filters</a>
+                  <a href="{% url 'harvests:harvest_list' %}" class="btn btn-primary">Go to Harvests</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if harvests.paginator.num_pages > 1 %}
+    <div class="card-footer d-flex align-items-center">
+      <p class="m-0 text-muted">
+        Showing <span class="fw-medium">{{ harvests.start_index }}</span>
+        to <span class="fw-medium">{{ harvests.end_index }}</span>
+        of <span class="fw-medium">{{ harvests.paginator.count }}</span> harvest{{ harvests.paginator.count|pluralize }}
+      </p>
+      <ul class="pagination m-0 ms-auto">
+        {% if harvests.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ harvests.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">
+            <i class="ti ti-chevron-left"></i> prev
+          </a>
+        </li>
+        {% endif %}
+        {% for num in harvests.paginator.page_range %}
+        <li class="page-item {% if harvests.number == num %}active{% endif %}">
+          <a class="page-link" href="?page={{ num }}{% if query_string %}&{{ query_string }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if harvests.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ harvests.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">
+            next <i class="ti ti-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{{ monthly_labels|json_script:"harvest-monthly-labels" }}
+{{ monthly_counts|json_script:"harvest-monthly-counts" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    const chartEl = document.getElementById('harvest-history-chart');
+    const labelsEl = document.getElementById('harvest-monthly-labels');
+    const countsEl = document.getElementById('harvest-monthly-counts');
+
+    if (!chartEl || !labelsEl || !countsEl || !window.ApexCharts) return;
+
+    const labels = JSON.parse(labelsEl.textContent);
+    const counts = JSON.parse(countsEl.textContent);
+
+    new ApexCharts(chartEl, {
+      chart: {
+        type: 'bar',
+        height: 288,
+        fontFamily: 'inherit',
+        toolbar: { show: false },
+        animations: { enabled: false },
+      },
+      theme: { mode: 'dark' },
+      series: [{ name: 'Harvests', data: counts }],
+      colors: ['var(--tblr-primary)'],
+      plotOptions: {
+        bar: {
+          columnWidth: '45%',
+          borderRadius: 4,
+        },
+      },
+      dataLabels: { enabled: false },
+      grid: { strokeDashArray: 4 },
+      xaxis: {
+        categories: labels,
+        labels: {
+          rotate: -45,
+          rotateAlways: true,
+          style: { fontSize: '11px' },
+        },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+      },
+      yaxis: {
+        min: 0,
+        forceNiceScale: true,
+        labels: {
+          formatter: function (value) { return Math.round(value); },
+        },
+      },
+      tooltip: {
+        y: {
+          formatter: function (value) {
+            return value + ' harvest' + (value === 1 ? '' : 's');
+          },
+        },
+      },
+    }).render();
+  });
+})();
+</script>
+{% endblock %}

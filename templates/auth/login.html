@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark" data-bs-theme-primary="blue">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -20,7 +20,6 @@
 </head>
 
 <body>
-  <script src="{% static 'js/tabler-theme.js' %}"></script>
   <div class="page page-center">
     <div class="container container-tight py-4">
 
@@ -72,8 +71,6 @@
  </div> -->
 </div>
 
-{% include 'theme/settings.html' %}
-
 <script src="{% static 'js/tabler.js' %}" defer></script>
 <script src="{% static 'js/demo.js' %}" defer></script>
 {% if locked %}
@@ -95,69 +92,6 @@
   }, 1000);
 </script>
 {% endif %}
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    var themeConfig = {
-      theme: "light",
-      "theme-base": "gray",
-      "theme-font": "sans-serif",
-      "theme-primary": "blue",
-      "theme-radius": "1",
-    };
-
-    var url = new URL(window.location);
-    var form = document.getElementById("offcanvasSettings");
-    var resetButton = document.getElementById("reset-changes");
-
-    var checkItems = function () {
-      for (var key in themeConfig) {
-        var value =
-        window.localStorage["tabler-" + key] || themeConfig[key];
-
-        if (!!value) {
-          var radios = form.querySelectorAll(`[name="${key}"]`);
-
-          if (!!radios) {
-            radios.forEach((radio) => {
-              radio.checked = radio.value === value;
-            });
-          }
-        }
-      }
-    };
-
-    form.addEventListener("change", function (event) {
-      var target = event.target,
-      name = target.name,
-      value = target.value;
-
-      for (var key in themeConfig) {
-        if (name === key) {
-          document.documentElement.setAttribute("data-bs-" + key, value);
-          window.localStorage.setItem("tabler-" + key, value);
-          url.searchParams.set(key, value);
-        }
-      }
-
-      window.history.pushState({}, "", url);
-    });
-
-    resetButton.addEventListener("click", function () {
-      for (var key in themeConfig) {
-        var value = themeConfig[key];
-        document.documentElement.removeAttribute("data-bs-" + key);
-        window.localStorage.removeItem("tabler-" + key);
-        url.searchParams.delete(key);
-      }
-
-      checkItems();
-
-      window.history.pushState({}, "", url);
-    });
-
-    checkItems();
-  });
-</script>
 <script>
   (function () {
     var form = document.getElementById("login-form");

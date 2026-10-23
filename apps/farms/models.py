@@ -3,6 +3,14 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
+
+
+class FarmManager(models.Manager):
+    """Default manager that hides farms moved to the deleted log."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
 
 
 class Farm(models.Model):
@@ -30,6 +38,12 @@ class Farm(models.Model):
         choices=Status.choices,
         default=Status.ACTIVE,
     )
+    is_deleted = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text='Moves the farm to the deleted log without removing related records.',
+    )
+    deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     user = models.ForeignKey(
@@ -40,11 +54,28 @@ class Farm(models.Model):
         blank=True,
     )
 
+    objects = FarmManager()
+    all_objects = models.Manager()
+
     class Meta:
         db_table = 'tblfarms'
         ordering = ['-date_registered']
         verbose_name = 'farm'
         verbose_name_plural = 'farms'
+        default_manager_name = 'objects'
+        base_manager_name = 'all_objects'
 
     def __str__(self):
         return self.name
+
+    def soft_delete(self):
+        """Move the farm to the deleted log while preserving related records."""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at', 'updated_at'])
+
+    def restore(self):
+        """Restore a farm from the deleted log."""
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save(update_fields=['is_deleted', 'deleted_at', 'updated_at'])

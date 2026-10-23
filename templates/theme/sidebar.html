@@ -43,7 +43,7 @@
         
         <li class="nav-item">
           <span class="dh-nav-section">
-            Farm Section
+            Main Section
           </span>
         </li>
         <li class="nav-item">
@@ -51,7 +51,7 @@
             <span class="nav-link-icon d-md-none d-lg-inline-block">
               <i class="nav-icon fas fa-map-marker-alt"></i>
             </span>
-            <span class="nav-link-title">Farms</span>
+            <span class="nav-link-title">Farm Field</span>
           </a>
         </li>
 
@@ -65,11 +65,20 @@
         </li>
 
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'harvests' %}active{% endif %}" href="{% url 'harvests:harvest_list' %}">
+          <a class="nav-link {% if request.resolver_match.app_name == 'harvests' and request.resolver_match.url_name != 'harvest_history' %}active{% endif %}" href="{% url 'harvests:harvest_list' %}">
             <span class="nav-link-icon d-md-none d-lg-inline-block">
               <i class="nav-icon fas fa-clipboard-list"></i>
             </span>
             <span class="nav-link-title">Harvests</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'harvest_history' %}active{% endif %}" href="{% url 'harvests:harvest_history' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="nav-icon fas fa-history"></i>
+            </span>
+            <span class="nav-link-title">Harvest History</span>
           </a>
         </li>
         <br>  

@@ -39,13 +39,11 @@
     {% endfor %}
   </div>
 
-  <div id="farmAlert" class="alert alert-danger d-none" role="alert"></div>
-
   <!-- Search + filter toolbar -->
   <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-1">
     <form method="GET" class="w-100" style="max-width: 520px;">
       <div class="input-group">
-        <span class="input-group-text"><i class="ti ti-search"></i></span>
+        <span class="input-group-text"><i class="fas fa-search"></i></span>
         <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by name, owner, location, or description...">
         <select name="status" class="form-select" style="max-width: 160px;">
           <option value="">All statuses</option>
@@ -62,50 +60,57 @@
 
     <div class="btn-group mt-n4" role="group" aria-label="View mode">
       <button type="button" class="btn btn-outline-primary view-mode-btn active" data-view="table" title="List view">
-        <i class="ti ti-layout-list"></i>
+        <i class="fas fa-list"></i>
       </button>
       <button type="button" class="btn btn-outline-primary view-mode-btn" data-view="grid" title="Grid view">
-        <i class="ti ti-layout-grid"></i>
+        <i class="fas fa-th-large"></i>
       </button>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-header">
+    <div class="card-header flex-wrap gap-2">
       <div class="card-title">
         Registered Farms
         {% if query or status %}
         <span class="text-muted fw-normal">— {{ farms.paginator.count }} result{{ farms.paginator.count|pluralize }}</span>
         {% endif %}
       </div>
+      <div class="card-actions d-flex align-items-center gap-2">
+        <span class="badge bg-primary-lt text-primary text-nowrap">
+          Total Registered Farms: {{ total_farms }}
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-bs-toggle="modal" data-bs-target="#deletedFarmsModal">
+          <i class="fas fa-trash-alt text-danger me-1"></i> Deleted Log
+          <span class="badge bg-danger-lt text-danger ms-1">{{ deleted_count }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- TABLE VIEW -->
     <div id="farmTableView" class="table-responsive">
-      <table class="table table-vcenter table-hover card-table text-nowrap" id="farmsTable">
+      <table class="table table-vcenter table-hover card-table farm-table" id="farmsTable">
         <thead>
           <tr>
-            <th>#</th>
-            <th>Farm ID</th>
-            <th>Farm Name</th>
-            <th>Owner / Manager</th>
-            <th>Location</th>
-            <th>Size (ha)</th>
-            <th>Date Registered</th>
-            <th>Status</th>
-            <th class="w-1">Actions</th>
+            <th class="farm-col-name">Farm</th>
+            <th class="farm-col-location">Location</th>
+            <th class="farm-col-size">Size (ha)</th>
+            <th class="farm-col-date d-none d-xl-table-cell">Registered</th>
+            <th class="farm-col-status">Status</th>
           </tr>
         </thead>
         <tbody id="farmsTableBody">
         {% for farm in farms %}
         <tr data-row-id="{{ farm.id }}">
-            <td class="text-muted">{{ forloop.counter0|add:farms.start_index }}</td>
-            <td class="text-muted fw-normal">#{{ farm.id }}</td>
-            <td class="fw-semibold">{{ farm.name }}</td>
-            <td class="text-muted">{{ farm.owner }}</td>
-            <td class="text-muted">{{ farm.location }}</td>
-            <td class="text-muted">{{ farm.size_hectares }}</td>
-            <td class="text-muted">{{ farm.date_registered|date:"M j, Y" }}</td>
+            <td>
+              <div class="farm-name fw-semibold" title="{{ farm.name }}">{{ farm.name }}</div>
+              <div class="farm-owner text-muted small" title="{{ farm.owner }}">{{ farm.owner }}</div>
+            </td>
+            <td class="text-muted">
+              <div class="farm-location" title="{{ farm.location }}">{{ farm.location }}</div>
+            </td>
+            <td class="farm-size text-muted">{{ farm.size_hectares }}</td>
+            <td class="farm-col-date text-muted d-none d-xl-table-cell">{{ farm.date_registered|date:"M j, Y" }}</td>
             <td>
               {% if farm.status == 'active' %}
               <span class="badge bg-success-lt text-success">{{ farm.get_status_display }}</span>
@@ -115,31 +120,13 @@
               <span class="badge bg-danger-lt text-danger">{{ farm.get_status_display }}</span>
               {% endif %}
             </td>
-            <td>
-              <div class="d-flex gap-1">
-                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="view" data-id="{{ farm.id }}" title="View details">
-                  <i class="fas fa-eye text-info"></i>
-                </button>
-                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="edit" data-id="{{ farm.id }}" title="Edit farm">
-                  <i class="fas fa-edit text-primary"></i>
-                </button>
-                {% if farm.status != 'archived' %}
-                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-action="archive" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Archive farm">
-                  <i class="fas fa-box-archive text-warning"></i>
-                </button>
-                {% endif %}
-                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#deleteFarmModal" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Delete farm">
-                  <i class="fas fa-trash-alt text-danger"></i>
-                </button>
-              </div>
-            </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="9">
+            <td colspan="5">
                 <div class="empty py-5">
                     <div class="empty-icon">
-                        <i class="fas fa-seedling fa-2x text-muted"></i>
+                        <i class="fas fa-map-marker-alt fa-2x text-muted"></i>
                     </div>
                     <p class="empty-title">No farms found</p>
                     <p class="empty-subtitle">Try adjusting your search or register a new farm.</p>
@@ -159,28 +146,39 @@
     <!-- GRID VIEW -->
     <div id="farmGridView" class="row g-3 d-none">
       {% for farm in farms %}
-      <div class="col-12 col-sm-6 col-lg-4">
-        <div class="card h-100">
+      <div class="col-12 col-lg-6 col-xl-4">
+        <div class="card h-100 farm-grid-card">
           <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <h5 class="card-title mb-1">{{ farm.name }}</h5>
-              <span class="badge
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+              <h5 class="card-title farm-grid-title" title="{{ farm.name }}">{{ farm.name }}</h5>
+              <span class="badge farm-grid-status
                 {% if farm.status == 'active' %}bg-success-lt text-success
                 {% elif farm.status == 'inactive' %}bg-warning-lt text-warning
                 {% else %}bg-danger-lt text-danger{% endif %}">
                 {{ farm.get_status_display }}
               </span>
             </div>
-            <p class="card-text text-muted small mb-3">
-              <i class="fas fa-user me-1"></i> {{ farm.owner }}<br>
-              <i class="fas fa-map-marker-alt me-1"></i> {{ farm.location }}<br>
-              <i class="fas fa-hashtag me-1"></i> Farm ID #{{ farm.id }}<br>
-              <i class="fas fa-layer-group me-1"></i> {{ farm.size_hectares }} hectares<br>
-              <i class="fas fa-calendar me-1"></i> Registered {{ farm.date_registered|date:"M j, Y" }}
+            <div class="farm-grid-meta">
+              <div class="farm-grid-meta-row" title="{{ farm.owner }}">
+                <i class="fas fa-user"></i>
+                <span class="farm-grid-meta-text">{{ farm.owner }}</span>
+              </div>
+              <div class="farm-grid-meta-row" title="{{ farm.location }}">
+                <i class="fas fa-map-marker-alt"></i>
+                <span class="farm-grid-meta-text">{{ farm.location }}</span>
+              </div>
+              <div class="farm-grid-meta-row">
+                <i class="fas fa-layer-group"></i>
+                <span>{{ farm.size_hectares }} hectares</span>
+              </div>
+              <div class="farm-grid-meta-row">
+                <i class="fas fa-calendar"></i>
+                <span>Registered {{ farm.date_registered|date:"M j, Y" }}</span>
+              </div>
+            </div>
+            <p class="farm-grid-description text-muted small">
+              {% if farm.description %}{{ farm.description }}{% else %}<span class="fst-italic opacity-50">No description provided</span>{% endif %}
             </p>
-            {% if farm.description %}
-            <p class="card-text text-muted small">{{ farm.description }}</p>
-            {% endif %}
           </div>
           <div class="card-footer d-flex gap-1">
             <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="view" data-id="{{ farm.id }}" title="View details">
@@ -207,7 +205,7 @@
       {% empty %}
       <div class="col-12">
         <div class="empty py-5 text-center">
-          <div class="empty-icon"><i class="fas fa-seedling fa-2x text-muted"></i></div>
+          <div class="empty-icon"><i class="fas fa-map-marker-alt fa-2x text-muted"></i></div>
           <p class="empty-title">No farms found</p>
           <p class="empty-subtitle">Try adjusting your search or register a new farm.</p>
         </div>
@@ -227,7 +225,7 @@
         {% if farms.has_previous %}
         <li class="page-item">
           <a class="page-link" href="?page={{ farms.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
-            <i class="ti ti-chevron-left"></i> prev
+            <i class="fas fa-chevron-left"></i> prev
           </a>
         </li>
         {% endif %}
@@ -239,7 +237,7 @@
         {% if farms.has_next %}
         <li class="page-item">
           <a class="page-link" href="?page={{ farms.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
-            next <i class="ti ti-chevron-right"></i>
+            next <i class="fas fa-chevron-right"></i>
           </a>
         </li>
         {% endif %}
@@ -315,11 +313,127 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="text-muted">Are you sure you want to delete <strong id="deleteFarmName"></strong>? This cannot be undone.</p>
+        <p class="text-muted">Are you sure you want to delete <strong id="deleteFarmName"></strong>? It will be moved to <strong>Deleted Log</strong>, where you can restore it later.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-danger" id="confirmDeleteFarmBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Deleted Farms Log Modal -->
+<div class="modal modal-blur fade" id="deletedFarmsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title"><i class="fas fa-trash-alt text-danger me-2"></i>Deleted Log</h5>
+          <div class="text-muted small mt-1">Restore farms, or permanently delete them when you no longer need their records.</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        {% if deleted_farms %}
+        <form method="post" action="{% url 'farms:farm_bulk_restore' %}" id="deletedFarmsBulkForm">
+          {% csrf_token %}
+          <div class="table-responsive">
+            <table class="table table-vcenter card-table mb-0">
+              <thead>
+                <tr>
+                  <th class="w-1">
+                    <input type="checkbox"
+                           class="form-check-input m-0"
+                           id="selectAllDeletedFarms"
+                           title="Select all"
+                           aria-label="Select all deleted farms">
+                  </th>
+                  <th>Farm</th>
+                  <th class="d-none d-md-table-cell">Location</th>
+                  <th class="d-none d-lg-table-cell">Status</th>
+                  <th>Deleted</th>
+                  <th class="w-1"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for farm in deleted_farms %}
+                <tr>
+                  <td class="w-1">
+                    <input type="checkbox"
+                           class="form-check-input m-0 deleted-farm-checkbox"
+                           name="farm_ids"
+                           value="{{ farm.id }}"
+                           aria-label="Select {{ farm.name }}">
+                  </td>
+                  <td>
+                    <div class="fw-semibold">{{ farm.name }}</div>
+                    <div class="text-muted small">{{ farm.owner }}</div>
+                  </td>
+                  <td class="text-muted d-none d-md-table-cell">{{ farm.location }}</td>
+                  <td class="d-none d-lg-table-cell">
+                    {% if farm.status == 'active' %}
+                    <span class="badge bg-success-lt text-success">{{ farm.get_status_display }}</span>
+                    {% elif farm.status == 'inactive' %}
+                    <span class="badge bg-warning-lt text-warning">{{ farm.get_status_display }}</span>
+                    {% else %}
+                    <span class="badge bg-danger-lt text-danger">{{ farm.get_status_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-muted small">
+                    {% if farm.deleted_at %}{{ farm.deleted_at|date:"M j, Y g:i A" }}{% else %}—{% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end flex-wrap">
+                      <button type="submit"
+                              formaction="{% url 'farms:farm_restore' farm.id %}"
+                              class="btn btn-sm btn-outline-success text-nowrap">
+                        <i class="fas fa-undo me-1"></i> Restore
+                      </button>
+                      <button type="submit"
+                              formaction="{% url 'farms:farm_permanent_delete' farm.id %}"
+                              class="btn btn-sm btn-outline-danger text-nowrap permanent-delete-btn"
+                              data-name="{{ farm.name|escape }}"
+                              title="Permanently delete this farm">
+                        <i class="fas fa-trash-alt me-1"></i> Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </form>
+        {% else %}
+        <div class="empty py-5">
+          <div class="empty-icon"><i class="fas fa-trash-alt fa-2x text-muted"></i></div>
+          <p class="empty-title">No deleted farms</p>
+          <p class="empty-subtitle">Farms you delete will appear here so you can restore them.</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        {% if deleted_farms %}
+        <span class="text-muted small me-auto" id="deletedSelectedCount" aria-live="polite">0 selected</span>
+        <button type="submit"
+                form="deletedFarmsBulkForm"
+                formaction="{% url 'farms:farm_bulk_restore' %}"
+                id="bulkRestoreBtn"
+                class="btn btn-outline-success text-nowrap"
+                disabled>
+          <i class="fas fa-undo me-1"></i> Restore Selected
+        </button>
+        <button type="submit"
+                form="deletedFarmsBulkForm"
+                formaction="{% url 'farms:farm_bulk_permanent_delete' %}"
+                id="bulkDeleteBtn"
+                class="btn btn-danger text-nowrap"
+                disabled>
+          <i class="fas fa-trash-alt me-1"></i> Delete Selected
+        </button>
+        {% endif %}
+        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
@@ -329,6 +443,7 @@
 {% block extra_js %}
 <script>
 (function () {
+  const LIST_PAGE_URL = '{% url "farms:farm_list" %}';
   const LIST_URL    = '{% url "farms:farm_list_ajax" %}';
   const GET_URL     = '{% url "farms:farm_get_ajax" 0 %}'.replace('/0/', '/');
   const SAVE_URL    = '{% url "farms:farm_save_ajax" %}';
@@ -340,7 +455,7 @@
   const modalEl     = document.getElementById('farmModal');
   const deleteModal = document.getElementById('deleteFarmModal');
   const form        = document.getElementById('farmForm');
-  const alertBox    = document.getElementById('farmAlert');
+  const alertBox    = document.getElementById('farmFormError');
   const title       = document.getElementById('farmModalTitle');
   const submitBtn   = document.getElementById('farmSubmitBtn');
   const deleteBtn   = document.getElementById('confirmDeleteFarmBtn');
@@ -354,6 +469,12 @@
     return m ? decodeURIComponent(m[2]) : null;
   }
   const csrftoken = getCookie('csrftoken');
+
+  function localDateTimeValue() {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  }
 
   function showFormError(msg) {
     alertBox.textContent = msg;
@@ -369,26 +490,128 @@
     bootstrap.Toast.getOrCreateInstance(el).show();
   });
 
-  // View mode toggle
-  document.querySelectorAll('.view-mode-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('.view-mode-btn').forEach(function (b) {
-        b.classList.remove('active');
-        b.classList.add('btn-outline-primary');
-        b.classList.remove('btn-primary');
+  // Deleted Log: select-all support and permanent-delete confirmation.
+  const deletedBulkForm = document.getElementById('deletedFarmsBulkForm');
+  const selectAllDeleted = document.getElementById('selectAllDeletedFarms');
+  const deletedCheckboxes = Array.from(document.querySelectorAll('.deleted-farm-checkbox'));
+  const bulkRestoreBtn = document.getElementById('bulkRestoreBtn');
+  const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+  const deletedSelectedCount = document.getElementById('deletedSelectedCount');
+
+  function selectedDeletedCount() {
+    return deletedCheckboxes.filter(function (checkbox) {
+      return checkbox.checked;
+    }).length;
+  }
+
+  function updateDeletedSelection() {
+    const count = selectedDeletedCount();
+    if (selectAllDeleted) {
+      selectAllDeleted.checked = deletedCheckboxes.length > 0 && count === deletedCheckboxes.length;
+      selectAllDeleted.indeterminate = count > 0 && count < deletedCheckboxes.length;
+    }
+    if (deletedSelectedCount) {
+      deletedSelectedCount.textContent = count + ' selected';
+    }
+    if (bulkRestoreBtn) bulkRestoreBtn.disabled = count === 0;
+    if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
+  }
+
+  if (selectAllDeleted) {
+    selectAllDeleted.addEventListener('change', function () {
+      deletedCheckboxes.forEach(function (checkbox) {
+        checkbox.checked = selectAllDeleted.checked;
       });
-      btn.classList.remove('btn-outline-primary');
-      btn.classList.add('btn-primary', 'active');
-      const view = btn.dataset.view;
-      if (view === 'table') {
-        tableView.classList.remove('d-none');
-        gridView.classList.add('d-none');
-      } else {
-        tableView.classList.add('d-none');
-        gridView.classList.remove('d-none');
+      updateDeletedSelection();
+    });
+  }
+
+  deletedCheckboxes.forEach(function (checkbox) {
+    checkbox.addEventListener('change', updateDeletedSelection);
+  });
+  updateDeletedSelection();
+
+  const deletedFarmsModalEl = document.getElementById('deletedFarmsModal');
+  if (deletedFarmsModalEl && deletedBulkForm) {
+    deletedFarmsModalEl.addEventListener('hidden.bs.modal', function () {
+      deletedBulkForm.reset();
+      updateDeletedSelection();
+    });
+  }
+
+  if (bulkDeleteBtn) {
+    bulkDeleteBtn.addEventListener('click', function (event) {
+      const count = selectedDeletedCount();
+      if (count === 0) {
+        event.preventDefault();
+        return;
+      }
+      const confirmed = window.confirm(
+        `Permanently delete ${count} selected farm${count === 1 ? '' : 's'}?\n\n` +
+        'This will also permanently delete their crops and harvest records. ' +
+        'This cannot be undone.'
+      );
+      if (!confirmed) {
+        event.preventDefault();
+      }
+    });
+  }
+
+  document.querySelectorAll('.permanent-delete-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (event) {
+      const name = btn.dataset.name || 'this farm';
+      const confirmed = window.confirm(
+        `Permanently delete farm "${name}"?\n\n` +
+        'This will also permanently delete its crops and harvest records. ' +
+        'This cannot be undone.'
+      );
+      if (!confirmed) {
+        event.preventDefault();
       }
     });
   });
+
+  // View mode toggle: remember the choice so editing in the grid view does
+  // not send the user back to the list view after a reload.
+  const VIEW_MODE_KEY = 'harvestlogFarmViewMode';
+
+  function getSavedViewMode() {
+    try {
+      return localStorage.getItem(VIEW_MODE_KEY) === 'grid' ? 'grid' : 'table';
+    } catch (err) {
+      return 'table';
+    }
+  }
+
+  function saveViewMode(view) {
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, view);
+    } catch (err) {
+      // Ignore storage errors (for example, private browsing).
+    }
+  }
+
+  function applyViewMode(view) {
+    const showGrid = view === 'grid';
+    tableView.classList.toggle('d-none', showGrid);
+    gridView.classList.toggle('d-none', !showGrid);
+    document.querySelectorAll('.view-mode-btn').forEach(function (btn) {
+      const active = btn.dataset.view === view;
+      btn.classList.toggle('active', active);
+      btn.classList.toggle('btn-primary', active);
+      btn.classList.toggle('btn-outline-primary', !active);
+    });
+  }
+
+  document.querySelectorAll('.view-mode-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const view = btn.dataset.view === 'grid' ? 'grid' : 'table';
+      saveViewMode(view);
+      applyViewMode(view);
+    });
+  });
+
+  applyViewMode(getSavedViewMode());
 
   function resetForm() {
     form.reset();
@@ -397,10 +620,11 @@
     currentMode = 'create';
     title.textContent = 'Register Farm';
     submitBtn.textContent = 'Save Farm';
+    submitBtn.disabled = false;
     clearFormError();
-    // Default status to Active, date to now
+    // Default status to Active, date to now (local time)
     document.getElementById('farm_status').value = 'active';
-    document.getElementById('farm_date_registered').value = new Date().toISOString().slice(0, 16);
+    document.getElementById('farm_date_registered').value = localDateTimeValue();
   }
 
   modalEl.addEventListener('show.bs.modal', function (event) {
@@ -498,8 +722,15 @@
       return data;
     })
     .then(() => {
+      const wasCreate = currentMode === 'create';
       bootstrap.Modal.getInstance(modalEl).hide();
-      location.reload();
+      // Clear any active search/status filters after creating a farm so the
+      // new record is visible on the reloaded list.
+      if (wasCreate) {
+        window.location.href = LIST_PAGE_URL;
+      } else {
+        location.reload();
+      }
     })
     .catch((err) => {
       showFormError(err.message);

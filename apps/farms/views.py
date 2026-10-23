@@ -1,13 +1,15 @@
 """Farm registration and management views."""
 
+from datetime import datetime, time
+
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date, parse_datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .models import Farm
@@ -19,6 +21,30 @@ def _parse_size(raw_size):
         value = float(raw_size)
     except (TypeError, ValueError):
         return None
+    return value
+
+
+def _selected_farm_ids(request):
+    """Return valid farm IDs submitted by a bulk action."""
+    farm_ids = []
+    for raw_id in request.POST.getlist('farm_ids'):
+        try:
+            farm_ids.append(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+    return farm_ids
+
+
+def _parse_registered_at(raw_value):
+    """Parse a datetime-local or date value into an aware datetime."""
+    value = parse_datetime(raw_value)
+    if value is None:
+        date_value = parse_date(raw_value)
+        if date_value is None:
+            return None
+        value = datetime.combine(date_value, time.min)
+    if timezone.is_naive(value):
+        value = timezone.make_aware(value)
     return value
 
 
@@ -44,7 +70,9 @@ def farm_list_page(request):
     query = request.GET.get('q', '').strip()
     status = request.GET.get('status', '').strip()
 
-    farms_list = Farm.objects.filter(user=request.user).order_by('-date_registered')
+    user_farms = Farm.objects.filter(user=request.user)
+    total_farms = user_farms.count()
+    farms_list = user_farms.order_by('-date_registered', '-id')
 
     if query:
         farms_list = farms_list.filter(
@@ -62,11 +90,19 @@ def farm_list_page(request):
     page_number = request.GET.get('page', 1)
     farms = paginator.get_page(page_number)
 
+    deleted_farms = (
+        Farm.all_objects.filter(user=request.user, is_deleted=True)
+        .order_by('-deleted_at', '-id')
+    )
+
     return render(request, 'farms/list.html', {
         'farms': farms,
         'query': query,
         'status': status,
         'status_choices': Farm.Status.choices,
+        'total_farms': total_farms,
+        'deleted_farms': deleted_farms,
+        'deleted_count': deleted_farms.count(),
     })
 
 
@@ -76,7 +112,7 @@ def farm_list_ajax(request):
     query = request.GET.get('q', '').strip()
     status = request.GET.get('status', '').strip()
 
-    farms_list = Farm.objects.filter(user=request.user).order_by('-date_registered')
+    farms_list = Farm.objects.filter(user=request.user).order_by('-date_registered', '-id')
 
     if query:
         farms_list = farms_list.filter(
@@ -151,7 +187,7 @@ def farm_save_ajax(request):
         return JsonResponse({'error': 'Please select a valid farm status.'}, status=400)
 
     if date_registered_raw:
-        date_registered_value = parse_datetime(date_registered_raw)
+        date_registered_value = _parse_registered_at(date_registered_raw)
         if date_registered_value is None:
             return JsonResponse(
                 {'error': 'Enter a valid date registered.'},
@@ -190,15 +226,96 @@ def farm_save_ajax(request):
 @login_required(login_url='login')
 @require_POST
 def farm_delete_ajax(request, pk):
-    """Delete the specified signed-in user's farm and confirm as JSON."""
+    """Move the specified farm to the deleted log and confirm as JSON."""
     farm = get_object_or_404(Farm, pk=pk, user=request.user)
     farm_name = farm.name
-    farm.delete()
-    messages.success(request, f'Farm "{farm_name}" has been deleted successfully.')
+    farm.soft_delete()
+    message = (
+        f'Farm "{farm_name}" has been moved to the deleted log. '
+        'You can restore it from Deleted Farms.'
+    )
+    messages.success(request, message)
     return JsonResponse({
         'status': 'deleted',
-        'message': f'Farm "{farm_name}" has been deleted successfully.',
+        'message': message,
     })
+
+
+@login_required(login_url='login')
+@require_POST
+def farm_restore(request, pk):
+    """Restore a farm from the deleted log."""
+    farm = Farm.all_objects.filter(
+        pk=pk,
+        user=request.user,
+        is_deleted=True,
+    ).first()
+    if farm is None:
+        messages.error(request, 'That deleted farm could not be found.')
+        return redirect('farms:farm_list')
+
+    farm.restore()
+    messages.success(request, f'Farm "{farm.name}" has been restored successfully.')
+    return redirect('farms:farm_list')
+
+
+@login_required(login_url='login')
+@require_POST
+def farm_permanent_delete(request, pk):
+    """Permanently delete a farm that is already in the deleted log."""
+    farm = get_object_or_404(
+        Farm.all_objects,
+        pk=pk,
+        user=request.user,
+        is_deleted=True,
+    )
+    farm_name = farm.name
+    farm.delete()
+    messages.success(request, f'Farm "{farm_name}" has been permanently deleted.')
+    return redirect('farms:farm_list')
+
+
+@login_required(login_url='login')
+@require_POST
+def farm_bulk_restore(request):
+    """Restore selected farms from the deleted log."""
+    farms = Farm.all_objects.filter(
+        pk__in=_selected_farm_ids(request),
+        user=request.user,
+        is_deleted=True,
+    )
+    count = farms.count()
+    if count == 0:
+        messages.error(request, 'Select at least one deleted farm to restore.')
+        return redirect('farms:farm_list')
+
+    farms.update(is_deleted=False, deleted_at=None, updated_at=timezone.now())
+    noun = 'farm' if count == 1 else 'farms'
+    messages.success(request, f'{count} {noun} restored successfully.')
+    return redirect('farms:farm_list')
+
+
+@login_required(login_url='login')
+@require_POST
+def farm_bulk_permanent_delete(request):
+    """Permanently delete selected farms from the deleted log."""
+    farms = Farm.all_objects.filter(
+        pk__in=_selected_farm_ids(request),
+        user=request.user,
+        is_deleted=True,
+    )
+    count = farms.count()
+    if count == 0:
+        messages.error(request, 'Select at least one deleted farm to permanently delete.')
+        return redirect('farms:farm_list')
+
+    farms.delete()
+    noun = 'farm' if count == 1 else 'farms'
+    messages.success(
+        request,
+        f'{count} {noun} permanently deleted, including related crops and harvest records.',
+    )
+    return redirect('farms:farm_list')
 
 
 @login_required(login_url='login')

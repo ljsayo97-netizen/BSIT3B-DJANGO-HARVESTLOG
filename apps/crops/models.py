@@ -6,6 +6,10 @@ from django.db import models
 from django.utils import timezone
 
 
+HARVEST_APPROACHING_DAYS = 14
+HARVEST_UPCOMING_WINDOW_DAYS = 30
+
+
 class Crop(models.Model):
     """A crop planted on a farm."""
 
@@ -70,3 +74,42 @@ class Crop(models.Model):
         if self.expected_harvest_date:
             return (self.expected_harvest_date - timezone.localdate()).days
         return None
+
+    @property
+    def maturity_status(self):
+        """Return the crop's harvest-readiness stage."""
+        if self.actual_harvest_date or self.status == self.Status.HARVESTED:
+            return 'harvested'
+        if self.status == self.Status.FAILED:
+            return 'failed'
+
+        days = self.days_to_harvest
+        if self.status == self.Status.READY_FOR_HARVEST or (days is not None and days <= 0):
+            return 'ready'
+        if days is not None and days <= HARVEST_APPROACHING_DAYS:
+            return 'approaching'
+        return 'upcoming'
+
+    @property
+    def maturity_label(self):
+        labels = {
+            'ready': 'Ready for harvest',
+            'approaching': 'Approaching harvest',
+            'upcoming': 'Upcoming harvest',
+            'harvested': 'Harvested',
+            'failed': 'Failed',
+        }
+        return labels.get(self.maturity_status, 'Upcoming harvest')
+
+    @property
+    def days_to_harvest_label(self):
+        days = self.days_to_harvest
+        if days is None:
+            return 'Ready now' if self.maturity_status == 'ready' else '—'
+        if days == 0:
+            return 'Today'
+        if days == 1:
+            return 'Tomorrow'
+        if days > 0:
+            return f'In {days} days'
+        return f'{abs(days)} day{"s" if abs(days) != 1 else ""} overdue'

@@ -9,11 +9,6 @@ from django.core.validators import validate_email
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
-from django.db.models import Sum
-
-from apps.crops.models import Crop
-from apps.farms.models import Farm
-from apps.harvests.models import Harvest
 
 User = get_user_model()
 
@@ -145,38 +140,8 @@ def logout_view(request):
 
 @login_required(login_url='login')
 def home(request):
-    users = User.objects.all()
-
-    # Farm summary for the signed-in user's dashboard
-    user_farms = Farm.objects.filter(user=request.user).order_by('name')
-    total_farms = user_farms.count()
-    active_farms = user_farms.filter(status=Farm.Status.ACTIVE).count()
-    inactive_farms = user_farms.filter(status=Farm.Status.INACTIVE).count()
-    archived_farms = user_farms.filter(status=Farm.Status.ARCHIVED).count()
-    recent_farms = user_farms.order_by('-date_registered')[:5]
-
-    # Harvest summary for the signed-in user's dashboard
-    user_harvests = Harvest.objects.filter(user=request.user)
-    total_harvests = user_harvests.count()
-    total_quantity = user_harvests.aggregate(total=Sum('quantity_harvested'))['total'] or 0
-    recent_harvests = user_harvests.select_related('farm', 'crop').order_by('-harvest_date')[:5]
-
-    # Crops for the harvest modal dropdown
-    crops = Crop.objects.filter(user=request.user).order_by('name')
-
-    return render(request, 'home.html', {
-        'users': users,
-        'farms': user_farms,
-        'crops': crops,
-        'total_farms': total_farms,
-        'active_farms': active_farms,
-        'inactive_farms': inactive_farms,
-        'archived_farms': archived_farms,
-        'recent_farms': recent_farms,
-        'total_harvests': total_harvests,
-        'total_quantity': total_quantity,
-        'recent_harvests': recent_harvests,
-    })
+    """Render the dashboard shell."""
+    return render(request, 'home.html')
 
 
 @require_http_methods(['GET', 'POST'])

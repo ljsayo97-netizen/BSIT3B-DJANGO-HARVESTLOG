@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark" data-bs-theme-primary="blue">
 <head>
   <meta charset="utf-8" />
   <meta
@@ -30,7 +30,6 @@ rel="stylesheet"
 </style>
 </head>
 <body class="antialiased">
-    <script src="{% static 'js/tabler-theme.js' %}"></script>
     <div class="page page-center">
         <div class="container container-tight py-4">
 
@@ -188,7 +187,6 @@ rel="stylesheet"
 
     </div>
 </div>
-{% include 'theme/settings.html' %}
 
 <script src="{% static 'js/tabler.js' %}" defer></script>
 <script src="{% static 'js/demo.js' %}" defer></script>
