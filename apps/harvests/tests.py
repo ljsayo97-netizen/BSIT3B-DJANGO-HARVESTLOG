@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+import re
+
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from django.test import RequestFactory, TestCase
@@ -573,3 +575,42 @@ class HarvestHistoryTests(TestCase):
 
         self.assertIn(self.harvest.harvest_code, content)
         self.assertNotIn(other_harvest.harvest_code, content)
+
+
+class HarvestListScriptTests(TestCase):
+    """Guard the harvest list page's inline script against dead references.
+
+    A getElementById() call on a missing element returns null, and the
+    resulting TypeError aborts the whole script, silently unregistering the
+    form submit handlers so harvests and schedules can no longer be saved.
+    """
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='farmer', password='secret1234'
+        )
+
+    def test_script_only_references_element_ids_that_exist(self):
+        request = RequestFactory().get(reverse('harvests:harvest_list'))
+        request.user = self.user
+
+        response = harvest_list_page(request)
+        content = response.content.decode()
+
+        referenced = set(re.findall(r"getElementById\('([^']+)'\)", content))
+        missing = sorted(ref for ref in referenced if f'id="{ref}"' not in content)
+
+        self.assertEqual(
+            missing,
+            [],
+            f'Script references element ids that are not in the page: {missing}',
+        )
+
+        ids = re.findall(r'\sid="([^"]+)"', content)
+        duplicates = sorted({element_id for element_id in ids if ids.count(element_id) > 1})
+
+        self.assertEqual(
+            duplicates,
+            [],
+            f'Duplicate element ids in the page: {duplicates}',
+        )

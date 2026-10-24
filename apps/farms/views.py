@@ -6,7 +6,9 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.core.validators import validate_email
 from django.db import connection, transaction
 from django.db.models import Q
 from django.http import JsonResponse
@@ -90,6 +92,10 @@ def _farm_json(farm):
         'name': farm.name,
         'owner': farm.owner,
         'location': farm.location,
+        'farm_code': farm.farm_code,
+        'email': farm.email,
+        'contact_number': farm.contact_number,
+        'zip_code': farm.zip_code,
         'size_hectares': float(farm.size_hectares),
         'description': farm.description,
         'date_registered': farm.date_registered.isoformat(),
@@ -202,6 +208,10 @@ def farm_save_ajax(request):
     description = request.POST.get('description', '').strip()
     date_registered_raw = request.POST.get('date_registered', '').strip()
     status = request.POST.get('status', '').strip()
+    # The farm ID is auto-generated, so anything posted for it is ignored.
+    email = request.POST.get('email', '').strip()
+    contact_number = request.POST.get('contact_number', '').strip()
+    zip_code = request.POST.get('zip_code', '').strip()
 
     if not name:
         return JsonResponse({'error': 'Farm name is required.'}, status=400)
@@ -209,6 +219,25 @@ def farm_save_ajax(request):
         return JsonResponse({'error': 'Owner / manager is required.'}, status=400)
     if not location:
         return JsonResponse({'error': 'Location is required.'}, status=400)
+
+    if email:
+        try:
+            validate_email(email)
+        except ValidationError:
+            return JsonResponse(
+                {'error': 'Enter a valid email address.'},
+                status=400,
+            )
+    if len(contact_number) > 50:
+        return JsonResponse(
+            {'error': 'Contact number must be 50 characters or fewer.'},
+            status=400,
+        )
+    if len(zip_code) > 20:
+        return JsonResponse(
+            {'error': 'ZIP code must be 20 characters or fewer.'},
+            status=400,
+        )
 
     size_value = _parse_size(size_raw)
     if size_value is None or size_value < 0:
@@ -234,6 +263,9 @@ def farm_save_ajax(request):
     farm.name = name
     farm.owner = owner
     farm.location = location
+    farm.email = email
+    farm.contact_number = contact_number
+    farm.zip_code = zip_code
     farm.size_hectares = size_value
     farm.description = description
     farm.date_registered = date_registered_value

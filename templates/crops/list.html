@@ -397,7 +397,9 @@
     resetForm();
   });
 
-  clearBtn.addEventListener('click', resetForm);
+  if (clearBtn) {
+    clearBtn.addEventListener('click', resetForm);
+  }
 
   deleteModal.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;

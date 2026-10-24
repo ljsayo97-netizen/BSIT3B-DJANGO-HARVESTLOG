@@ -159,6 +159,10 @@
               </span>
             </div>
             <div class="farm-grid-meta">
+              <div class="farm-grid-meta-row" title="Farm ID">
+                <i class="fas fa-hashtag"></i>
+                <span class="farm-grid-meta-text">{{ farm.farm_code|default:"—" }}</span>
+              </div>
               <div class="farm-grid-meta-row" title="{{ farm.owner }}">
                 <i class="fas fa-user"></i>
                 <span class="farm-grid-meta-text">{{ farm.owner }}</span>
@@ -167,6 +171,24 @@
                 <i class="fas fa-map-marker-alt"></i>
                 <span class="farm-grid-meta-text">{{ farm.location }}</span>
               </div>
+              {% if farm.email %}
+              <div class="farm-grid-meta-row" title="{{ farm.email }}">
+                <i class="fas fa-envelope"></i>
+                <span class="farm-grid-meta-text">{{ farm.email }}</span>
+              </div>
+              {% endif %}
+              {% if farm.contact_number %}
+              <div class="farm-grid-meta-row" title="{{ farm.contact_number }}">
+                <i class="fas fa-phone"></i>
+                <span class="farm-grid-meta-text">{{ farm.contact_number }}</span>
+              </div>
+              {% endif %}
+              {% if farm.zip_code %}
+              <div class="farm-grid-meta-row" title="ZIP Code {{ farm.zip_code }}">
+                <i class="fas fa-map-pin"></i>
+                <span class="farm-grid-meta-text">ZIP {{ farm.zip_code }}</span>
+              </div>
+              {% endif %}
               <div class="farm-grid-meta-row">
                 <i class="fas fa-layer-group"></i>
                 <span>{{ farm.size_hectares }} hectares</span>
@@ -273,9 +295,27 @@
               <label class="form-label">Location <span class="text-danger">*</span></label>
               <input type="text" name="location" id="farm_location" class="form-control" required>
             </div>
+            <div class="col-12">
+              <label class="form-label">Farm ID</label>
+              <input type="text" id="farm_code" class="form-control" readonly
+                     placeholder="Auto-generated (e.g. FARM-0001)">
+              <div class="form-hint">Assigned automatically when the farm is saved.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" id="farm_email" class="form-control" placeholder="">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact Number</label>
+              <input type="text" name="contact_number" id="farm_contact_number" class="form-control" placeholder="09XX-XXX-XXXX">
+            </div>
+            <div class="col-12">
+              <label class="form-label">ZIP Code</label>
+              <input type="text" name="zip_code" id="farm_zip_code" class="form-control" placeholder=" 3300">
+            </div>
             <div class="col-6">
               <label class="form-label">Farm Size (hectares) <span class="text-danger">*</span></label>
-              <input type="number" name="size_hectares" id="farm_size_hectares" class="form-control" step="0.01" min="0" required placeholder="0.00">
+              <input type="number" name="size_hectares" id="farm_size_hectares" class="form-control" step="00.00" min="0" required placeholder="0.00">
             </div>
             <div class="col-6">
               <label class="form-label">Date Registered <span class="text-danger">*</span></label>
@@ -623,6 +663,8 @@
     });
     form.reset();
     document.getElementById('farm_id').value = '';
+    // The Farm ID field has no name (it is never posted), so reset() skips it.
+    document.getElementById('farm_code').value = '';
     currentId = null;
     currentMode = 'create';
     title.textContent = 'Register Farm';
@@ -634,6 +676,7 @@
     document.getElementById('farm_date_registered').value = localDateTimeValue();
   }
 
+  if (modalEl) {
   modalEl.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     if (!button) {
@@ -664,6 +707,10 @@
         document.getElementById('farm_name').value        = data.name || '';
         document.getElementById('farm_owner').value       = data.owner || '';
         document.getElementById('farm_location').value    = data.location || '';
+        document.getElementById('farm_code').value        = data.farm_code || '';
+        document.getElementById('farm_email').value       = data.email || '';
+        document.getElementById('farm_contact_number').value = data.contact_number || '';
+        document.getElementById('farm_zip_code').value     = data.zip_code || '';
         document.getElementById('farm_size_hectares').value = data.size_hectares || '';
         document.getElementById('farm_date_registered').value = data.date_registered ? data.date_registered.slice(0, 16) : '';
         document.getElementById('farm_description').value = data.description || '';
@@ -675,22 +722,29 @@
     }
   });
 
-  modalEl.addEventListener('hidden.bs.modal', function () {
-    form.querySelectorAll('input, select, textarea').forEach(function (el) {
-      el.disabled = false;
+  }
+  if (modalEl) {
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      if (form) {
+        form.querySelectorAll('input, select, textarea').forEach(function (el) {
+          el.disabled = false;
+        });
+      }
+      resetForm();
     });
-    resetForm();
-  });
+  }
 
-  clearBtn.addEventListener('click', resetForm);
-
-  deleteModal.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    if (button) {
-      currentId = button.getAttribute('data-id');
-      deleteName.textContent = button.getAttribute('data-name');
-    }
-  });
+  if (deleteModal) {
+    deleteModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (button) {
+        currentId = button.getAttribute('data-id');
+        if (deleteName) {
+          deleteName.textContent = button.getAttribute('data-name');
+        }
+      }
+    });
+  }
 
   // Handle inline archive button (table + grid)
   document.body.addEventListener('click', function (e) {
@@ -712,71 +766,93 @@
     });
   });
 
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    clearFormError();
-    submitBtn.disabled = true;
+  if (clearBtn) {
+    clearBtn.addEventListener('click', resetForm);
+  }
 
-    const formData = new FormData(form);
-    fetch(SAVE_URL, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': csrftoken },
-      body: formData,
-    })
-    .then(async (resp) => {
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.error || 'Something went wrong.');
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearFormError();
+      if (submitBtn) {
+        submitBtn.disabled = true;
       }
-      return data;
-    })
-    .then(() => {
-      const wasCreate = currentMode === 'create';
-      bootstrap.Modal.getInstance(modalEl).hide();
-      // Clear any active search/status filters after creating a farm so the
-      // new record is visible on the reloaded list.
-      if (wasCreate) {
-        window.location.href = LIST_PAGE_URL;
-      } else {
+
+      const formData = new FormData(form);
+      fetch(SAVE_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: formData,
+      })
+      .then(async (resp) => {
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.error || 'Something went wrong.');
+        }
+        return data;
+      })
+      .then(() => {
+        const wasCreate = currentMode === 'create';
+        if (modalEl) {
+          const modalInstance = bootstrap.Modal.getInstance(modalEl);
+          if (modalInstance) {
+            modalInstance.hide();
+          }
+        }
+        // Clear any active search/status filters after creating a farm so the
+        // new record is visible on the reloaded list.
+        if (wasCreate) {
+          window.location.href = LIST_PAGE_URL;
+        } else {
+          location.reload();
+        }
+      })
+      .catch((err) => {
+        showFormError(err.message);
+      })
+      .finally(() => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      });
+    });
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function () {
+      if (!currentId) return;
+      const btn = this;
+      btn.disabled = true;
+      fetch(`${DELETE_BASE}${currentId}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+      })
+      .then(async (resp) => {
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.error || 'Could not delete farm.');
+        }
+        return data;
+      })
+      .then(() => {
+        if (deleteModal) {
+          const modalInstance = bootstrap.Modal.getInstance(deleteModal);
+          if (modalInstance) {
+            modalInstance.hide();
+          }
+        }
+        const row = document.querySelector(`tr[data-row-id="${currentId}"]`);
+        if (row) row.remove();
         location.reload();
-      }
-    })
-    .catch((err) => {
-      showFormError(err.message);
-    })
-    .finally(() => {
-      submitBtn.disabled = false;
+      })
+      .catch((err) => {
+        alert(err.message);
+      })
+      .finally(() => {
+        btn.disabled = false;
+      });
     });
-  });
-
-  deleteBtn.addEventListener('click', function () {
-    if (!currentId) return;
-    const btn = this;
-    btn.disabled = true;
-    fetch(`${DELETE_BASE}${currentId}/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': csrftoken },
-    })
-    .then(async (resp) => {
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.error || 'Could not delete farm.');
-      }
-      return data;
-    })
-    .then(() => {
-      bootstrap.Modal.getInstance(deleteModal).hide();
-      const row = document.querySelector(`tr[data-row-id="${currentId}"]`);
-      if (row) row.remove();
-      location.reload();
-    })
-    .catch((err) => {
-      alert(err.message);
-    })
-    .finally(() => {
-      btn.disabled = false;
-    });
-  });
+  }
 })();
 </script>
 {% endblock %}

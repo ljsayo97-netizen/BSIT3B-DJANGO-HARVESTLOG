@@ -785,32 +785,3 @@ html {
     font-size: 1.3rem;
   }
 }
-/* Clear (X) button inside modal form fields */
-.input-clear-wrapper {
-  position: relative;
-  display: block;
-  width: 100%;
-}
-.input-clear-wrapper .form-control {
-  padding-right: 2.5rem;
-}
-.input-clear-btn {
-  position: absolute;
-  top: 50%;
-  right: 0.65rem;
-  transform: translateY(-50%);
-  border: 0;
-  background: transparent;
-  color: var(--tblr-muted-color, #868e96);
-  padding: 0;
-  line-height: 1;
-  cursor: pointer;
-  z-index: 5;
-  font-size: 0.9rem;
-}
-.input-clear-btn:hover {
-  color: var(--tblr-danger, #d63939);
-}
-.input-clear-wrapper textarea.form-control {
-  padding-right: 2.5rem;
-}

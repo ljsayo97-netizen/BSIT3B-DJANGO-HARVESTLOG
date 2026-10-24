@@ -990,7 +990,9 @@
     resetScheduleForm();
   });
 
-  scheduleClear.addEventListener('click', resetScheduleForm);
+  if (scheduleClear) {
+    scheduleClear.addEventListener('click', resetScheduleForm);
+  }
 
   scheduleForm.addEventListener('submit', function (event) {
     event.preventDefault();
@@ -1094,7 +1096,9 @@
     resetHarvestForm();
   });
 
-  harvestClear.addEventListener('click', resetHarvestForm);
+  if (harvestClear) {
+    harvestClear.addEventListener('click', resetHarvestForm);
+  }
 
   harvestForm.addEventListener('submit', function (event) {
     event.preventDefault();

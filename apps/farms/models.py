@@ -24,6 +24,22 @@ class Farm(models.Model):
     name = models.CharField('farm name', max_length=255)
     owner = models.CharField('owner / manager', max_length=255)
     location = models.CharField(max_length=255)
+    farm_code = models.CharField(
+        'farm ID',
+        max_length=20,
+        unique=True,
+        blank=True,
+        editable=False,
+        help_text='Auto-generated farm ID, for example FARM-0001.',
+    )
+    email = models.EmailField('email', blank=True)
+    contact_number = models.CharField(
+        'contact number',
+        max_length=50,
+        blank=True,
+        help_text='Contact number of the farm owner or manager.',
+    )
+    zip_code = models.CharField('ZIP code', max_length=20, blank=True)
     size_hectares = models.DecimalField(
         'size (hectares)',
         max_digits=10,
@@ -67,6 +83,19 @@ class Farm(models.Model):
 
     def __str__(self):
         return self.name
+
+    @staticmethod
+    def make_farm_code(pk):
+        """Build the auto-generated farm ID, e.g. FARM-0001."""
+        return f'FARM-{pk:04d}'
+
+    def save(self, *args, **kwargs):
+        """Assign an auto-generated farm ID the first time a farm is stored."""
+        creating = self.pk is None
+        super().save(*args, **kwargs)
+        if creating and not self.farm_code:
+            self.farm_code = self.make_farm_code(self.pk)
+            super().save(update_fields=['farm_code'])
 
     def soft_delete(self):
         """Move the farm to the deleted log while preserving related records."""
