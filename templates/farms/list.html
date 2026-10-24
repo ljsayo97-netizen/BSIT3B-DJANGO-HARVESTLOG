@@ -248,7 +248,7 @@
 </div>
 
 <!-- Farm Modal (View / Create / Edit) -->
-<div class="modal modal-blur fade" id="farmModal" tabindex="-1">
+<div class="modal modal-blur fade" id="farmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -263,15 +263,15 @@
           <div class="row g-3">
             <div class="col-12">
               <label class="form-label">Farm Name <span class="text-danger">*</span></label>
-              <input type="text" name="name" id="farm_name" class="form-control" required placeholder="e.g. Sunny Fields Farm">
+              <input type="text" name="name" id="farm_name" class="form-control" required>
             </div>
             <div class="col-12">
               <label class="form-label">Owner / Manager <span class="text-danger">*</span></label>
-              <input type="text" name="owner" id="farm_owner" class="form-control" required placeholder="e.g. Juan Dela Cruz">
+              <input type="text" name="owner" id="farm_owner" class="form-control" required>
             </div>
             <div class="col-12">
               <label class="form-label">Location <span class="text-danger">*</span></label>
-              <input type="text" name="location" id="farm_location" class="form-control" required placeholder="e.g. Cauayan, Isabela">
+              <input type="text" name="location" id="farm_location" class="form-control" required>
             </div>
             <div class="col-6">
               <label class="form-label">Farm Size (hectares) <span class="text-danger">*</span></label>
@@ -296,6 +296,9 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary me-auto" id="farmClearBtn" title="Clear all fields">
+            <i class="ti ti-x me-1"></i>Clear
+          </button>
           <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary" id="farmSubmitBtn">Save Farm</button>
         </div>
@@ -305,7 +308,7 @@
 </div>
 
 <!-- Delete Farm Modal -->
-<div class="modal modal-blur fade" id="deleteFarmModal" tabindex="-1">
+<div class="modal modal-blur fade" id="deleteFarmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -324,7 +327,7 @@
 </div>
 
 <!-- Deleted Farms Log Modal -->
-<div class="modal modal-blur fade" id="deletedFarmsModal" tabindex="-1">
+<div class="modal modal-blur fade" id="deletedFarmsModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
@@ -460,6 +463,7 @@
   const submitBtn   = document.getElementById('farmSubmitBtn');
   const deleteBtn   = document.getElementById('confirmDeleteFarmBtn');
   const deleteName  = document.getElementById('deleteFarmName');
+  const clearBtn    = document.getElementById('farmClearBtn');
   const bodyRows    = document.getElementById('farmsTableBody');
   let currentId     = null;
   let currentMode   = 'create';
@@ -614,6 +618,9 @@
   applyViewMode(getSavedViewMode());
 
   function resetForm() {
+    form.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.disabled = false;
+    });
     form.reset();
     document.getElementById('farm_id').value = '';
     currentId = null;
@@ -674,6 +681,8 @@
     });
     resetForm();
   });
+
+  clearBtn.addEventListener('click', resetForm);
 
   deleteModal.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;

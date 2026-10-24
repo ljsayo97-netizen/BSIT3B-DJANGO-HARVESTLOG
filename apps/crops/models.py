@@ -26,8 +26,8 @@ class Crop(models.Model):
         on_delete=models.CASCADE,
         verbose_name='farm',
     )
-    name = models.CharField('crop name', max_length=255, help_text='e.g. Rice, Corn, Mango')
-    variety = models.CharField('variety', max_length=255, blank=True, help_text='e.g. IR64, Hybrid, Carabao')
+    name = models.CharField('crop name', max_length=255)
+    variety = models.CharField('variety', max_length=255, blank=True)
     planting_date = models.DateField('planting date', default=timezone.localdate)
     expected_harvest_date = models.DateField('expected harvest date', blank=True, null=True)
     actual_harvest_date = models.DateField('actual harvest date', blank=True, null=True)

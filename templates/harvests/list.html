@@ -571,7 +571,7 @@
 </div>
 
 <!-- Harvest Schedule Modal (Create / Edit) -->
-<div class="modal modal-blur fade" id="scheduleModal" tabindex="-1">
+<div class="modal modal-blur fade" id="scheduleModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -650,6 +650,9 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary me-auto" id="scheduleClearBtn" title="Clear all fields">
+            <i class="ti ti-x me-1"></i>Clear
+          </button>
           <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary" id="scheduleSubmitBtn">Save Schedule</button>
         </div>
@@ -659,7 +662,7 @@
 </div>
 
 <!-- Harvest Modal (View / Create / Edit) -->
-<div class="modal modal-blur fade" id="harvestModal" tabindex="-1">
+<div class="modal modal-blur fade" id="harvestModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -752,6 +755,9 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary me-auto" id="harvestClearBtn" title="Clear all fields">
+            <i class="ti ti-x me-1"></i>Clear
+          </button>
           <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary" id="harvestSubmitBtn">Record Harvest</button>
         </div>
@@ -761,7 +767,7 @@
 </div>
 
 <!-- Delete Harvest Modal -->
-<div class="modal modal-blur fade" id="deleteHarvestModal" tabindex="-1">
+<div class="modal modal-blur fade" id="deleteHarvestModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -780,7 +786,7 @@
 </div>
 
 <!-- Delete Harvest Schedule Modal -->
-<div class="modal modal-blur fade" id="deleteScheduleModal" tabindex="-1">
+<div class="modal modal-blur fade" id="deleteScheduleModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -814,6 +820,7 @@
   const scheduleTitle   = document.getElementById('scheduleModalTitle');
   const scheduleSubmit  = document.getElementById('scheduleSubmitBtn');
   const scheduleError   = document.getElementById('scheduleFormError');
+  const scheduleClear   = document.getElementById('scheduleClearBtn');
 
   const harvestModalEl  = document.getElementById('harvestModal');
   const harvestForm     = document.getElementById('harvestForm');
@@ -822,6 +829,7 @@
   const harvestError    = document.getElementById('harvestFormError');
   const harvestNotice   = document.getElementById('harvestScheduleNotice');
   const harvestCode     = document.getElementById('harvest_code_display');
+  const harvestClear    = document.getElementById('harvestClearBtn');
 
   const deleteHarvestModal  = document.getElementById('deleteHarvestModal');
   const deleteScheduleModal = document.getElementById('deleteScheduleModal');
@@ -877,6 +885,7 @@
 
   function resetScheduleForm() {
     scheduleForm.reset();
+    currentScheduleId = null;
     document.getElementById('schedule_id').value = '';
     scheduleTitle.textContent = 'Schedule Harvest';
     scheduleSubmit.textContent = 'Save Schedule';
@@ -891,6 +900,7 @@
 
   function resetHarvestForm() {
     harvestForm.reset();
+    currentHarvestId = null;
     document.getElementById('harvest_id').value = '';
     document.getElementById('harvest_schedule_id').value = '';
     harvestTitle.textContent = 'Record Harvest';
@@ -979,6 +989,8 @@
   scheduleModalEl.addEventListener('hidden.bs.modal', function () {
     resetScheduleForm();
   });
+
+  scheduleClear.addEventListener('click', resetScheduleForm);
 
   scheduleForm.addEventListener('submit', function (event) {
     event.preventDefault();
@@ -1081,6 +1093,8 @@
   harvestModalEl.addEventListener('hidden.bs.modal', function () {
     resetHarvestForm();
   });
+
+  harvestClear.addEventListener('click', resetHarvestForm);
 
   harvestForm.addEventListener('submit', function (event) {
     event.preventDefault();

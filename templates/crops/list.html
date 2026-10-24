@@ -198,7 +198,7 @@
 </div>
 
 <!-- Crop Modal (View / Create / Edit) -->
-<div class="modal modal-blur fade" id="cropModal" tabindex="-1">
+<div class="modal modal-blur fade" id="cropModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -222,11 +222,11 @@
             </div>
             <div class="col-6">
               <label class="form-label">Crop Name <span class="text-danger">*</span></label>
-              <input type="text" name="name" id="crop_name" class="form-control" required placeholder="e.g. Rice">
+              <input type="text" name="name" id="crop_name" class="form-control" required>
             </div>
             <div class="col-6">
               <label class="form-label">Variety</label>
-              <input type="text" name="variety" id="crop_variety" class="form-control" placeholder="e.g. IR64">
+              <input type="text" name="variety" id="crop_variety" class="form-control">
             </div>
             <div class="col-6">
               <label class="form-label">Planting Date <span class="text-danger">*</span></label>
@@ -261,6 +261,9 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary me-auto" id="cropClearBtn" title="Clear all fields">
+            <i class="ti ti-x me-1"></i>Clear
+          </button>
           <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary" id="cropSubmitBtn">Save Crop</button>
         </div>
@@ -270,7 +273,7 @@
 </div>
 
 <!-- Delete Crop Modal -->
-<div class="modal modal-blur fade" id="deleteCropModal" tabindex="-1">
+<div class="modal modal-blur fade" id="deleteCropModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -305,6 +308,7 @@
   const submitBtn   = document.getElementById('cropSubmitBtn');
   const deleteBtn   = document.getElementById('confirmDeleteCropBtn');
   const deleteName  = document.getElementById('deleteCropName');
+  const clearBtn    = document.getElementById('cropClearBtn');
   let currentId     = null;
   let currentMode   = 'create';
 
@@ -328,12 +332,16 @@
   });
 
   function resetForm() {
+    form.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.disabled = false;
+    });
     form.reset();
     document.getElementById('crop_id').value = '';
     currentId = null;
     currentMode = 'create';
     title.textContent = 'Add Crop';
     submitBtn.textContent = 'Save Crop';
+    submitBtn.disabled = false;
     clearFormError();
     document.getElementById('crop_status').value = 'planting';
     document.getElementById('crop_planting_date').value = new Date().toISOString().split('T')[0];
@@ -388,6 +396,8 @@
     });
     resetForm();
   });
+
+  clearBtn.addEventListener('click', resetForm);
 
   deleteModal.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;

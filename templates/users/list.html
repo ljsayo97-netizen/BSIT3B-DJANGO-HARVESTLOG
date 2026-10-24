@@ -197,7 +197,7 @@
 </div>
 
 <!-- ========== EDIT / CREATE USER MODAL ========== -->
-<div class="modal modal-blur fade" id="editUserModal" tabindex="-1">
+<div class="modal modal-blur fade" id="editUserModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-md modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -248,6 +248,9 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary me-auto" id="userClearBtn" title="Clear all fields">
+            <i class="ti ti-x me-1"></i>Clear
+          </button>
           <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary" id="editUserSubmitBtn">Save Changes</button>
         </div>
@@ -257,7 +260,7 @@
 </div>
 
 <!-- ========== DELETE USER MODAL ========== -->
-<div class="modal modal-blur fade" id="deleteUserModal" tabindex="-1">
+<div class="modal modal-blur fade" id="deleteUserModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -293,6 +296,7 @@
     const deleteUserName   = document.getElementById('deleteUserName');
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
     const submitBtn        = document.getElementById('editUserSubmitBtn');
+    const clearBtn         = document.getElementById('userClearBtn');
 
     // ---------- CSRF helper ----------
     function getCookie(name) {
@@ -310,6 +314,18 @@
         editFormError.textContent = '';
         editFormError.classList.add('d-none');
     }
+    function resetForm() {
+        clearFormError();
+        editForm.reset();
+        modalTitle.textContent = 'Add User';
+        document.getElementById('edit_id').value = '';
+        usernameInput.readOnly = false;
+        passwordHint.classList.add('d-none');
+        passwordInput.required = true;
+        document.getElementById('edit_is_active').checked = true;
+        document.getElementById('edit_is_staff').checked = false;
+        submitBtn.disabled = false;
+    }
     function showSuccessAlert(msg) {
         const box = document.getElementById('userAlert');
         document.getElementById('userAlertText').textContent = msg;
@@ -319,13 +335,12 @@
 
     // ---------- EDIT / CREATE MODAL: populate on open ----------
     editModal.addEventListener('show.bs.modal', function (e) {
-        clearFormError();
-        editForm.reset();
-
         const btn = e.relatedTarget;
         const mode = btn ? btn.dataset.mode : 'create';
 
         if (mode === 'edit') {
+            clearFormError();
+            editForm.reset();
             modalTitle.textContent = 'Edit User';
             usernameInput.readOnly = false;
             passwordHint.classList.remove('d-none');
@@ -339,14 +354,11 @@
             document.getElementById('edit_is_active').checked = btn.dataset.active === 'true';
             document.getElementById('edit_is_staff').checked  = btn.dataset.staff === 'true';
         } else {
-            modalTitle.textContent = 'Add User';
-            document.getElementById('edit_id').value = '';
-            passwordHint.classList.add('d-none');
-            passwordInput.required = true;
-            document.getElementById('edit_is_active').checked = true;
-            document.getElementById('edit_is_staff').checked  = false;
+            resetForm();
         }
     });
+
+    clearBtn.addEventListener('click', resetForm);
 
     // ---------- EDIT / CREATE: submit via AJAX ----------
     editForm.addEventListener('submit', function (e) {

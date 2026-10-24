@@ -1301,5 +1301,31 @@
       });
     </script>
     <!-- END PAGE SCRIPTS -->
-  </body>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.modal input.form-control, .modal textarea.form-control').forEach(function (input) {
+        if (input.dataset.clearable === 'true') return;
+        var parent = input.parentNode;
+        if (parent && parent.classList && parent.classList.contains('input-clear-wrapper')) return;
+        var wrapper = document.createElement('div');
+        wrapper.className = 'input-clear-wrapper';
+        parent.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'input-clear-btn';
+        btn.setAttribute('aria-label', 'Clear field');
+        btn.innerHTML = '<i class="ti ti-x"></i>';
+        btn.addEventListener('click', function () {
+          input.value = '';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          input.focus();
+        });
+        wrapper.appendChild(btn);
+        input.dataset.clearable = 'true';
+      });
+    });
+  </script>
+</body>
 </html>

@@ -7,12 +7,47 @@ from django.utils.dateparse import parse_date, parse_datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import connection, transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .models import Farm
+
+
+# Tables created by an older farm-fields feature. They have no models in this
+# project, but their foreign keys still block permanent farm deletion.
+LEGACY_FARM_FIELD_TABLE = 'tblfarmfields'
+LEGACY_FIELD_HISTORY_TABLE = 'tblfieldhistory'
+
+
+def _purge_legacy_farm_field_records(farm_ids):
+    """Remove legacy farm-field rows that block permanent farm deletion."""
+    farm_ids = [farm_id for farm_id in farm_ids if farm_id is not None]
+    if not farm_ids:
+        return
+
+    existing_tables = set(connection.introspection.table_names())
+    if LEGACY_FARM_FIELD_TABLE not in existing_tables:
+        return
+
+    placeholders = ', '.join(['%s'] * len(farm_ids))
+    with connection.cursor() as cursor:
+        if LEGACY_FIELD_HISTORY_TABLE in existing_tables:
+            cursor.execute(
+                f'DELETE FROM {LEGACY_FIELD_HISTORY_TABLE} '
+                'WHERE field_id IN ('
+                f'SELECT id FROM {LEGACY_FARM_FIELD_TABLE} '
+                f'WHERE farm_id IN ({placeholders})'
+                ')',
+                farm_ids,
+            )
+        cursor.execute(
+            f'DELETE FROM {LEGACY_FARM_FIELD_TABLE} '
+            f'WHERE farm_id IN ({placeholders})',
+            farm_ids,
+        )
 
 
 def _parse_size(raw_size):
@@ -270,7 +305,9 @@ def farm_permanent_delete(request, pk):
         is_deleted=True,
     )
     farm_name = farm.name
-    farm.delete()
+    with transaction.atomic():
+        _purge_legacy_farm_field_records([farm.pk])
+        farm.delete()
     messages.success(request, f'Farm "{farm_name}" has been permanently deleted.')
     return redirect('farms:farm_list')
 
@@ -304,12 +341,16 @@ def farm_bulk_permanent_delete(request):
         user=request.user,
         is_deleted=True,
     )
-    count = farms.count()
+    farm_ids = list(farms.values_list('pk', flat=True))
+    count = len(farm_ids)
     if count == 0:
         messages.error(request, 'Select at least one deleted farm to permanently delete.')
         return redirect('farms:farm_list')
 
-    farms.delete()
+    with transaction.atomic():
+        _purge_legacy_farm_field_records(farm_ids)
+        Farm.all_objects.filter(pk__in=farm_ids).delete()
+
     noun = 'farm' if count == 1 else 'farms'
     messages.success(
         request,
