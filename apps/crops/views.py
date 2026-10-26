@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 from apps.farms.models import Farm
+from apps.harvests.models import Harvest
 from .models import Crop
 
 
@@ -35,6 +36,8 @@ def _crop_json(crop):
         'actual_harvest_date': crop.actual_harvest_date.isoformat() if crop.actual_harvest_date else None,
         'status': crop.status,
         'status_display': crop.get_status_display(),
+        'quality': crop.quality,
+        'quality_display': crop.get_quality_display(),
         'area_hectares': float(crop.area_hectares),
         'notes': crop.notes,
         'days_since_planting': crop.days_since_planting,
@@ -75,6 +78,32 @@ def crop_list_page(request):
     page_number = request.GET.get('page', 1)
     crops = paginator.get_page(page_number)
 
+    # Farm detail panel: show the selected farm's details, active crops, and
+    # crop history (harvested / damaged-failed crops).
+    farm_detail_id = request.GET.get('farm_detail', '').strip()
+    selected_farm = None
+    farm_crops = []
+    farm_history = []
+    if farm_detail_id.isdigit():
+        selected_farm = Farm.objects.filter(pk=int(farm_detail_id), user=request.user).first()
+        if selected_farm:
+            farm_qs = Crop.objects.filter(farm=selected_farm, user=request.user)
+            history_statuses = (Crop.Status.HARVESTED, Crop.Status.FAILED)
+            farm_crops = farm_qs.exclude(status__in=history_statuses)
+            farm_history = list(farm_qs.filter(status__in=history_statuses))
+
+            # Attach each history crop's most recent harvest quality record.
+            if farm_history:
+                latest_quality = {}
+                harvest_qs = Harvest.objects.filter(
+                    user=request.user,
+                    crop_id__in=[crop.pk for crop in farm_history],
+                ).order_by('-harvest_date', '-created_at')
+                for harvest in harvest_qs:
+                    latest_quality.setdefault(harvest.crop_id, harvest)
+                for crop in farm_history:
+                    crop.latest_quality = latest_quality.get(crop.pk)
+
     return render(request, 'crops/list.html', {
         'crops': crops,
         'farms': farms,
@@ -82,6 +111,11 @@ def crop_list_page(request):
         'status': status,
         'farm_id': farm_id,
         'status_choices': Crop.Status.choices,
+        'quality_choices': Crop.Quality.choices,
+        'farm_detail_id': farm_detail_id,
+        'selected_farm': selected_farm,
+        'farm_crops': farm_crops,
+        'farm_history': farm_history,
     })
 
 
@@ -151,10 +185,9 @@ def crop_save_ajax(request):
     variety = request.POST.get('variety', '').strip()
     planting_date_raw = request.POST.get('planting_date', '').strip()
     expected_harvest_date_raw = request.POST.get('expected_harvest_date', '').strip()
-    actual_harvest_date_raw = request.POST.get('actual_harvest_date', '').strip()
     status = request.POST.get('status', '').strip()
+    quality = request.POST.get('quality', '').strip()
     area_raw = request.POST.get('area_hectares', '').strip()
-    notes = request.POST.get('notes', '').strip()
 
     if not farm_id:
         return JsonResponse({'error': 'Please select a farm.'}, status=400)
@@ -178,15 +211,24 @@ def crop_save_ajax(request):
         if expected_harvest_date is None:
             return JsonResponse({'error': 'Enter a valid expected harvest date.'}, status=400)
 
-    actual_harvest_date = None
-    if actual_harvest_date_raw:
-        actual_harvest_date = parse_date(actual_harvest_date_raw)
-        if actual_harvest_date is None:
-            return JsonResponse({'error': 'Enter a valid actual harvest date.'}, status=400)
+    # Notes and the actual harvest date are no longer part of the crop form:
+    # existing values are kept as-is (the actual harvest date is set
+    # automatically when a harvest is recorded).
+    if status:
+        valid_statuses = dict(Crop.Status.choices)
+        if status not in valid_statuses:
+            return JsonResponse({'error': 'Please select a valid crop status.'}, status=400)
+        crop.status = status
+    elif not is_update:
+        crop.status = Crop.Status.PLANTING
 
-    valid_statuses = dict(Crop.Status.choices)
-    if status not in valid_statuses:
-        return JsonResponse({'error': 'Please select a valid crop status.'}, status=400)
+    if quality:
+        valid_qualities = dict(Crop.Quality.choices)
+        if quality not in valid_qualities:
+            return JsonResponse({'error': 'Please select a valid quality grade.'}, status=400)
+        crop.quality = quality
+    else:
+        crop.quality = ''
 
     area_value = _parse_decimal(area_raw)
     if area_value is None or area_value < 0:
@@ -200,10 +242,7 @@ def crop_save_ajax(request):
     crop.variety = variety
     crop.planting_date = planting_date
     crop.expected_harvest_date = expected_harvest_date
-    crop.actual_harvest_date = actual_harvest_date
-    crop.status = status
     crop.area_hectares = area_value
-    crop.notes = notes
 
     try:
         crop.save()

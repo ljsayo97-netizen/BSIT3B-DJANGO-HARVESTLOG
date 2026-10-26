@@ -9,6 +9,7 @@ urlpatterns = [
     path('', views.harvest_list_page, name='harvest_list'),
     path('history/', views.harvest_history_page, name='harvest_history'),
     path('history/export/', views.harvest_history_export, name='harvest_history_export'),
+    path('history/ajax/quality/save/', views.harvest_quality_save_ajax, name='harvest_quality_save'),
     # Harvest records (AJAX)
     path('ajax/list/', views.harvest_list_ajax, name='harvest_list_ajax'),
     path('ajax/get/<int:pk>/', views.harvest_get_ajax, name='harvest_get_ajax'),

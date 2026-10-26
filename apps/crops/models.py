@@ -14,11 +14,21 @@ class Crop(models.Model):
     """A crop planted on a farm."""
 
     class Status(models.TextChoices):
-        PLANTING = 'planting', 'Planting'
-        GROWING = 'growing', 'Growing'
-        READY_FOR_HARVEST = 'ready_for_harvest', 'Ready for Harvest'
-        HARVESTED = 'harvested', 'Harvested'
-        FAILED = 'failed', 'Failed'
+        PLANTING = 'planting', 'Planted'
+        GROWING = 'growing', '🌿 Growing'
+        MATURING = 'maturing', '🌾 Maturing'
+        READY_FOR_HARVEST = 'ready_for_harvest', '🟡 Ready for Harvest'
+        HARVESTED = 'harvested', '✅ Harvested'
+        FAILED = 'failed', '⚠️ Damaged/Failed'
+
+    class Quality(models.TextChoices):
+        """Quality grades, mirroring the harvest quality scale."""
+        PREMIUM = 'premium', 'Premium'
+        GRADE_A = 'grade_a', 'Grade A'
+        GRADE_B = 'grade_b', 'Grade B'
+        GRADE_C = 'grade_c', 'Grade C'
+        STANDARD = 'standard', 'Standard'
+        FAIR = 'fair', 'Fair'
 
     farm = models.ForeignKey(
         'farms.Farm',
@@ -44,6 +54,14 @@ class Crop(models.Model):
         help_text='Area planted in hectares.',
     )
     notes = models.TextField(blank=True)
+    quality = models.CharField(
+        'quality / grade',
+        max_length=30,
+        choices=Quality.choices,
+        blank=True,
+        default='',
+        help_text='Quality grade recorded for this crop.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     user = models.ForeignKey(

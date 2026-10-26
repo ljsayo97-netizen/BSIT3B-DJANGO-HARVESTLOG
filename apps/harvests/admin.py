@@ -42,6 +42,7 @@ class HarvestAdmin(admin.ModelAdmin):
         'harvested_by',
         'supervised_by',
         'notes',
+        'quality_observations',
         'farm__name',
     )
     list_editable = ('quality_grade',)

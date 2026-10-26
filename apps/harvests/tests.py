@@ -15,6 +15,7 @@ from apps.harvests.services import get_upcoming_harvests
 from apps.harvests.views import (
     harvest_history_page,
     harvest_list_page,
+    harvest_quality_save_ajax,
     harvest_schedule_delete_ajax,
     harvest_schedule_get_ajax,
 )
@@ -575,6 +576,176 @@ class HarvestHistoryTests(TestCase):
 
         self.assertIn(self.harvest.harvest_code, content)
         self.assertNotIn(other_harvest.harvest_code, content)
+
+
+class HarvestQualityRecordingTests(TestCase):
+    """Quality & observation recording from the harvest history page."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='qualityuser', password='secret1234'
+        )
+        self.farm = Farm.objects.create(
+            name='Green Acres',
+            owner='Maria Santos',
+            location='Tuguegarao, Cagayan',
+            size_hectares=3.00,
+            date_registered=timezone.now(),
+            status='active',
+            user=self.user,
+        )
+        self.harvest = Harvest.objects.create(
+            farm=self.farm,
+            user=self.user,
+            harvest_date=date(2026, 10, 12),
+            location='Field B',
+            crop_type='Rice',
+            quantity_harvested=1200,
+            unit='kg',
+            quality_grade='standard',
+            workers_count=5,
+            harvested_by='Team Lead',
+        )
+        self.url = reverse('harvests:harvest_quality_save')
+        self.client.force_login(self.user)
+
+    def record_quality(self, **overrides):
+        data = {
+            'id': str(self.harvest.id),
+            'quality_grade': 'premium',
+            'quality_condition': 'fresh',
+            'moisture_level': '14.5',
+            'damaged_quantity': '25.5',
+            'quality_observations': 'Clean batch, no foul odor.',
+        }
+        data.update(overrides)
+        return self.client.post(self.url, data)
+
+    def test_quality_can_be_documented(self):
+        response = self.record_quality()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'success')
+
+        self.harvest.refresh_from_db()
+        self.assertEqual(self.harvest.quality_grade, 'premium')
+        self.assertEqual(self.harvest.quality_condition, 'fresh')
+        self.assertEqual(self.harvest.moisture_level, 14.5)
+        self.assertEqual(self.harvest.damaged_quantity, 25.5)
+        self.assertEqual(self.harvest.quality_observations, 'Clean batch, no foul odor.')
+        self.assertIsNotNone(self.harvest.quality_recorded_at)
+        self.assertTrue(self.harvest.has_quality_record)
+
+    def test_history_page_shows_recorded_quality(self):
+        self.record_quality()
+        request = RequestFactory().get(reverse('harvests:harvest_history'))
+        request.user = self.user
+        content = harvest_history_page(request).content.decode()
+
+        self.assertIn('qualityModal', content)
+        self.assertIn('Fresh', content)
+        self.assertIn('moisture', content)
+        self.assertIn('25.5 kg damaged', content)
+        self.assertIn('Clean batch, no foul odor.', content)
+
+    def test_quality_fields_can_be_cleared(self):
+        self.record_quality()
+        response = self.record_quality(
+            quality_condition='',
+            moisture_level='',
+            damaged_quantity='',
+            quality_observations='',
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.harvest.refresh_from_db()
+        self.assertEqual(self.harvest.quality_condition, '')
+        self.assertIsNone(self.harvest.moisture_level)
+        self.assertIsNone(self.harvest.damaged_quantity)
+        self.assertEqual(self.harvest.quality_observations, '')
+        self.assertIsNotNone(self.harvest.quality_recorded_at)
+
+    def test_moisture_level_must_be_within_range(self):
+        response = self.record_quality(moisture_level='150')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('between 0 and 100', response.json()['error'])
+
+        self.harvest.refresh_from_db()
+        self.assertIsNone(self.harvest.moisture_level)
+
+    def test_invalid_condition_is_rejected(self):
+        response = self.record_quality(quality_condition='soggy')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('valid condition', response.json()['error'])
+
+    def test_invalid_grade_is_rejected(self):
+        response = self.record_quality(quality_grade='diamond')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('valid quality grade', response.json()['error'])
+
+    def test_quality_save_requires_login(self):
+        self.client.logout()
+        response = self.record_quality()
+        self.assertEqual(response.status_code, 302)
+
+    def test_quality_save_is_scoped_to_owner(self):
+        other = get_user_model().objects.create_user(
+            username='qualityother', password='secret1234'
+        )
+        other_farm = Farm.objects.create(
+            name='Other Farm',
+            owner='Other',
+            location='Elsewhere',
+            size_hectares=1,
+            date_registered=timezone.now(),
+            status='active',
+            user=other,
+        )
+        other_harvest = Harvest.objects.create(
+            farm=other_farm,
+            user=other,
+            harvest_date=date(2026, 10, 13),
+            location='Field Z',
+            crop_type='Corn',
+            quantity_harvested=50,
+            unit='kg',
+            quality_grade='standard',
+            workers_count=2,
+            harvested_by='Other Lead',
+        )
+
+        request = RequestFactory().post(self.url, {
+            'id': str(other_harvest.id),
+            'quality_grade': 'premium',
+            'quality_condition': 'fresh',
+        })
+        request.user = self.user
+        with self.assertRaises(Http404):
+            harvest_quality_save_ajax(request)
+
+        other_harvest.refresh_from_db()
+        self.assertFalse(other_harvest.has_quality_record)
+
+    def test_history_csv_export_includes_quality_columns(self):
+        self.record_quality()
+        content = self.client.get(
+            reverse('harvests:harvest_history_export')
+        ).content.decode('utf-8-sig')
+
+        self.assertIn('Quality,Condition,Moisture (%),Damaged Quantity,Quality Observations', content)
+        self.assertIn('Fresh', content)
+        self.assertIn('Clean batch, no foul odor.', content)
+
+    def test_quality_details_property(self):
+        self.assertEqual(self.harvest.quality_details, [])
+        self.assertFalse(self.harvest.has_quality_record)
+
+        self.harvest.quality_condition = 'fresh'
+        self.harvest.moisture_level = 14.5
+        self.harvest.damaged_quantity = 25
+        self.assertEqual(
+            self.harvest.quality_details,
+            ['Fresh', '14.5% moisture', '25 kg damaged'],
+        )
 
 
 class HarvestListScriptTests(TestCase):

@@ -284,41 +284,41 @@
           <div id="farmFormError" class="alert alert-danger d-none"></div>
           <div class="row g-3">
             <div class="col-12">
-              <label class="form-label">Farm Name <span class="text-danger">*</span></label>
+              <label class="form-label">Farm Name <span class="text-danger"></span></label>
               <input type="text" name="name" id="farm_name" class="form-control" required>
             </div>
             <div class="col-12">
-              <label class="form-label">Owner / Manager <span class="text-danger">*</span></label>
+              <label class="form-label">Owner  <span class="text-danger"></span></label>
               <input type="text" name="owner" id="farm_owner" class="form-control" required>
             </div>
             <div class="col-12">
-              <label class="form-label">Location <span class="text-danger">*</span></label>
+              <label class="form-label">Location <span class="text-danger"></span></label>
               <input type="text" name="location" id="farm_location" class="form-control" required>
             </div>
             <div class="col-12">
               <label class="form-label">Farm ID</label>
               <input type="text" id="farm_code" class="form-control" readonly
-                     placeholder="Auto-generated (e.g. FARM-0001)">
-              <div class="form-hint">Assigned automatically when the farm is saved.</div>
+                     placeholder="Auto-generated">
+
             </div>
             <div class="col-md-6">
               <label class="form-label">Email</label>
-              <input type="email" name="email" id="farm_email" class="form-control" placeholder="">
+              <input type="email" name="email" id="farm_email" class="form-control" placeholder="" maxlength="11">
             </div>
             <div class="col-md-6">
               <label class="form-label">Contact Number</label>
-              <input type="text" name="contact_number" id="farm_contact_number" class="form-control" placeholder="09XX-XXX-XXXX">
+              <input type="text" name="contact_number" id="farm_contact_number" class="form-control" placeholder="09XX-XXX-XXXX" maxlength="13" inputmode="numeric" pattern="[0-9]{11}" title="Please enter exactly 11 digits">
             </div>
             <div class="col-12">
               <label class="form-label">ZIP Code</label>
               <input type="text" name="zip_code" id="farm_zip_code" class="form-control" placeholder=" 3300">
             </div>
             <div class="col-6">
-              <label class="form-label">Farm Size (hectares) <span class="text-danger">*</span></label>
+              <label class="form-label">Farm Size (hectares) <span class="text-danger"></span></label>
               <input type="number" name="size_hectares" id="farm_size_hectares" class="form-control" step="00.00" min="0" required placeholder="0.00">
             </div>
             <div class="col-6">
-              <label class="form-label">Date Registered <span class="text-danger">*</span></label>
+              <label class="form-label">Date Registered <span class="text-danger"></span></label>
               <input type="datetime-local" name="date_registered" id="farm_date_registered" class="form-control" required>
             </div>
             <div class="col-12">
@@ -326,7 +326,7 @@
               <textarea name="description" id="farm_description" class="form-control" rows="3" placeholder="Brief description of the farm..."></textarea>
             </div>
             <div class="col-12">
-              <label class="form-label">Farm Status <span class="text-danger">*</span></label>
+              <label class="form-label">Farm Status <span class="text-danger"></span></label>
               <select name="status" id="farm_status" class="form-select" required>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -527,6 +527,41 @@
   function clearFormError() {
     alertBox.textContent = '';
     alertBox.classList.add('d-none');
+  }
+
+  // Contact number: enforce exactly 11 digits and auto-format as 09XX-XXX-XXXX
+  const contactInput = document.getElementById('farm_contact_number');
+  function formatContactNumber(value) {
+    let digits = value.replace(/\D/g, '').slice(0, 11);
+    let formatted = digits;
+    if (digits.length > 7) {
+      formatted = digits.slice(0, 4) + '-' + digits.slice(4, 7) + '-' + digits.slice(7);
+    } else if (digits.length > 4) {
+      formatted = digits.slice(0, 4) + '-' + digits.slice(4);
+    }
+    return formatted;
+  }
+  if (contactInput) {
+    contactInput.addEventListener('input', function () {
+      const cursorAtEnd = this.selectionStart === this.value.length;
+      const formatted = formatContactNumber(this.value);
+      this.value = formatted;
+      if (cursorAtEnd) {
+        this.setSelectionRange(formatted.length, formatted.length);
+      }
+    });
+    contactInput.addEventListener('keydown', function (e) {
+      const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
+      if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
+      if (!/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+    contactInput.addEventListener('paste', function (e) {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData).getData('text');
+      this.value = formatContactNumber(pasted);
+    });
   }
 
   // Show server-rendered toasts

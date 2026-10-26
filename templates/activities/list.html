@@ -1,0 +1,781 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none" aria-label="Page header">
+    <div class="container-xl">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Operations</div>
+          <div class="d-flex align-items-center gap-3 flex-wrap d-none d-md-flex">
+            <h2 class="page-title mb-0">Farm Activity Scheduling</h2>
+          </div>
+          <h2 class="page-title mb-0 d-md-none">Farm Activity Scheduling</h2>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{% url 'activities:activity_export' %}?{{ query_string }}" class="btn btn-outline-secondary">
+              <i class='fas fa-file-csv me-2'></i> Export CSV
+            </a>
+            <button type="button"
+               class="btn btn-primary"
+               data-bs-toggle="modal"
+               data-bs-target="#activityModal"
+               data-mode="create">
+              <i class='fas fa-calendar-plus me-2'></i> Schedule Activity
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br>
+
+  <div class="toast-container position-fixed top-0 end-0 p-3" id="activityToastContainer" aria-live="polite" aria-atomic="true">
+    {% for message in messages %}
+    <div class="toast bg-info-lt" role="status" aria-atomic="true" data-bs-delay="4000" style="--tblr-toast-color: #000;">
+      <div class="d-flex">
+        <div class="toast-body">{{ message }}</div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="activityAlert" class="alert alert-danger d-none" role="alert"></div>
+
+  <!-- Activity overview cards -->
+  <div class="row row-cards mb-3">
+    <div class="col-sm-6 col-xl">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-secondary-lt text-secondary rounded-pill">Scheduled</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.total }}</h2>
+              <p class="text-muted small mb-0">Total activities</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-calendar-check fa-2x text-secondary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-info-lt text-info rounded-pill">Pending</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.pending }}</h2>
+              <p class="text-muted small mb-0">Waiting to start</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-hourglass-half fa-2x text-info"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-primary-lt text-primary rounded-pill">In Progress</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.in_progress }}</h2>
+              <p class="text-muted small mb-0">Work underway</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-spinner fa-2x text-primary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-success-lt text-success rounded-pill">Completed</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.completed }}</h2>
+              <p class="text-muted small mb-0">Finished activities</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-check-circle fa-2x text-success"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-danger-lt text-danger rounded-pill">Attention</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.overdue }}</h2>
+              <p class="text-muted small mb-0">Overdue &middot; {{ summary.due_today }} due today</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overdue / due today -->
+  {% if attention_activities %}
+  <div class="card mb-3">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title mb-1">Needs Attention</h3>
+        <div class="text-muted small">Overdue activities and activities scheduled for today.</div>
+      </div>
+      <div class="card-actions">
+        <span class="badge bg-danger-lt text-danger">{{ attention_activities|length }} activit{{ attention_activities|length|pluralize:"y,ies" }}</span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter table-hover card-table text-nowrap">
+        <thead>
+          <tr>
+            <th>Scheduled</th>
+            <th>Activity</th>
+            <th>Farm / Location</th>
+            <th>Assigned Worker</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th class="w-1">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for activity in attention_activities %}
+          <tr>
+            <td>
+              <span class="badge {% if activity.is_overdue %}bg-danger-lt text-danger{% else %}bg-warning-lt text-warning{% endif %}">
+                {{ activity.scheduled_date|date:"M j, Y" }}
+              </span>
+              <div class="text-muted small">
+                {% if activity.is_overdue %}{{ activity.days_overdue }} day{{ activity.days_overdue|pluralize }} overdue{% else %}Due today{% endif %}
+              </div>
+            </td>
+            <td>
+              <span class="{{ activity.icon }} me-1"></span>
+              <span class="fw-semibold">{{ activity.get_activity_type_display }}</span>
+            </td>
+            <td>
+              <div class="fw-semibold">{{ activity.farm.name }}</div>
+              <div class="text-muted small">{{ activity.location }}</div>
+            </td>
+            <td class="text-muted">{{ activity.assigned_worker }}</td>
+            <td><span class="badge {{ activity.priority_badge }}">{{ activity.get_priority_display }}</span></td>
+            <td><span class="badge {{ activity.status_badge }}">{{ activity.get_status_display }}</span></td>
+            <td>
+              <div class="d-flex gap-1">
+                <button type="button"
+                        class="btn btn-sm {% if activity.status == 'pending' %}btn-outline-primary{% elif activity.status == 'in_progress' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}"
+                        data-activity-status
+                        data-id="{{ activity.id }}"
+                        data-next="{{ activity.next_status }}"
+                        title="{{ activity.next_status_label }}">
+                  <i class="fas fa-fast-forward me-1"></i> {{ activity.next_status_label }}
+                </button>
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#activityModal" data-mode="view" data-id="{{ activity.id }}" title="View activity">
+                  <i class="fas fa-eye text-info"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Search + filter toolbar -->
+  <form method="GET" class="mb-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-xl-4">
+        <label class="form-label small text-muted mb-1" for="activitySearch">Search</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="ti ti-search"></i></span>
+          <input type="text" id="activitySearch" name="q" value="{{ query }}" class="form-control" placeholder="Search location, worker, farm, remarks...">
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <label class="form-label small text-muted mb-1" for="activityStatus">Status</label>
+        <select name="status" id="activityStatus" class="form-select">
+          <option value="">All statuses</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <label class="form-label small text-muted mb-1" for="activityPriority">Priority</label>
+        <select name="priority" id="activityPriority" class="form-select">
+          <option value="">All priorities</option>
+          {% for value, label in priority_choices %}
+          <option value="{{ value }}" {% if priority == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <label class="form-label small text-muted mb-1" for="activityType">Activity type</label>
+        <select name="type" id="activityType" class="form-select">
+          <option value="">All types</option>
+          {% for value, label in activity_type_choices %}
+          <option value="{{ value }}" {% if activity_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <label class="form-label small text-muted mb-1" for="activityFarm">Farm</label>
+        <select name="farm" id="activityFarm" class="form-select">
+          <option value="">All farms</option>
+          {% for farm in farms %}
+          <option value="{{ farm.id }}" {% if farm_id == farm.id|stringformat:"s" %}selected{% endif %}>{{ farm.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <label class="form-label small text-muted mb-1" for="activityDateFrom">From</label>
+        <input type="date" name="date_from" id="activityDateFrom" value="{{ date_from }}" class="form-control">
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <label class="form-label small text-muted mb-1" for="activityDateTo">To</label>
+        <input type="date" name="date_to" id="activityDateTo" value="{{ date_to }}" class="form-control">
+      </div>
+      <div class="col-6 col-md-4 col-xl-3">
+        <label class="form-label small text-muted mb-1" for="activitySort">Sort by</label>
+        <select name="sort" id="activitySort" class="form-select">
+          {% for value, label in sort_choices %}
+          <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-4 col-xl-3">
+        <div class="btn-list">
+          {% if query or status or priority or activity_type or farm_id or date_from or date_to %}
+          <a href="{% url 'activities:activity_list' %}" class="btn btn-outline-secondary flex-fill">Clear</a>
+          {% endif %}
+          <button type="submit" class="btn btn-primary flex-fill">
+            <i class="ti ti-filter me-1"></i> Apply Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        Scheduled Activities
+        <span class="text-muted fw-normal">— {{ activities.paginator.count }} result{{ activities.paginator.count|pluralize }}</span>
+      </div>
+      <div class="card-options">
+        <span class="badge bg-primary-lt text-primary me-1">{{ summary.in_progress }} in progress</span>
+        <span class="badge bg-info-lt text-info">{{ summary.pending }} pending</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-vcenter table-hover card-table text-nowrap" id="activitiesTable">
+        <thead>
+          <tr>
+            <th>Scheduled</th>
+            <th>Activity Type</th>
+            <th>Farm / Location</th>
+            <th>Crop</th>
+            <th>Assigned Worker</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Remarks</th>
+            <th class="w-1">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="activitiesTableBody">
+        {% for activity in activities %}
+        <tr data-row-id="{{ activity.id }}">
+            <td>
+              <div class="fw-semibold">{{ activity.scheduled_date|date:"M j, Y" }}</div>
+              <div class="text-muted small">
+                {% if activity.is_overdue %}
+                <span class="text-danger">{{ activity.days_overdue }} day{{ activity.days_overdue|pluralize }} overdue</span>
+                {% elif activity.due_today %}
+                <span class="text-warning">Due today</span>
+                {% else %}
+                In {{ activity.days_until }} day{{ activity.days_until|pluralize }}
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <span class="{{ activity.icon }} me-1"></span>
+              <span class="fw-semibold">{{ activity.get_activity_type_display }}</span>
+            </td>
+            <td>
+              <div class="fw-semibold">{{ activity.farm.name }}</div>
+              <div class="text-muted small">{{ activity.location }}</div>
+            </td>
+            <td class="text-muted">{{ activity.crop.name|default:"—" }}</td>
+            <td class="text-muted">{{ activity.assigned_worker }}</td>
+            <td><span class="badge {{ activity.priority_badge }}">{{ activity.get_priority_display }}</span></td>
+            <td>
+              <span class="badge {{ activity.status_badge }}">{{ activity.get_status_display }}</span>
+              {% if activity.started_at %}
+              <div class="text-muted small">Started {{ activity.started_at|date:"M j, H:i" }}</div>
+              {% endif %}
+              {% if activity.completed_at %}
+              <div class="text-muted small">Done {{ activity.completed_at|date:"M j, H:i" }}</div>
+              {% endif %}
+            </td>
+            <td class="text-muted text-truncate" style="max-width: 220px;" title="{{ activity.remarks }}">
+              {{ activity.remarks|default:"—"|truncatechars:70 }}
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#activityModal" data-mode="view" data-id="{{ activity.id }}" title="View activity">
+                  <i class="fas fa-eye text-info"></i>
+                </button>
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#activityModal" data-mode="edit" data-id="{{ activity.id }}" title="Edit activity">
+                  <i class="fas fa-edit text-primary"></i>
+                </button>
+                <button type="button"
+                        class="btn btn-ghost-secondary btn-icon btn-sm"
+                        data-activity-status
+                        data-id="{{ activity.id }}"
+                        data-next="{{ activity.next_status }}"
+                        title="{{ activity.next_status_label }}">
+                  <i class="fas fa-fast-forward {% if activity.status == 'pending' %}text-primary{% elif activity.status == 'in_progress' %}text-success{% else %}text-secondary{% endif %}"></i>
+                </button>
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#deleteActivityModal" data-id="{{ activity.id }}" data-name="{{ activity.get_activity_type_display }} on {{ activity.location|escape }}" title="Delete activity">
+                  <i class="fas fa-trash-alt text-danger"></i>
+                </button>
+              </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="9">
+                <div class="empty py-5">
+                    <div class="empty-icon">
+                        <i class="fas fa-calendar-check fa-2x text-muted"></i>
+                    </div>
+                    <p class="empty-title">No activities scheduled</p>
+                    <p class="empty-subtitle">Plan crop inspections, irrigation, fertilization, weeding, and other field work.</p>
+                    <div class="empty-action">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#activityModal" data-mode="create">
+                            <i class="fas fa-calendar-plus me-1"></i> Schedule Activity
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if activities.paginator.num_pages > 1 %}
+    <div class="card-footer d-flex align-items-center">
+      <p class="m-0 text-muted">
+        Showing <span class="fw-medium">{{ activities.start_index }}</span>
+        to <span class="fw-medium">{{ activities.end_index }}</span>
+        of <span class="fw-medium">{{ activities.paginator.count }}</span> activit{{ activities.paginator.count|pluralize:"y,ies" }}
+      </p>
+      <ul class="pagination m-0 ms-auto">
+        {% if activities.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ activities.previous_page_number }}&q={{ query }}&status={{ status }}&priority={{ priority }}&type={{ activity_type }}&farm={{ farm_id }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={{ sort }}">
+            <i class="ti ti-chevron-left"></i> prev
+          </a>
+        </li>
+        {% endif %}
+        {% for num in activities.paginator.page_range %}
+        <li class="page-item {% if activities.number == num %}active{% endif %}">
+          <a class="page-link" href="?page={{ num }}&q={{ query }}&status={{ status }}&priority={{ priority }}&type={{ activity_type }}&farm={{ farm_id }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={{ sort }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if activities.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ activities.next_page_number }}&q={{ query }}&status={{ status }}&priority={{ priority }}&type={{ activity_type }}&farm={{ farm_id }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={{ sort }}">
+            next <i class="ti ti-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Activity Modal (View / Create / Edit) -->
+<div class="modal modal-blur fade" id="activityModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="activityModalTitle">Schedule Activity</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="activityForm">
+        {% csrf_token %}
+        <input type="hidden" name="id" id="activity_id">
+        <div class="modal-body">
+          <div id="activityFormError" class="alert alert-danger d-none"></div>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Activity Type <span class="text-danger">*</span></label>
+              <select name="activity_type" id="activity_activity_type" class="form-select" required>
+                <option value="">Select an activity</option>
+                {% for value, label in activity_type_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Farm <span class="text-danger">*</span></label>
+              <select name="farm_id" id="activity_farm_id" class="form-select" required>
+                <option value="">Select a farm</option>
+                {% for farm in farms %}
+                <option value="{{ farm.id }}" data-location="{{ farm.location }}">{{ farm.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Location <span class="text-danger">*</span></label>
+              <input type="text" name="location" id="activity_location" class="form-control" required list="activity_location_suggestions" placeholder="e.g. North Field, Block A">
+              <datalist id="activity_location_suggestions">
+                {% for loc in location_suggestions %}
+                <option value="{{ loc }}"></option>
+                {% endfor %}
+              </datalist>
+              <small class="text-muted">Selecting a farm fills in its location automatically. Existing locations are suggested while typing.</small>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Crop</label>
+              <select name="crop_id" id="activity_crop_id" class="form-select">
+                <option value="">No specific crop</option>
+                {% for crop in crops %}
+                <option value="{{ crop.id }}" data-farm="{{ crop.farm_id }}">{{ crop.name }} — {{ crop.farm.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Scheduled Date <span class="text-danger">*</span></label>
+              <input type="date" name="scheduled_date" id="activity_scheduled_date" class="form-control" required>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Assigned Worker <span class="text-danger">*</span></label>
+              <input type="text" name="assigned_worker" id="activity_assigned_worker" class="form-control" required placeholder="Worker or team name">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Priority <span class="text-danger">*</span></label>
+              <select name="priority" id="activity_priority" class="form-select" required>
+                {% for value, label in priority_choices %}
+                <option value="{{ value }}" {% if value == 'medium' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Status <span class="text-danger">*</span></label>
+              <select name="status" id="activity_status" class="form-select" required>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-hint">Flow: Pending &rarr; In Progress &rarr; Completed</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Remarks</label>
+              <textarea name="remarks" id="activity_remarks" class="form-control" rows="3" placeholder="Instructions, reminders, or observations..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary me-auto" id="activityClearBtn" title="Clear all fields">
+            <i class="ti ti-x me-1"></i>Clear
+          </button>
+          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="activitySubmitBtn">Save Activity</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Activity Modal -->
+<div class="modal modal-blur fade" id="deleteActivityModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">Delete Activity</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Are you sure you want to delete <strong id="deleteActivityName"></strong>? This cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteActivityBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const SAVE_URL    = '{% url "activities:activity_save_ajax" %}';
+  const GET_URL     = '{% url "activities:activity_get_ajax" 0 %}'.replace('/0/', '/');
+  const STATUS_BASE = '{% url "activities:activity_status_ajax" 0 %}'.replace('/0/', '/');
+  const DELETE_BASE = '{% url "activities:activity_delete_ajax" 0 %}'.replace('/0/', '/');
+
+  const modalEl     = document.getElementById('activityModal');
+  const deleteModal = document.getElementById('deleteActivityModal');
+  const form        = document.getElementById('activityForm');
+  const alertBox    = document.getElementById('activityAlert');
+  const title       = document.getElementById('activityModalTitle');
+  const submitBtn   = document.getElementById('activitySubmitBtn');
+  const deleteBtn   = document.getElementById('confirmDeleteActivityBtn');
+  const deleteName  = document.getElementById('deleteActivityName');
+  const clearBtn    = document.getElementById('activityClearBtn');
+  let currentId     = null;
+
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return m ? decodeURIComponent(m[2]) : null;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  function showFormError(msg) {
+    alertBox.textContent = msg;
+    alertBox.classList.remove('d-none');
+  }
+  function clearFormError() {
+    alertBox.textContent = '';
+    alertBox.classList.add('d-none');
+  }
+
+  document.querySelectorAll('#activityToastContainer .toast').forEach(function (el) {
+    bootstrap.Toast.getOrCreateInstance(el).show();
+  });
+
+  /* Only offer crops that belong to the selected farm. */
+  function filterCropOptions() {
+    const farmId = document.getElementById('activity_farm_id').value;
+    const cropSelect = document.getElementById('activity_crop_id');
+    const current = cropSelect.value;
+    let stillVisible = false;
+
+    cropSelect.querySelectorAll('option[data-farm]').forEach(function (opt) {
+      const match = !farmId || opt.getAttribute('data-farm') === farmId;
+      opt.hidden = !match;
+      opt.disabled = !match;
+      if (match && opt.value === current) stillVisible = true;
+    });
+
+    if (!stillVisible) cropSelect.value = '';
+  }
+  document.getElementById('activity_farm_id').addEventListener('change', filterCropOptions);
+
+  /* Selecting a farm fills in its location, the same way the crop page shows
+     the farm's location and the harvest schedule form auto-fills. Typing a
+     custom value keeps it. */
+  let locationAutoFilled = false;
+
+  function activityFarmLocation() {
+    const farmSelect = document.getElementById('activity_farm_id');
+    const option = farmSelect.options[farmSelect.selectedIndex];
+    return option && option.dataset.location ? option.dataset.location.trim() : '';
+  }
+
+  function syncLocationFromFarm() {
+    const input = document.getElementById('activity_location');
+    const farmLocation = activityFarmLocation();
+    if (!farmLocation) return;
+    if (!input.value.trim() || locationAutoFilled || input.value.trim() === farmLocation) {
+      input.value = farmLocation;
+      locationAutoFilled = true;
+    }
+  }
+
+  document.getElementById('activity_location').addEventListener('input', function () {
+    locationAutoFilled = false;
+  });
+
+  document.getElementById('activity_farm_id').addEventListener('change', syncLocationFromFarm);
+
+  /* New activities always start as Pending, so only offer the other
+     statuses once an existing activity is being edited. */
+  function setStatusOptions(mode) {
+    const statusSelect = document.getElementById('activity_status');
+    statusSelect.querySelectorAll('option').forEach(function (opt) {
+      const lock = mode === 'create' && opt.value !== 'pending';
+      opt.hidden = lock;
+      opt.disabled = lock;
+    });
+  }
+
+  function resetForm() {
+    form.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.disabled = false;
+    });
+    form.reset();
+    document.getElementById('activity_id').value = '';
+    currentId = null;
+    title.textContent = 'Schedule Activity';
+    submitBtn.textContent = 'Save Activity';
+    submitBtn.disabled = false;
+    clearFormError();
+    setStatusOptions('create');
+    document.getElementById('activity_priority').value = 'medium';
+    document.getElementById('activity_status').value = 'pending';
+    document.getElementById('activity_scheduled_date').value = new Date().toISOString().split('T')[0];
+    filterCropOptions();
+    locationAutoFilled = false;
+    syncLocationFromFarm();
+  }
+
+  modalEl.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (!button) {
+      resetForm();
+      return;
+    }
+    const mode = button.getAttribute('data-mode');
+
+    if (mode === 'edit' || mode === 'view') {
+      const id = button.getAttribute('data-id');
+      currentId = id;
+      document.getElementById('activity_id').value = id;
+
+      title.textContent = mode === 'edit' ? 'Edit Activity' : 'Activity Details';
+      submitBtn.textContent = mode === 'edit' ? 'Update Activity' : 'View Details';
+      submitBtn.disabled = mode === 'view';
+      form.querySelectorAll('input, select, textarea').forEach(function (el) {
+        el.disabled = mode === 'view';
+      });
+      setStatusOptions(mode);
+
+      fetch(`${GET_URL}${id}/`, {
+        method: 'GET',
+        headers: { 'X-CSRFToken': csrftoken },
+      })
+      .then((r) => r.json())
+      .then((data) => {
+        document.getElementById('activity_activity_type').value = data.activity_type || '';
+        document.getElementById('activity_farm_id').value        = data.farm_id || '';
+        filterCropOptions();
+        document.getElementById('activity_crop_id').value        = data.crop_id || '';
+        document.getElementById('activity_location').value        = data.location || '';
+        locationAutoFilled = false;
+        document.getElementById('activity_scheduled_date').value = data.scheduled_date ? data.scheduled_date.slice(0, 10) : '';
+        document.getElementById('activity_assigned_worker').value = data.assigned_worker || '';
+        document.getElementById('activity_priority').value       = data.priority || 'medium';
+        document.getElementById('activity_status').value         = data.status || 'pending';
+        document.getElementById('activity_remarks').value        = data.remarks || '';
+      })
+      .catch(() => { showFormError('Could not load activity details.'); });
+    } else {
+      resetForm();
+    }
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', resetForm);
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', resetForm);
+  }
+
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (button) {
+      currentId = button.getAttribute('data-id');
+      deleteName.textContent = button.getAttribute('data-name');
+    }
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearFormError();
+    submitBtn.disabled = true;
+
+    fetch(SAVE_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+      body: new FormData(form),
+    })
+    .then(async (resp) => {
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Something went wrong.');
+      return data;
+    })
+    .then(() => {
+      bootstrap.Modal.getInstance(modalEl).hide();
+      location.reload();
+    })
+    .catch((err) => {
+      showFormError(err.message);
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+    });
+  });
+
+  /* Advance / reopen an activity along Pending -> In Progress -> Completed. */
+  document.querySelectorAll('[data-activity-status]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const id = btn.getAttribute('data-id');
+      const next = btn.getAttribute('data-next');
+      if (!id || !next) return;
+
+      btn.disabled = true;
+      const body = new FormData();
+      body.append('status', next);
+
+      fetch(`${STATUS_BASE}${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: body,
+      })
+      .then(async (resp) => {
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Could not update the status.');
+        return data;
+      })
+      .then(() => { location.reload(); })
+      .catch((err) => { alert(err.message); })
+      .finally(() => { btn.disabled = false; });
+    });
+  });
+
+  deleteBtn.addEventListener('click', function () {
+    if (!currentId) return;
+    const btn = this;
+    btn.disabled = true;
+
+    fetch(`${DELETE_BASE}${currentId}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+    })
+    .then(async (resp) => {
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Could not delete activity.');
+      return data;
+    })
+    .then(() => {
+      bootstrap.Modal.getInstance(deleteModal).hide();
+      location.reload();
+    })
+    .catch((err) => { alert(err.message); })
+    .finally(() => { btn.disabled = false; });
+  });
+})();
+</script>
+{% endblock %}

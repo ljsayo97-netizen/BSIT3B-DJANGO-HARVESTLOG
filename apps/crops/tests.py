@@ -16,11 +16,12 @@ class CropModelTests(TestCase):
 
     def test_status_choices(self):
         labels = dict(Crop.Status.choices)
-        self.assertEqual(labels['planting'], 'Planting')
-        self.assertEqual(labels['growing'], 'Growing')
-        self.assertEqual(labels['ready_for_harvest'], 'Ready for Harvest')
-        self.assertEqual(labels['harvested'], 'Harvested')
-        self.assertEqual(labels['failed'], 'Failed')
+        self.assertEqual(labels['planting'], 'Planted')
+        self.assertEqual(labels['growing'], '🌿 Growing')
+        self.assertEqual(labels['maturing'], '🌾 Maturing')
+        self.assertEqual(labels['ready_for_harvest'], '🟡 Ready for Harvest')
+        self.assertEqual(labels['harvested'], '✅ Harvested')
+        self.assertEqual(labels['failed'], '⚠️ Damaged/Failed')
 
 
 class CropViewTests(TestCase):
@@ -50,6 +51,36 @@ class CropViewTests(TestCase):
         response = self.client.get(reverse('crops:crop_list'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'crops/list.html')
+
+    def test_farm_detail_panel_shows_details_crops_and_history(self):
+        from apps.crops.models import Crop
+
+        active = Crop.objects.create(
+            name='Rice', farm=self.farm, area_hectares=2.5,
+            status=Crop.Status.GROWING, user=self.user,
+        )
+        past = Crop.objects.create(
+            name='Corn', farm=self.farm, area_hectares=1.0,
+            status=Crop.Status.HARVESTED, user=self.user,
+        )
+
+        # Without a selected farm the panel shows only the picker.
+        request = RequestFactory().get(reverse('crops:crop_list'))
+        request.user = self.user
+        self.assertNotIn('Crop History', crop_list_page(request).content.decode())
+
+        # With a farm selected: details, active crops, and crop history appear.
+        request = RequestFactory().get(
+            reverse('crops:crop_list'), {'farm_detail': self.farm.pk}
+        )
+        request.user = self.user
+        content = crop_list_page(request).content.decode()
+
+        self.assertIn('Farm Details', content)
+        self.assertIn(self.farm.location, content)
+        self.assertIn('Crop History', content)
+        self.assertIn(active.name, content)
+        self.assertIn(past.name, content)
 
     def test_script_only_references_element_ids_that_exist(self):
         # A getElementById() call on a missing element returns null, and the

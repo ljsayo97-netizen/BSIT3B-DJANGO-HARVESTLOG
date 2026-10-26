@@ -13,6 +13,11 @@
         </div>
         <div class="col-auto">
           <div class="btn-list">
+            {% if selected_farm %}
+            <a href="{% url 'crops:crop_list' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i> Back to Crops
+            </a>
+            {% endif %}
             <button type="button"
                class="btn btn-primary"
                data-bs-toggle="modal"
@@ -40,6 +45,147 @@
 
   <div id="cropAlert" class="alert alert-danger d-none" role="alert"></div>
 
+  <!-- Farm detail panel -->
+  <div class="card mb-3">
+    <div class="card-header">
+      <div class="card-title">Farm Details</div>
+      <div class="card-options">
+        <form method="GET" id="farmDetailForm" class="d-flex align-items-center gap-2">
+          <input type="hidden" name="q" value="{{ query }}">
+          <input type="hidden" name="status" value="{{ status }}">
+          <input type="hidden" name="farm" value="{{ farm_id }}">
+          <select name="farm_detail" id="farm_detail_id" class="form-select" style="width: auto;" aria-label="Select a farm">
+            <option value="">Select a farm</option>
+            {% for farm in farms %}
+            <option value="{{ farm.id }}" {% if farm_detail_id == farm.id|stringformat:"s" %}selected{% endif %}>{{ farm.name }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+    </div>
+    {% if selected_farm %}
+    <div class="card-body">
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md">
+          <div class="text-muted small text-uppercase">Farm Name</div>
+          <div class="fw-semibold">{{ selected_farm.name }}</div>
+        </div>
+        <div class="col-6 col-md">
+          <div class="text-muted small text-uppercase">Farm ID</div>
+          <div class="fw-semibold">{{ selected_farm.farm_code|default:"—" }}</div>
+        </div>
+        <div class="col-6 col-md">
+          <div class="text-muted small text-uppercase">Owner / Manager</div>
+          <div class="fw-semibold">{{ selected_farm.owner|default:"—" }}</div>
+        </div>
+        <div class="col-6 col-md">
+          <div class="text-muted small text-uppercase">Location</div>
+          <div class="fw-semibold">{{ selected_farm.location|default:"—" }}</div>
+        </div>
+        <div class="col-6 col-md">
+          <div class="text-muted small text-uppercase">Size (hectares)</div>
+          <div class="fw-semibold">{{ selected_farm.size_hectares|default:"—" }}</div>
+        </div>
+      </div>
+
+      <div class="fw-bold mb-2">Crops</div>
+      {% if farm_crops %}
+      <div class="table-responsive mb-4">
+        <table class="table table-vcenter table-hover text-nowrap">
+          <thead>
+            <tr>
+              <th>Crop</th>
+              <th>Variety</th>
+              <th>Planting Date</th>
+              <th>Expected Harvest Date</th>
+              <th>Quality</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for crop in farm_crops %}
+            <tr>
+              <td class="fw-semibold">{{ crop.name }}</td>
+              <td class="text-muted">{{ crop.variety|default:"—" }}</td>
+              <td class="text-muted">{{ crop.planting_date|date:"M j, Y" }}</td>
+              <td class="text-muted">
+                {% if crop.expected_harvest_date %}{{ crop.expected_harvest_date|date:"M j, Y" }}{% else %}—{% endif %}
+              </td>
+              <td>
+                {% include "crops/_quality_badge.html" with grade=crop.quality label=crop.get_quality_display %}
+              </td>
+              <td>
+                {% if crop.status == 'planting' %}
+                <span class="badge bg-info-lt text-info">{{ crop.get_status_display }}</span>
+                {% elif crop.status == 'growing' %}
+                <span class="badge bg-primary-lt text-primary">{{ crop.get_status_display }}</span>
+                {% elif crop.status == 'maturing' %}
+                <span class="badge bg-secondary-lt text-secondary">{{ crop.get_status_display }}</span>
+                {% else %}
+                <span class="badge bg-warning-lt text-warning">{{ crop.get_status_display }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-4">No active crops for this farm.</p>
+      {% endif %}
+
+      <div class="fw-bold mb-2">Crop History</div>
+      {% if farm_history %}
+      <div class="table-responsive">
+        <table class="table table-vcenter table-hover text-nowrap">
+          <thead>
+            <tr>
+              <th>Crop</th>
+              <th>Planting Date</th>
+              <th>Expected Harvest Date</th>
+              <th>Actual Harvest Date</th>
+              <th>Quality</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for crop in farm_history %}
+            <tr>
+              <td class="fw-semibold">{{ crop.name }}</td>
+              <td class="text-muted">{{ crop.planting_date|date:"M j, Y" }}</td>
+              <td class="text-muted">
+                {% if crop.expected_harvest_date %}{{ crop.expected_harvest_date|date:"M j, Y" }}{% else %}—{% endif %}
+              </td>
+              <td class="text-muted">
+                {% if crop.actual_harvest_date %}{{ crop.actual_harvest_date|date:"M j, Y" }}{% else %}—{% endif %}
+              </td>
+              <td>
+                {% if crop.quality %}
+                {% include "crops/_quality_badge.html" with grade=crop.quality label=crop.get_quality_display %}
+                {% else %}
+                {% include "crops/_quality_badge.html" with grade=crop.latest_quality.quality_grade label=crop.latest_quality.get_quality_grade_display %}
+                {% endif %}
+              </td>
+              <td>
+                {% if crop.status == 'harvested' %}
+                <span class="badge bg-success-lt text-success">{{ crop.get_status_display }}</span>
+                {% else %}
+                <span class="badge bg-danger-lt text-danger">{{ crop.get_status_display }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No crop history yet.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if not selected_farm %}
   <!-- Search + filter toolbar -->
   <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-1">
     <form method="GET" class="w-100" style="max-width: 620px;">
@@ -80,7 +226,6 @@
       <table class="table table-vcenter table-hover card-table text-nowrap" id="cropsTable">
         <thead>
           <tr>
-            <th>#</th>
             <th>Farm</th>
             <th>Crop Name</th>
             <th>Variety</th>
@@ -94,7 +239,6 @@
         <tbody id="cropsTableBody">
         {% for crop in crops %}
         <tr data-row-id="{{ crop.id }}">
-            <td class="text-muted">{{ forloop.counter0|add:crops.start_index }}</td>
             <td class="text-muted">{{ crop.farm.name }}</td>
             <td class="fw-semibold">{{ crop.name }}</td>
             <td class="text-muted">{{ crop.variety|default:"—" }}</td>
@@ -112,6 +256,8 @@
               <span class="badge bg-info-lt text-info">{{ crop.get_status_display }}</span>
               {% elif crop.status == 'growing' %}
               <span class="badge bg-primary-lt text-primary">{{ crop.get_status_display }}</span>
+              {% elif crop.status == 'maturing' %}
+              <span class="badge bg-secondary-lt text-secondary">{{ crop.get_status_display }}</span>
               {% elif crop.status == 'ready_for_harvest' %}
               <span class="badge bg-warning-lt text-warning">{{ crop.get_status_display }}</span>
               {% elif crop.status == 'harvested' %}
@@ -141,7 +287,7 @@
         </tr>
         {% empty %}
         <tr>
-            <td colspan="9">
+            <td colspan="8">
                 <div class="empty py-5">
                     <div class="empty-icon">
                         <i class="fas fa-leaf fa-2x text-muted"></i>
@@ -195,6 +341,7 @@
     </div>
     {% endif %}
   </div>
+  {% endif %} {# end: hide search + planted crops when a farm is selected #}
 </div>
 
 <!-- Crop Modal (View / Create / Edit) -->
@@ -212,7 +359,7 @@
           <div id="cropFormError" class="alert alert-danger d-none"></div>
           <div class="row g-3">
             <div class="col-12">
-              <label class="form-label">Farm <span class="text-danger">*</span></label>
+              <label class="form-label">Farm <span class="text-danger"></span></label>
               <select name="farm_id" id="crop_farm_id" class="form-select" required>
                 <option value="">Select a farm</option>
                 {% for farm in farms %}
@@ -221,7 +368,7 @@
               </select>
             </div>
             <div class="col-6">
-              <label class="form-label">Crop Name <span class="text-danger">*</span></label>
+              <label class="form-label">Crop Name <span class="text-danger"></span></label>
               <input type="text" name="name" id="crop_name" class="form-control" required>
             </div>
             <div class="col-6">
@@ -229,7 +376,7 @@
               <input type="text" name="variety" id="crop_variety" class="form-control">
             </div>
             <div class="col-6">
-              <label class="form-label">Planting Date <span class="text-danger">*</span></label>
+              <label class="form-label">Planting Date <span class="text-danger"></span></label>
               <input type="date" name="planting_date" id="crop_planting_date" class="form-control" required>
             </div>
             <div class="col-6">
@@ -237,26 +384,25 @@
               <input type="date" name="expected_harvest_date" id="crop_expected_harvest_date" class="form-control">
             </div>
             <div class="col-6">
-              <label class="form-label">Actual Harvest Date</label>
-              <input type="date" name="actual_harvest_date" id="crop_actual_harvest_date" class="form-control">
-            </div>
-            <div class="col-6">
-              <label class="form-label">Area (hectares) <span class="text-danger">*</span></label>
+              <label class="form-label">Area (hectares) <span class="text-danger"></span></label>
               <input type="number" name="area_hectares" id="crop_area_hectares" class="form-control" step="0.01" min="0" required placeholder="0.00">
             </div>
             <div class="col-6">
-              <label class="form-label">Status <span class="text-danger">*</span></label>
+              <label class="form-label">Status <span class="text-danger"></span></label>
               <select name="status" id="crop_status" class="form-select" required>
-                <option value="planting">Planting</option>
-                <option value="growing">Growing</option>
-                <option value="ready_for_harvest">Ready for Harvest</option>
-                <option value="harvested">Harvested</option>
-                <option value="failed">Failed</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
               </select>
             </div>
-            <div class="col-12">
-              <label class="form-label">Notes</label>
-              <textarea name="notes" id="crop_notes" class="form-control" rows="3" placeholder="Observations, treatments, etc..."></textarea>
+            <div class="col-6">
+              <label class="form-label">Quality / Grade</label>
+              <select name="quality" id="crop_quality" class="form-select">
+                <option value="">Not set</option>
+                {% for value, label in quality_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
         </div>
@@ -331,6 +477,11 @@
     bootstrap.Toast.getOrCreateInstance(el).show();
   });
 
+  /* Reload with the farm detail panel when a farm is selected. */
+  document.getElementById('farm_detail_id').addEventListener('change', function () {
+    document.getElementById('farmDetailForm').submit();
+  });
+
   function resetForm() {
     form.querySelectorAll('input, select, textarea').forEach(function (el) {
       el.disabled = false;
@@ -379,10 +530,9 @@
         document.getElementById('crop_variety').value      = data.variety || '';
         document.getElementById('crop_planting_date').value = data.planting_date ? data.planting_date.slice(0, 10) : '';
         document.getElementById('crop_expected_harvest_date').value = data.expected_harvest_date ? data.expected_harvest_date.slice(0, 10) : '';
-        document.getElementById('crop_actual_harvest_date').value = data.actual_harvest_date ? data.actual_harvest_date.slice(0, 10) : '';
         document.getElementById('crop_area_hectares').value = data.area_hectares || '';
         document.getElementById('crop_status').value       = data.status || 'planting';
-        document.getElementById('crop_notes').value        = data.notes || '';
+        document.getElementById('crop_quality').value      = data.quality || '';
       })
       .catch(() => { showFormError('Could not load crop details.'); });
     } else {

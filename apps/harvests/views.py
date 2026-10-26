@@ -77,6 +77,7 @@ def _filter_harvests(request, queryset=None):
             Q(harvested_by__icontains=query) |
             Q(supervised_by__icontains=query) |
             Q(notes__icontains=query) |
+            Q(quality_observations__icontains=query) |
             Q(farm__name__icontains=query) |
             Q(crop__name__icontains=query)
         )
@@ -169,6 +170,16 @@ def _harvest_json(harvest):
         'unit': harvest.unit,
         'quality_grade': harvest.quality_grade,
         'quality_grade_display': harvest.get_quality_grade_display(),
+        'quality_condition': harvest.quality_condition,
+        'quality_condition_display': harvest.get_quality_condition_display(),
+        'moisture_level': (
+            float(harvest.moisture_level) if harvest.moisture_level is not None else None
+        ),
+        'damaged_quantity': (
+            float(harvest.damaged_quantity) if harvest.damaged_quantity is not None else None
+        ),
+        'quality_observations': harvest.quality_observations,
+        'quality_recorded_at': harvest.quality_recorded_at.isoformat() if harvest.quality_recorded_at else None,
         'workers_count': harvest.workers_count,
         'harvested_by': harvest.harvested_by,
         'supervised_by': harvest.supervised_by,
@@ -222,6 +233,13 @@ def harvest_list_page(request):
     upcoming_harvests = get_upcoming_harvests(request.user)
     schedules = list(get_harvest_schedules(request.user))
     active_schedules = [schedule for schedule in schedules if schedule.is_active]
+
+    # Existing locations (from schedules and farms) offered as suggestions
+    # when typing the harvest schedule location.
+    location_suggestions = sorted({
+        *(schedule.field_name.strip() for schedule in schedules if schedule.field_name and schedule.field_name.strip()),
+        *(farm.location.strip() for farm in farms if farm.location and farm.location.strip()),
+    }, key=str.lower)
     all_harvests = Harvest.objects.filter(user=request.user)
     total_harvests = all_harvests.count()
     total_quantity = all_harvests.aggregate(total=Sum('quantity_harvested'))['total'] or 0
@@ -237,6 +255,7 @@ def harvest_list_page(request):
         'total_quantity': total_quantity,
         'quality_choices': Harvest.QualityGrade.choices,
         'schedule_status_choices': HarvestSchedule.Status.choices,
+        'location_suggestions': location_suggestions,
         **filters,
     })
 
@@ -343,6 +362,7 @@ def harvest_history_page(request):
         'farms': Farm.objects.filter(user=request.user).order_by('name'),
         'crops': Crop.objects.filter(user=request.user).select_related('farm').order_by('name'),
         'quality_choices': Harvest.QualityGrade.choices,
+        'condition_choices': Harvest.Condition.choices,
         'summary': summary,
         'unit_totals': unit_totals,
         'monthly_labels': monthly_labels,
@@ -376,6 +396,10 @@ def harvest_history_export(request):
         'Quantity',
         'Unit',
         'Quality',
+        'Condition',
+        'Moisture (%)',
+        'Damaged Quantity',
+        'Quality Observations',
         'Workers',
         'Team Lead',
         'Supervisor',
@@ -395,6 +419,10 @@ def harvest_history_export(request):
             harvest.quantity_harvested,
             _csv_value(harvest.unit),
             _csv_value(harvest.get_quality_grade_display()),
+            _csv_value(harvest.get_quality_condition_display() if harvest.quality_condition else ''),
+            '' if harvest.moisture_level is None else harvest.moisture_level,
+            '' if harvest.damaged_quantity is None else harvest.damaged_quantity,
+            _csv_value(harvest.quality_observations),
             harvest.workers_count,
             _csv_value(harvest.harvested_by),
             _csv_value(harvest.supervised_by),
@@ -403,6 +431,88 @@ def harvest_history_export(request):
         ])
 
     return response
+
+
+@login_required(login_url='login')
+@require_POST
+def harvest_quality_save_ajax(request):
+    """Document the quality of one of the user's harvests after the fact."""
+    harvest_id = request.POST.get('id', '').strip()
+    if not harvest_id:
+        return JsonResponse({'error': 'Harvest record is required.'}, status=400)
+
+    harvest = get_object_or_404(Harvest, pk=harvest_id, user=request.user)
+
+    quality_grade = request.POST.get('quality_grade', '').strip()
+    quality_condition = request.POST.get('quality_condition', '').strip()
+    moisture_raw = request.POST.get('moisture_level', '').strip()
+    damaged_raw = request.POST.get('damaged_quantity', '').strip()
+    observations = request.POST.get('quality_observations', '').strip()
+
+    valid_grades = dict(Harvest.QualityGrade.choices)
+    if quality_grade not in valid_grades:
+        return JsonResponse({'error': 'Please select a valid quality grade.'}, status=400)
+
+    valid_conditions = dict(Harvest.Condition.choices)
+    if quality_condition and quality_condition not in valid_conditions:
+        return JsonResponse({'error': 'Please select a valid condition.'}, status=400)
+
+    moisture_level = None
+    if moisture_raw:
+        moisture_level = _parse_decimal(moisture_raw)
+        if moisture_level is None or moisture_level < 0 or moisture_level > 100:
+            return JsonResponse(
+                {'error': 'Moisture level must be a number between 0 and 100.'},
+                status=400,
+            )
+
+    damaged_quantity = None
+    if damaged_raw:
+        damaged_quantity = _parse_decimal(damaged_raw)
+        if damaged_quantity is None or damaged_quantity < 0:
+            return JsonResponse(
+                {'error': 'Damaged quantity must be a valid number (0 or greater).'},
+                status=400,
+            )
+
+    harvest.quality_grade = quality_grade
+    harvest.quality_condition = quality_condition
+    harvest.moisture_level = moisture_level
+    harvest.damaged_quantity = damaged_quantity
+    harvest.quality_observations = observations
+    harvest.quality_recorded_at = timezone.now()
+    harvest.save(update_fields=[
+        'quality_grade',
+        'quality_condition',
+        'moisture_level',
+        'damaged_quantity',
+        'quality_observations',
+        'quality_recorded_at',
+        'updated_at',
+    ])
+
+    messages.success(
+        request,
+        f'Quality & observations recorded for harvest {harvest.harvest_code}.',
+    )
+
+    return JsonResponse({
+        'status': 'success',
+        'harvest_code': harvest.harvest_code,
+        'quality_grade': harvest.quality_grade,
+        'quality_grade_display': harvest.get_quality_grade_display(),
+        'quality_condition': harvest.quality_condition,
+        'quality_condition_display': harvest.get_quality_condition_display(),
+        'moisture_level': (
+            float(harvest.moisture_level) if harvest.moisture_level is not None else None
+        ),
+        'damaged_quantity': (
+            float(harvest.damaged_quantity) if harvest.damaged_quantity is not None else None
+        ),
+        'quality_observations': harvest.quality_observations,
+        'quality_recorded_at': harvest.quality_recorded_at.isoformat(),
+        'quality_details': harvest.quality_details,
+    })
 
 
 @login_required(login_url='login')
@@ -712,7 +822,7 @@ def harvest_schedule_save_ajax(request):
             )
 
     if not field_name:
-        return JsonResponse({'error': 'Field is required.'}, status=400)
+        return JsonResponse({'error': 'Location is required.'}, status=400)
 
     if not scheduled_date_raw:
         return JsonResponse({'error': 'Scheduled date is required.'}, status=400)

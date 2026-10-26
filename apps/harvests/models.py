@@ -1,9 +1,16 @@
 """Harvest scheduling and recording models."""
 
+from decimal import Decimal
+
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
+
+
+def _trim_number(value):
+    """Render a number without trailing zeros (14.50 -> 14.5, 2500 stays 2500)."""
+    return format(Decimal(str(value)).normalize(), 'f')
 
 
 class HarvestSchedule(models.Model):
@@ -32,9 +39,9 @@ class HarvestSchedule(models.Model):
         verbose_name='crop',
     )
     field_name = models.CharField(
-        'field',
+        'location',
         max_length=255,
-        help_text='Field or block where the harvest will take place (e.g. Field A).',
+        help_text='Location where the harvest will take place (e.g. North Field, Block A).',
     )
     scheduled_date = models.DateField('scheduled date', default=timezone.localdate)
     expected_quantity = models.DecimalField(
@@ -123,6 +130,15 @@ class Harvest(models.Model):
         STANDARD = 'standard', 'Standard'
         FAIR = 'fair', 'Fair'
 
+    class Condition(models.TextChoices):
+        FRESH = 'fresh', 'Fresh'
+        DRY = 'dry', 'Dry'
+        WET = 'wet', 'Wet'
+        DISCOLORED = 'discolored', 'Discolored'
+        MOLDY = 'moldy', 'Moldy'
+        PEST_AFFECTED = 'pest_affected', 'Pest-affected'
+        MIXED = 'mixed', 'Mixed'
+
     harvest_code = models.CharField(
         'harvest ID',
         max_length=20,
@@ -184,6 +200,42 @@ class Harvest(models.Model):
         choices=QualityGrade.choices,
         default=QualityGrade.STANDARD,
     )
+    quality_condition = models.CharField(
+        'condition',
+        max_length=30,
+        choices=Condition.choices,
+        blank=True,
+        help_text='Condition of the harvested produce, documented after the harvest.',
+    )
+    moisture_level = models.DecimalField(
+        'moisture level (%)',
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Moisture content of the produce, in percent.',
+    )
+    damaged_quantity = models.DecimalField(
+        'damaged quantity',
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text='Amount lost or damaged, in the harvest unit.',
+    )
+    quality_observations = models.TextField(
+        'quality observations',
+        blank=True,
+        help_text='General observations about the harvested produce.',
+    )
+    quality_recorded_at = models.DateTimeField(
+        'quality recorded at',
+        null=True,
+        blank=True,
+        help_text='When the quality & observation record was documented.',
+    )
     workers_count = models.PositiveIntegerField(
         'workers',
         default=0,
@@ -221,6 +273,29 @@ class Harvest(models.Model):
         reference = self.harvest_code or 'Harvest'
         fruit = self.crop_type or (self.crop.name if self.crop else 'Crop')
         return f'{reference} — {fruit} ({self.farm.name})'
+
+    @property
+    def has_quality_record(self):
+        """Whether quality & observations have been documented."""
+        return (
+            self.quality_recorded_at is not None
+            or bool(self.quality_condition)
+            or self.moisture_level is not None
+            or self.damaged_quantity is not None
+            or bool(self.quality_observations)
+        )
+
+    @property
+    def quality_details(self):
+        """Short quality details for compact display in the history table."""
+        details = []
+        if self.quality_condition:
+            details.append(self.get_quality_condition_display())
+        if self.moisture_level is not None:
+            details.append(f'{_trim_number(self.moisture_level)}% moisture')
+        if self.damaged_quantity is not None:
+            details.append(f'{_trim_number(self.damaged_quantity)} {self.unit} damaged')
+        return details
 
     def _next_harvest_code(self):
         """Build the next sequential code for the harvest year."""

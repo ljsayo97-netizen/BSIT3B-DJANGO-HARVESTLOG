@@ -282,7 +282,7 @@
             <th>Scheduled Date</th>
             <th>Farm</th>
             <th>Crop</th>
-            <th>Field</th>
+            <th>Location</th>
             <th>Workers</th>
             <th>Assigned Team</th>
             <th>Status</th>
@@ -585,16 +585,16 @@
           <div id="scheduleFormError" class="alert alert-danger d-none"></div>
           <div class="row g-3">
             <div class="col-12">
-              <label class="form-label">Farm <span class="text-danger">*</span></label>
+              <label class="form-label">Farm <span class="text-danger"></span></label>
               <select name="farm_id" id="schedule_farm_id" class="form-select" required>
                 <option value="">Select a farm</option>
                 {% for farm in farms %}
-                <option value="{{ farm.id }}">{{ farm.name }}</option>
+                <option value="{{ farm.id }}" data-location="{{ farm.location }}">{{ farm.name }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Crop <span class="text-muted">(optional)</span></label>
+              <label class="form-label">Crop Type<span class="text-muted"></span></label>
               <select name="crop_id" id="schedule_crop_id" class="form-select">
                 <option value="">Select a crop</option>
                 {% for crop in crops %}
@@ -603,15 +603,21 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Field <span class="text-danger">*</span></label>
-              <input type="text" name="field_name" id="schedule_field_name" class="form-control" required placeholder="e.g. Field A">
+              <label class="form-label">Location <span class="text-danger"></span></label>
+              <input type="text" name="field_name" id="schedule_field_name" class="form-control" required list="schedule_location_suggestions" placeholder="e.g. North Field, Block A">
+              <datalist id="schedule_location_suggestions">
+                {% for loc in location_suggestions %}
+                <option value="{{ loc }}"></option>
+                {% endfor %}
+              </datalist>
+              <small class="text-muted">Selecting a farm fills in its location automatically. Existing locations are suggested while typing.</small>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Scheduled Date <span class="text-danger">*</span></label>
+              <label class="form-label">Scheduled Date <span class="text-danger"></span></label>
               <input type="date" name="scheduled_date" id="schedule_scheduled_date" class="form-control" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Status <span class="text-danger">*</span></label>
+              <label class="form-label">Status <span class="text-danger"></span></label>
               <select name="status" id="schedule_status" class="form-select" required>
                 {% for value, label in schedule_status_choices %}
                 <option value="{{ value }}">{{ label }}</option>
@@ -632,7 +638,7 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Number of Workers <span class="text-danger">*</span></label>
+              <label class="form-label">Number of Workers <span class="text-danger"></span></label>
               <input type="number" name="workers_count" id="schedule_workers_count" class="form-control" min="1" step="1" value="1" required>
             </div>
             <div class="col-md-6">
@@ -683,7 +689,7 @@
               <div class="form-hint">A sequential harvest reference is assigned automatically when the record is saved.</div>
             </div>
             <div class="col-md-8">
-              <label class="form-label">Farm <span class="text-danger">*</span></label>
+              <label class="form-label">Farm <span class="text-danger"></span></label>
               <select name="farm_id" id="harvest_farm_id" class="form-select" required>
                 <option value="">Select a farm</option>
                 {% for farm in farms %}
@@ -692,7 +698,7 @@
               </select>
             </div>
             <div class="col-md-4">
-              <label class="form-label">Harvest Date <span class="text-danger">*</span></label>
+              <label class="form-label">Harvest Date <span class="text-danger"></span></label>
               <input type="date" name="harvest_date" id="harvest_harvest_date" class="form-control" required>
             </div>
             <div class="col-md-6">
@@ -705,15 +711,15 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Crop Type <span class="text-danger">*</span></label>
+              <label class="form-label">Crop Type <span class="text-danger"></span></label>
               <input type="text" name="crop_type" id="harvest_crop_type" class="form-control" required placeholder="e.g. Rice">
             </div>
             <div class="col-12">
-              <label class="form-label">Field / Harvest Location <span class="text-danger">*</span></label>
+              <label class="form-label">Field / Harvest Location <span class="text-danger"></span></label>
               <input type="text" name="location" id="harvest_location" class="form-control" required placeholder="e.g. Field A, North field, Block A">
             </div>
             <div class="col-md-4">
-              <label class="form-label">Quantity <span class="text-danger">*</span></label>
+              <label class="form-label">Quantity <span class="text-danger"></span></label>
               <input type="number" name="quantity_harvested" id="harvest_quantity_harvested" class="form-control" step="0.01" min="0" required placeholder="0.00">
             </div>
             <div class="col-md-2">
@@ -726,7 +732,7 @@
               </select>
             </div>
             <div class="col-md-3">
-              <label class="form-label">Quality / Grade <span class="text-danger">*</span></label>
+              <label class="form-label">Quality / Grade <span class="text-danger"></span></label>
               <select name="quality_grade" id="harvest_quality_grade" class="form-select" required>
                 <option value="premium">Premium</option>
                 <option value="grade_a">Grade A</option>
@@ -741,7 +747,7 @@
               <input type="number" name="workers_count" id="harvest_workers_count" class="form-control" min="0" step="1" value="0" placeholder="0">
             </div>
             <div class="col-md-6">
-              <label class="form-label">Harvest Team Lead <span class="text-danger">*</span></label>
+              <label class="form-label">Harvest Team Lead <span class="text-danger"></span></label>
               <input type="text" name="harvested_by" id="harvest_harvested_by" class="form-control" required placeholder="Person who led the harvest">
             </div>
             <div class="col-md-6">
@@ -861,7 +867,7 @@
     bootstrap.Toast.getOrCreateInstance(el).show();
   });
 
-  /* Filter crop options to the selected farm. */
+  / Filter crop options to the selected farm. */
   function filterCropOptions(selectId, farmId, selectedId) {
     const select = document.getElementById(selectId);
     if (!select) return;
@@ -895,6 +901,7 @@
     document.getElementById('schedule_status').value = 'scheduled';
     document.getElementById('schedule_workers_count').value = '1';
     document.getElementById('schedule_unit').value = 'kg';
+    scheduleLocationAutoFilled = false;
     filterCropOptions('schedule_crop_id', '', '');
   }
 
@@ -938,8 +945,32 @@
   }
 
   /* ---------- Harvest schedule modal ---------- */
+  let scheduleLocationAutoFilled = false;
+
+  function scheduleFarmLocation() {
+    const farmSelect = document.getElementById('schedule_farm_id');
+    const option = farmSelect.options[farmSelect.selectedIndex];
+    return option && option.dataset.location ? option.dataset.location.trim() : '';
+  }
+
+  /* Auto-fill the schedule location from the selected farm's location. */
+  function syncScheduleLocationFromFarm() {
+    const input = document.getElementById('schedule_field_name');
+    const farmLocation = scheduleFarmLocation();
+    if (!farmLocation) return;
+    if (!input.value.trim() || scheduleLocationAutoFilled || input.value.trim() === farmLocation) {
+      input.value = farmLocation;
+      scheduleLocationAutoFilled = true;
+    }
+  }
+
+  document.getElementById('schedule_field_name').addEventListener('input', function () {
+    scheduleLocationAutoFilled = false;
+  });
+
   document.getElementById('schedule_farm_id').addEventListener('change', function () {
     filterCropOptions('schedule_crop_id', this.value, '');
+    syncScheduleLocationFromFarm();
   });
 
   scheduleModalEl.addEventListener('show.bs.modal', function (event) {
@@ -951,6 +982,7 @@
         const cropId = button.getAttribute('data-crop-id');
         document.getElementById('schedule_farm_id').value = farmId || '';
         filterCropOptions('schedule_crop_id', farmId, cropId);
+        syncScheduleLocationFromFarm();
         const date = button.getAttribute('data-scheduled-date');
         if (date) document.getElementById('schedule_scheduled_date').value = date;
         const notes = button.getAttribute('data-notes');
@@ -974,6 +1006,7 @@
         document.getElementById('schedule_farm_id').value = data.farm_id || '';
         filterCropOptions('schedule_crop_id', data.farm_id, data.crop_id);
         document.getElementById('schedule_field_name').value = data.field_name || '';
+        scheduleLocationAutoFilled = false;
         document.getElementById('schedule_scheduled_date').value = data.scheduled_date ? data.scheduled_date.slice(0, 10) : today;
         document.getElementById('schedule_expected_quantity').value = data.expected_quantity !== null && data.expected_quantity !== undefined ? data.expected_quantity : '';
         document.getElementById('schedule_unit').value = data.unit || 'kg';

@@ -310,6 +310,7 @@
             <th>Workers</th>
             <th>Team Lead</th>
             <th>Remarks</th>
+            <th class="w-1">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -346,6 +347,18 @@
               {% else %}
               <span class="badge bg-dark-lt text-dark">{{ harvest.get_quality_grade_display }}</span>
               {% endif %}
+              {% if harvest.quality_details or harvest.quality_observations %}
+              <div class="small text-muted mt-1" style="white-space: normal;">
+                {% for detail in harvest.quality_details %}
+                {{ detail }}{% if not forloop.last %} &middot; {% endif %}
+                {% endfor %}
+                {% if harvest.quality_observations %}
+                <div title="{{ harvest.quality_observations }}">
+                  <i class="fas fa-comment-dots me-1"></i>{{ harvest.quality_observations|truncatechars:60 }}
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
             </td>
             <td class="text-muted">{{ harvest.workers_count }}</td>
             <td class="text-muted">
@@ -357,10 +370,28 @@
             <td class="text-muted" style="max-width: 240px; white-space: normal;">
               {{ harvest.notes|default:"—"|truncatechars:100 }}
             </td>
+            <td class="text-end">
+              <button type="button"
+                      class="btn btn-sm btn-ghost-secondary btn-icon"
+                      title="{% if harvest.has_quality_record %}Edit quality record{% else %}Record quality &amp; observations{% endif %}"
+                      data-bs-toggle="modal"
+                      data-bs-target="#qualityModal"
+                      data-id="{{ harvest.id }}"
+                      data-code="{{ harvest.harvest_code|default:'' }}"
+                      data-unit="{{ harvest.unit }}"
+                      data-grade="{{ harvest.quality_grade }}"
+                      data-condition="{{ harvest.quality_condition }}"
+                      data-moisture="{% if harvest.moisture_level is not None %}{{ harvest.moisture_level }}{% endif %}"
+                      data-damaged="{% if harvest.damaged_quantity is not None %}{{ harvest.damaged_quantity }}{% endif %}"
+                      data-recorded="{% if harvest.has_quality_record %}1{% else %}0{% endif %}"
+                      data-observations="{{ harvest.quality_observations }}">
+                <i class="fas fa-clipboard-check"></i>
+              </button>
+            </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="10">
+            <td colspan="11">
               <div class="empty py-5">
                 <div class="empty-icon">
                   <i class="fas fa-history fa-2x text-muted"></i>
@@ -409,6 +440,75 @@
       </ul>
     </div>
     {% endif %}
+  </div>
+</div>
+
+<!-- ========== RECORD QUALITY & OBSERVATIONS MODAL ========== -->
+<div class="modal modal-blur fade" id="qualityModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="qualityModalTitle">Record Quality &amp; Observations</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="qualityForm">
+        {% csrf_token %}
+        <input type="hidden" name="id" id="quality_id">
+        <div class="modal-body">
+          <div id="qualityFormError" class="alert alert-danger d-none"></div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted small">Harvest</span>
+            <span class="fw-semibold" id="quality_harvest_code">—</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">Grade <span class="text-danger">*</span></label>
+              <select name="quality_grade" id="quality_grade" class="form-select" required>
+                {% for value, label in quality_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Condition</label>
+              <select name="quality_condition" id="quality_condition" class="form-select">
+                <option value="">Not specified</option>
+                {% for value, label in condition_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Moisture level</label>
+              <div class="input-group">
+                <input type="number" name="moisture_level" id="quality_moisture" class="form-control"
+                       min="0" max="100" step="0.01" placeholder="e.g. 14.50">
+                <span class="input-group-text">%</span>
+              </div>
+              <small class="form-hint">Moisture content in percent (0–100).</small>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Damaged quantity</label>
+              <div class="input-group">
+                <input type="number" name="damaged_quantity" id="quality_damaged" class="form-control"
+                       min="0" step="0.01" placeholder="0.00">
+                <span class="input-group-text" id="quality_unit">kg</span>
+              </div>
+              <small class="form-hint">Amount lost or damaged, in the harvest unit.</small>
+            </div>
+            <div class="col-12">
+              <label class="form-label">General observations</label>
+              <textarea name="quality_observations" id="quality_observations" class="form-control" rows="3"
+                        placeholder="Appearance, odor, sorting notes, issues found, etc."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="qualitySubmitBtn">Save Quality Record</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -473,6 +573,87 @@
         },
       },
     }).render();
+  });
+})();
+</script>
+
+<script>
+(function () {
+  const QUALITY_SAVE_URL = '{% url "harvests:harvest_quality_save" %}';
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+  }
+
+  function showError(box, msg) {
+    box.textContent = msg;
+    box.classList.remove('d-none');
+  }
+
+  function clearError(box) {
+    box.textContent = '';
+    box.classList.add('d-none');
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('qualityModal');
+    const form = document.getElementById('qualityForm');
+    const errorBox = document.getElementById('qualityFormError');
+    const titleEl = document.getElementById('qualityModalTitle');
+    const submitBtn = document.getElementById('qualitySubmitBtn');
+    if (!modalEl || !form || !errorBox || !submitBtn) return;
+
+    /* Populate the modal from the row's button when it opens. */
+    modalEl.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (!button) return;
+
+      document.getElementById('quality_id').value = button.dataset.id || '';
+      document.getElementById('quality_harvest_code').textContent = button.dataset.code || '—';
+      document.getElementById('quality_unit').textContent = button.dataset.unit || 'kg';
+      document.getElementById('quality_grade').value = button.dataset.grade || '';
+      document.getElementById('quality_condition').value = button.dataset.condition || '';
+      document.getElementById('quality_moisture').value = button.dataset.moisture || '';
+      document.getElementById('quality_damaged').value = button.dataset.damaged || '';
+      document.getElementById('quality_observations').value = button.dataset.observations || '';
+      titleEl.textContent = button.dataset.recorded === '1'
+        ? 'Edit Quality & Observations'
+        : 'Record Quality & Observations';
+      clearError(errorBox);
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      clearError(errorBox);
+    });
+
+    /* Save the quality record over AJAX, then reload to refresh the table. */
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      clearError(errorBox);
+      submitBtn.disabled = true;
+
+      fetch(QUALITY_SAVE_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: new FormData(form),
+      })
+        .then(async function (response) {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Could not save the quality record.');
+          return data;
+        })
+        .then(function () {
+          bootstrap.Modal.getInstance(modalEl).hide();
+          location.reload();
+        })
+        .catch(function (error) {
+          showError(errorBox, error.message);
+        })
+        .finally(function () {
+          submitBtn.disabled = false;
+        });
+    });
   });
 })();
 </script>

@@ -60,7 +60,7 @@
             <span class="nav-link-icon d-md-none d-lg-inline-block">
               <i class="nav-icon fas fa-seedling"></i>
             </span>
-            <span class="nav-link-title">Crops</span>
+            <span class="nav-link-title">Crop Management</span>
           </a>
         </li>
 
@@ -70,6 +70,15 @@
               <i class="nav-icon fas fa-clipboard-list"></i>
             </span>
             <span class="nav-link-title">Harvests</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'activities' %}active{% endif %}" href="{% url 'activities:activity_list' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="fa fa-calendar-check"></i>
+            </span>
+            <span class="nav-link-title">Activity Schedule</span>
           </a>
         </li>
         <br>  

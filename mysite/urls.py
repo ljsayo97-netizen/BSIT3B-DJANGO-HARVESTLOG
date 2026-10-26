@@ -27,6 +27,7 @@ urlpatterns = [
     path('farms/', include('apps.farms.urls')),
     path('crops/', include('apps.crops.urls')),
     path('harvests/', include('apps.harvests.urls')),
+    path('activities/', include('apps.activities.urls')),
 ]
 
 if settings.DEBUG:
