@@ -10,6 +10,8 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
+from .dashboard import build_dashboard_context
+
 User = get_user_model()
 
 MAX_FAILED_ATTEMPTS = 5
@@ -140,8 +142,8 @@ def logout_view(request):
 
 @login_required(login_url='login')
 def home(request):
-    """Render the dashboard shell."""
-    return render(request, 'home.html')
+    """Render the farm operations dashboard for the signed-in user."""
+    return render(request, 'home.html', build_dashboard_context(request.user))
 
 
 @require_http_methods(['GET', 'POST'])

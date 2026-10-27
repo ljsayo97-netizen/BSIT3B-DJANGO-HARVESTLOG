@@ -303,11 +303,13 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Email</label>
-              <input type="email" name="email" id="farm_email" class="form-control" placeholder="" maxlength="11">
+              <!-- FIXED: Removed maxlength="11" and updated placeholder -->
+              <input type="email" name="email" id="farm_email" class="form-control" placeholder="example@domain.com">
             </div>
             <div class="col-md-6">
               <label class="form-label">Contact Number</label>
-              <input type="text" name="contact_number" id="farm_contact_number" class="form-control" placeholder="09XX-XXX-XXXX" maxlength="13" inputmode="numeric" pattern="[0-9]{11}" title="Please enter exactly 11 digits">
+              <!-- FIXED: Updated pattern and title to allow the hyphens added by JS -->
+              <input type="text" name="contact_number" id="farm_contact_number" class="form-control" placeholder="09XX-XXX-XXXX" maxlength="13" inputmode="numeric" pattern="[0-9]{4}-[0-9]{3}-[0-9]{4}" title="Please enter exactly 11 digits (e.g., 0912-345-6789)">
             </div>
             <div class="col-12">
               <label class="form-label">ZIP Code</label>
@@ -890,4 +892,4 @@
   }
 })();
 </script>
-{% endblock %}
+{% endblock %}  
