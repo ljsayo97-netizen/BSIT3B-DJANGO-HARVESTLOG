@@ -15,9 +15,7 @@ urlpatterns = [
     path('ajax/get/<int:pk>/', views.harvest_get_ajax, name='harvest_get_ajax'),
     path('ajax/save/', views.harvest_save_ajax, name='harvest_save_ajax'),
     path('ajax/delete/<int:pk>/', views.harvest_delete_ajax, name='harvest_delete_ajax'),
-    # Harvest schedules (AJAX)
-    path('schedules/ajax/list/', views.harvest_schedule_list_ajax, name='harvest_schedule_list_ajax'),
-    path('schedules/ajax/get/<int:pk>/', views.harvest_schedule_get_ajax, name='harvest_schedule_get_ajax'),
-    path('schedules/ajax/save/', views.harvest_schedule_save_ajax, name='harvest_schedule_save_ajax'),
-    path('schedules/ajax/delete/<int:pk>/', views.harvest_schedule_delete_ajax, name='harvest_schedule_delete_ajax'),
+    # Notifications / readiness (AJAX)
+    path('notifications/ajax/read/', views.harvest_notification_read_ajax, name='harvest_notification_read'),
+    path('readiness/ajax/refresh/', views.harvest_refresh_readiness_ajax, name='harvest_refresh_readiness'),
 ]

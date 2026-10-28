@@ -9,7 +9,7 @@ from django.utils import timezone
 from apps.activities.models import FarmActivity
 from apps.crops.models import Crop
 from apps.farms.models import Farm
-from apps.harvests.models import Harvest, HarvestSchedule
+from apps.harvests.models import Harvest, HarvestNotification
 
 
 class HomeViewTests(TestCase):
@@ -55,8 +55,8 @@ class DashboardDataTests(TestCase):
             farm=self.farm,
             name='Rice',
             variety='IR64',
-            planting_date=self.today - timedelta(days=30),
-            expected_harvest_date=self.today,
+            planting_date=self.today - timedelta(days=100),
+            days_to_maturity=90,
             area_hectares=Decimal('2.00'),
             status=Crop.Status.MATURING,
         )
@@ -72,16 +72,6 @@ class DashboardDataTests(TestCase):
             quality_grade=Harvest.QualityGrade.PREMIUM,
             workers_count=4,
             harvested_by='Mia Santos',
-        )
-        HarvestSchedule.objects.create(
-            user=self.user,
-            farm=self.farm,
-            crop=crop,
-            field_name='North Field',
-            scheduled_date=self.today + timedelta(days=3),
-            expected_quantity=Decimal('300.00'),
-            workers_count=5,
-            status=HarvestSchedule.Status.SCHEDULED,
         )
         activity = FarmActivity.objects.create(
             user=self.user,
@@ -107,8 +97,15 @@ class DashboardDataTests(TestCase):
         self.assertEqual(response.context['this_month_harvest_count'], 1)
         self.assertEqual(response.context['primary_unit'], 'kg')
         self.assertEqual(response.context['primary_unit_total'], harvest.quantity_harvested)
-        self.assertEqual(response.context['active_schedule_count'], 1)
+        self.assertEqual(response.context['approaching_crop_count'], 0)
         self.assertEqual(response.context['upcoming_harvest_count'], 1)
+        self.assertTrue(
+            HarvestNotification.objects.filter(
+                user=self.user,
+                crop=crop,
+                kind=HarvestNotification.Kind.READY,
+            ).exists()
+        )
         self.assertEqual(response.context['recent_harvests'][0], harvest)
         self.assertEqual(response.context['quality_rows'][0]['label'], 'Premium')
         self.assertEqual(response.context['activity_summary']['total'], 1)

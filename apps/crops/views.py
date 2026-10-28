@@ -1,16 +1,23 @@
 """Crop management views."""
 
-from django.utils.dateparse import parse_date
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
 from apps.farms.models import Farm
 from apps.harvests.models import Harvest
+from apps.harvests.services import evaluate_crop
+from .maturity import (
+    CROP_MATURITY_DAYS,
+    DEFAULT_MATURITY_DAYS,
+    suggest_maturity_days,
+)
 from .models import Crop
 
 
@@ -32,8 +39,10 @@ def _crop_json(crop):
         'name': crop.name,
         'variety': crop.variety,
         'planting_date': crop.planting_date.isoformat() if crop.planting_date else None,
+        'days_to_maturity': crop.days_to_maturity,
         'expected_harvest_date': crop.expected_harvest_date.isoformat() if crop.expected_harvest_date else None,
         'actual_harvest_date': crop.actual_harvest_date.isoformat() if crop.actual_harvest_date else None,
+        'harvest_season': getattr(crop, 'harvest_season', ''),
         'status': crop.status,
         'status_display': crop.get_status_display(),
         'quality': crop.quality,
@@ -42,6 +51,9 @@ def _crop_json(crop):
         'notes': crop.notes,
         'days_since_planting': crop.days_since_planting,
         'days_to_harvest': crop.days_to_harvest,
+        'days_to_harvest_label': crop.days_to_harvest_label,
+        'maturity_status': crop.maturity_status,
+        'maturity_label': crop.maturity_label,
         'created_at': crop.created_at.isoformat(),
     }
 
@@ -116,6 +128,8 @@ def crop_list_page(request):
         'selected_farm': selected_farm,
         'farm_crops': farm_crops,
         'farm_history': farm_history,
+        'default_maturity_days': DEFAULT_MATURITY_DAYS,
+        'maturity_suggestions': CROP_MATURITY_DAYS,
     })
 
 
@@ -184,7 +198,7 @@ def crop_save_ajax(request):
     name = request.POST.get('name', '').strip()
     variety = request.POST.get('variety', '').strip()
     planting_date_raw = request.POST.get('planting_date', '').strip()
-    expected_harvest_date_raw = request.POST.get('expected_harvest_date', '').strip()
+    days_to_maturity_raw = request.POST.get('days_to_maturity', '').strip()
     status = request.POST.get('status', '').strip()
     quality = request.POST.get('quality', '').strip()
     area_raw = request.POST.get('area_hectares', '').strip()
@@ -204,12 +218,26 @@ def crop_save_ajax(request):
         planting_date = parse_date(planting_date_raw)
         if planting_date is None:
             return JsonResponse({'error': 'Enter a valid planting date.'}, status=400)
+    else:
+        return JsonResponse({'error': 'Planting date is required.'}, status=400)
 
-    expected_harvest_date = None
-    if expected_harvest_date_raw:
-        expected_harvest_date = parse_date(expected_harvest_date_raw)
-        if expected_harvest_date is None:
-            return JsonResponse({'error': 'Enter a valid expected harvest date.'}, status=400)
+    days_to_maturity = None
+    if days_to_maturity_raw:
+        try:
+            days_to_maturity = int(days_to_maturity_raw)
+        except (TypeError, ValueError):
+            days_to_maturity = None
+        if days_to_maturity is None or days_to_maturity < 1:
+            return JsonResponse(
+                {'error': 'Days to maturity must be a whole number of at least 1.'},
+                status=400,
+            )
+
+    # The crop form no longer collects a harvest date. The system derives it
+    # from the planting date and days to maturity (or the crop's estimate when
+    # the grower leaves the field blank).
+    if days_to_maturity is None:
+        days_to_maturity = suggest_maturity_days(name)
 
     # Notes and the actual harvest date are no longer part of the crop form:
     # existing values are kept as-is (the actual harvest date is set
@@ -241,7 +269,7 @@ def crop_save_ajax(request):
     crop.name = name
     crop.variety = variety
     crop.planting_date = planting_date
-    crop.expected_harvest_date = expected_harvest_date
+    crop.days_to_maturity = days_to_maturity
     crop.area_hectares = area_value
 
     try:
@@ -252,15 +280,45 @@ def crop_save_ajax(request):
             status=400,
         )
 
+    # Evaluate readiness immediately so a crop that is already mature gets a
+    # notification the moment it is added or edited.
+    readiness = evaluate_crop(crop)
+
+    expected_label = (
+        crop.expected_harvest_date.strftime('%b %d, %Y')
+        if crop.expected_harvest_date else 'not set'
+    )
+    detail = ''
+    if readiness['status'] == 'ready':
+        detail = (
+            f' It is ready for harvest now; the system assigned '
+            f'{expected_label} as its harvest date.'
+        )
+    elif readiness['status'] == 'approaching':
+        detail = (
+            f' It will be ready for harvest {crop.days_to_harvest_label.lower()} '
+            f'({expected_label}).'
+        )
+    elif readiness['status'] == 'upcoming':
+        detail = (
+            f' The system assigned {expected_label} as its harvest date '
+            f'({crop.days_to_harvest_label.lower()}).'
+        )
+
     messages.success(
         request,
-        f'Crop "{crop.name}" has been {"updated" if is_update else "added"} successfully.',
+        f'Crop "{crop.name}" has been {"updated" if is_update else "added"} '
+        f'successfully.{detail}',
     )
 
-    return JsonResponse({
+    payload = _crop_json(crop)
+    payload.update({
         'status': 'success',
-        **_crop_json(crop),
+        'crop_status': crop.status,
+        'readiness': readiness['status'],
+        'notification_created': readiness['notification_created'],
     })
+    return JsonResponse(payload)
 
 
 @login_required(login_url='login')

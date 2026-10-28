@@ -69,6 +69,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.harvests.context_processors.harvest_notifications',
             ],
         },
     },
@@ -136,3 +137,6 @@ LOGOUT_REDIRECT_URL = '/'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Use a project test runner that shims template-context copying for Python 3.14.
+TEST_RUNNER = 'mysite.test_runner.ProjectTestRunner'

@@ -9,8 +9,8 @@ from django.utils import timezone
 from apps.activities.models import FarmActivity
 from apps.crops.models import Crop
 from apps.farms.models import Farm
-from apps.harvests.models import Harvest, HarvestSchedule
-from apps.harvests.services import get_upcoming_harvests
+from apps.harvests.models import Harvest
+from apps.harvests.services import get_harvest_board
 
 DASHBOARD_MONTHS = 6
 UPCOMING_HARVESTS_LIMIT = 6
@@ -76,6 +76,10 @@ def build_dashboard_context(user):
     this_month_start = month_starts[-1]
     last_month_start = month_starts[-2]
 
+    # Refresh readiness first so status counts, dashboard cards, and the
+    # notification banner all agree on which crops are ready.
+    harvest_board = get_harvest_board(user)
+
     farms = Farm.objects.filter(user=user)
     farm_count = farms.count()
     active_farm_count = farms.filter(status=Farm.Status.ACTIVE).count()
@@ -87,10 +91,7 @@ def build_dashboard_context(user):
         status__in=[Crop.Status.HARVESTED, Crop.Status.FAILED]
     )
     active_crop_count = active_crops.count()
-    ready_crop_count = active_crops.filter(
-        Q(status=Crop.Status.READY_FOR_HARVEST)
-        | Q(expected_harvest_date__lte=today)
-    ).count()
+    ready_crop_count = harvest_board['ready_count']
 
     crop_status_counts = {
         row['status']: row['total']
@@ -176,14 +177,13 @@ def build_dashboard_context(user):
         })
     quality_rows.sort(key=lambda row: row['count'], reverse=True)
 
-    active_schedule_count = HarvestSchedule.objects.filter(
-        user=user,
-        status__in=HarvestSchedule.STATUS_ACTIVE,
-    ).count()
-
-    upcoming = get_upcoming_harvests(user)
-    upcoming_harvest_count = len(upcoming)
-    upcoming_harvests = upcoming[:UPCOMING_HARVESTS_LIMIT]
+    upcoming_harvests = (
+        harvest_board['ready_crops']
+        + harvest_board['approaching_crops']
+        + harvest_board['upcoming_crops']
+    )
+    upcoming_harvest_count = len(upcoming_harvests)
+    upcoming_harvests = upcoming_harvests[:UPCOMING_HARVESTS_LIMIT]
 
     recent_harvests = list(
         harvests.select_related('farm', 'crop').order_by(
@@ -246,7 +246,7 @@ def build_dashboard_context(user):
         'last_month_harvest_count': last_month_harvest_count,
         'harvest_chart_data': harvest_chart_data,
         'quality_rows': quality_rows,
-        'active_schedule_count': active_schedule_count,
+        'approaching_crop_count': harvest_board['approaching_count'],
         'upcoming_harvests': upcoming_harvests,
         'upcoming_harvest_count': upcoming_harvest_count,
         'recent_harvests': recent_harvests,

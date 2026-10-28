@@ -542,9 +542,9 @@ class FarmContactDetailTests(TestCase):
         content = farm_list_page(request).content.decode()
 
         self.assertIn('id="farm_code"', content)
-        self.assertIn('Auto-generated (e.g. FARM-0001)', content)
+        self.assertIn('placeholder="Auto-generated"', content)
         self.assertIn('id="farm_email"', content)
-        self.assertIn('placeholder="carl@example.com"', content)
+        self.assertIn('placeholder="example@domain.com"', content)
         self.assertIn('id="farm_contact_number"', content)
         self.assertIn('placeholder="09XX-XXX-XXXX"', content)
         self.assertIn('id="farm_zip_code"', content)

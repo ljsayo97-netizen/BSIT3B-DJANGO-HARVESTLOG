@@ -1,17 +1,17 @@
-"""Harvest scheduling, recording, and history views."""
+"""Crop-driven harvest recording, readiness, and history views."""
 
 import csv
 from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
@@ -19,17 +19,23 @@ from django.views.decorators.http import require_POST
 from apps.crops.models import Crop
 from apps.farms.models import Farm
 
-from .models import Harvest, HarvestSchedule
-from .services import get_harvest_schedules, get_upcoming_harvests
+from .models import Harvest, HarvestNotification
+from .services import (
+    get_harvest_board,
+    get_notifications,
+    get_unread_notification_count,
+    mark_all_notifications_read,
+    reopen_crop_notifications,
+    resolve_crop_notifications,
+)
 
 
 def _parse_decimal(raw_value):
     """Convert a value to a decimal, returning None when invalid."""
     try:
-        value = float(raw_value)
+        return float(raw_value)
     except (TypeError, ValueError):
         return None
-    return value
 
 
 def _parse_int(raw_value):
@@ -145,14 +151,6 @@ def _csv_value(value):
     return text
 
 
-def _schedule_harvest_record(schedule):
-    """Return the harvest recorded against a schedule, if one exists."""
-    try:
-        return schedule.harvest_record
-    except ObjectDoesNotExist:
-        return None
-
-
 def _harvest_json(harvest):
     """Serialize a harvest instance to a JSON-friendly dict."""
     return {
@@ -162,7 +160,7 @@ def _harvest_json(harvest):
         'farm_name': harvest.farm.name,
         'crop_id': harvest.crop_id,
         'crop_name': harvest.crop.name if harvest.crop else None,
-        'schedule_id': harvest.schedule_id,
+        'harvest_season': harvest.harvest_season,
         'harvest_date': harvest.harvest_date.isoformat() if harvest.harvest_date else None,
         'location': harvest.location,
         'crop_type': harvest.crop_type,
@@ -179,7 +177,9 @@ def _harvest_json(harvest):
             float(harvest.damaged_quantity) if harvest.damaged_quantity is not None else None
         ),
         'quality_observations': harvest.quality_observations,
-        'quality_recorded_at': harvest.quality_recorded_at.isoformat() if harvest.quality_recorded_at else None,
+        'quality_recorded_at': (
+            harvest.quality_recorded_at.isoformat() if harvest.quality_recorded_at else None
+        ),
         'workers_count': harvest.workers_count,
         'harvested_by': harvest.harvested_by,
         'supervised_by': harvest.supervised_by,
@@ -188,74 +188,66 @@ def _harvest_json(harvest):
     }
 
 
-def _schedule_json(schedule):
-    """Serialize a harvest schedule to a JSON-friendly dict."""
-    record = _schedule_harvest_record(schedule)
-    return {
-        'id': schedule.id,
-        'farm_id': schedule.farm_id,
-        'farm_name': schedule.farm.name,
-        'crop_id': schedule.crop_id,
-        'crop_name': schedule.crop.name if schedule.crop else None,
-        'field_name': schedule.field_name,
-        'scheduled_date': schedule.scheduled_date.isoformat() if schedule.scheduled_date else None,
-        'expected_quantity': (
-            float(schedule.expected_quantity)
-            if schedule.expected_quantity is not None
-            else None
-        ),
-        'unit': schedule.unit,
-        'workers_count': schedule.workers_count,
-        'assigned_to': schedule.assigned_to,
-        'supervisor': schedule.supervisor,
-        'status': schedule.status,
-        'status_display': schedule.get_status_display(),
-        'notes': schedule.notes,
-        'days_until': schedule.days_until,
-        'is_active': schedule.is_active,
-        'harvest_record_id': record.id if record else None,
-        'harvest_code': record.harvest_code if record else None,
-    }
+def _restore_crop_readiness(crop):
+    """Return a crop to the harvest board after its harvest is removed."""
+    if crop.status == Crop.Status.FAILED:
+        return
+
+    crop.actual_harvest_date = None
+    days = crop.days_to_harvest
+    if days is None or days <= 0:
+        crop.status = Crop.Status.READY_FOR_HARVEST
+    else:
+        crop.status = Crop.Status.MATURING
+    crop.save(update_fields=['status', 'actual_harvest_date', 'updated_at'])
+    reopen_crop_notifications(crop)
 
 
 @login_required(login_url='login')
 def harvest_list_page(request):
-    """Render harvest scheduling, upcoming harvests, and harvest history."""
+    """Render crop readiness, harvest notifications, and harvest records."""
     harvests_list, filters = _filter_harvests(request)
-
-    farms = Farm.objects.filter(user=request.user).order_by('name')
-    crops = Crop.objects.filter(user=request.user).select_related('farm').order_by('name')
+    board = get_harvest_board(request.user)
 
     paginator = Paginator(harvests_list, 10)
-    page_number = request.GET.get('page', 1)
-    harvests = paginator.get_page(page_number)
+    harvests = paginator.get_page(request.GET.get('page', 1))
 
-    upcoming_harvests = get_upcoming_harvests(request.user)
-    schedules = list(get_harvest_schedules(request.user))
-    active_schedules = [schedule for schedule in schedules if schedule.is_active]
-
-    # Existing locations (from schedules and farms) offered as suggestions
-    # when typing the harvest schedule location.
-    location_suggestions = sorted({
-        *(schedule.field_name.strip() for schedule in schedules if schedule.field_name and schedule.field_name.strip()),
-        *(farm.location.strip() for farm in farms if farm.location and farm.location.strip()),
-    }, key=str.lower)
     all_harvests = Harvest.objects.filter(user=request.user)
     total_harvests = all_harvests.count()
-    total_quantity = all_harvests.aggregate(total=Sum('quantity_harvested'))['total'] or 0
+    unit_totals = list(
+        all_harvests.values('unit')
+        .annotate(total=Sum('quantity_harvested'))
+        .order_by('-total', 'unit')
+    )
+    total_quantity = unit_totals[0]['total'] if unit_totals else 0
+    total_unit = unit_totals[0]['unit'] if unit_totals else ''
+    this_month_count = all_harvests.filter(
+        harvest_date__gte=timezone.localdate().replace(day=1)
+    ).count()
+
+    notifications = get_notifications(request.user, limit=15)
+    unread_notifications = [item for item in notifications if not item.is_read]
 
     return render(request, 'harvests/list.html', {
         'harvests': harvests,
-        'farms': farms,
-        'crops': crops,
-        'upcoming_harvests': upcoming_harvests,
-        'schedules': schedules,
-        'active_schedule_count': len(active_schedules),
+        'farms': Farm.objects.filter(user=request.user).order_by('name'),
+        'crops': board['crops'],
+        'ready_crops': board['ready_crops'],
+        'approaching_crops': board['approaching_crops'],
+        'upcoming_crops': board['upcoming_crops'],
+        'ready_count': board['ready_count'],
+        'approaching_count': board['approaching_count'],
+        'upcoming_count': board['upcoming_count'],
+        'notifications': notifications,
+        'unread_notifications': unread_notifications,
+        'unread_notification_count': len(unread_notifications),
         'total_harvests': total_harvests,
         'total_quantity': total_quantity,
+        'total_unit': total_unit,
+        'this_month_harvest_count': this_month_count,
         'quality_choices': Harvest.QualityGrade.choices,
-        'schedule_status_choices': HarvestSchedule.Status.choices,
-        'location_suggestions': location_suggestions,
+        'condition_choices': Harvest.Condition.choices,
+        'today': timezone.localdate(),
         **filters,
     })
 
@@ -266,16 +258,15 @@ def harvest_list_ajax(request):
     harvests_list, _ = _filter_harvests(request)
 
     paginator = Paginator(harvests_list, 10)
-    page_number = request.GET.get('page', 1)
-    harvests = paginator.get_page(page_number)
+    harvests = paginator.get_page(request.GET.get('page', 1))
 
     return JsonResponse({
         'data': [_harvest_json(harvest) for harvest in harvests.object_list],
         'has_next': harvests.has_next(),
         'has_prev': harvests.has_previous(),
         'page': harvests.number,
-        'pages': harvests.paginator.num_pages,
-        'total': harvests.paginator.count,
+        'pages': paginator.num_pages,
+        'total': paginator.count,
     })
 
 
@@ -393,6 +384,7 @@ def harvest_history_export(request):
         'Field',
         'Crop',
         'Crop Type',
+        'Harvest Season',
         'Quantity',
         'Unit',
         'Quality',
@@ -403,11 +395,10 @@ def harvest_history_export(request):
         'Workers',
         'Team Lead',
         'Supervisor',
-        'Scheduled Harvest',
         'Remarks',
     ])
 
-    records = harvests_list.select_related('farm', 'crop', 'schedule')
+    records = harvests_list.select_related('farm', 'crop')
     for harvest in records.iterator():
         writer.writerow([
             _csv_value(harvest.harvest_code),
@@ -416,6 +407,7 @@ def harvest_history_export(request):
             _csv_value(harvest.location),
             _csv_value(harvest.crop.name if harvest.crop else ''),
             _csv_value(harvest.crop_type),
+            _csv_value(harvest.harvest_season),
             harvest.quantity_harvested,
             _csv_value(harvest.unit),
             _csv_value(harvest.get_quality_grade_display()),
@@ -426,7 +418,6 @@ def harvest_history_export(request):
             harvest.workers_count,
             _csv_value(harvest.harvested_by),
             _csv_value(harvest.supervised_by),
-            'Yes' if harvest.schedule_id else 'No',
             _csv_value(harvest.notes),
         ])
 
@@ -519,7 +510,7 @@ def harvest_quality_save_ajax(request):
 def harvest_get_ajax(request, pk):
     """Return one of the signed-in user's harvest records as JSON."""
     harvest = get_object_or_404(
-        Harvest.objects.select_related('farm', 'crop', 'schedule'),
+        Harvest.objects.select_related('farm', 'crop'),
         pk=pk,
         user=request.user,
     )
@@ -529,109 +520,65 @@ def harvest_get_ajax(request, pk):
 @login_required(login_url='login')
 @require_POST
 def harvest_save_ajax(request):
-    """Validate and create or update a harvest record, returning its data as JSON."""
+    """Record or update a harvest; the system supplies the harvest date."""
     harvest_id = request.POST.get('id', '').strip()
-    schedule_id = request.POST.get('schedule_id', '').strip()
 
     if harvest_id:
         harvest = get_object_or_404(Harvest, pk=harvest_id, user=request.user)
         is_update = True
+        previous_crop = harvest.crop
     else:
         harvest = Harvest(user=request.user)
         is_update = False
+        previous_crop = None
 
-    previous_crop = harvest.crop if is_update else None
-    previous_schedule = harvest.schedule if is_update else None
-
-    schedule = None
-    if schedule_id:
-        try:
-            schedule = HarvestSchedule.objects.select_related('farm', 'crop').get(
-                pk=schedule_id,
-                user=request.user,
-            )
-        except HarvestSchedule.DoesNotExist:
-            return JsonResponse({'error': 'Selected harvest schedule does not exist.'}, status=400)
-
-        if schedule.status == HarvestSchedule.Status.CANCELLED:
-            return JsonResponse(
-                {'error': 'This harvest schedule was cancelled and can no longer be recorded.'},
-                status=400,
-            )
-
-        linked_record = _schedule_harvest_record(schedule)
-        if linked_record and linked_record.pk != harvest.pk:
-            return JsonResponse(
-                {'error': f'Harvest {linked_record.harvest_code} has already been recorded for this schedule.'},
-                status=400,
-            )
-
-    farm_id = request.POST.get('farm_id', '').strip()
     crop_id = request.POST.get('crop_id', '').strip()
-    harvest_date_raw = request.POST.get('harvest_date', '').strip()
-    location = request.POST.get('location', '').strip()
-    crop_type = request.POST.get('crop_type', '').strip()
+    crop = None
+    if crop_id:
+        try:
+            crop = Crop.objects.select_related('farm').get(pk=crop_id, user=request.user)
+        except Crop.DoesNotExist:
+            return JsonResponse({'error': 'Selected crop does not exist.'}, status=400)
+    elif is_update:
+        # Legacy records may not have a crop; keep their original link.
+        crop = harvest.crop
+    else:
+        return JsonResponse({'error': 'Please select the crop being harvested.'}, status=400)
+
+    if crop and crop.status == Crop.Status.FAILED:
+        return JsonResponse(
+            {'error': 'This crop was marked as damaged/failed and cannot be harvested.'},
+            status=400,
+        )
+
+    if crop:
+        other_harvests = Harvest.objects.filter(crop=crop)
+        if is_update:
+            other_harvests = other_harvests.exclude(pk=harvest.pk)
+        if other_harvests.exists():
+            return JsonResponse(
+                {'error': 'This crop already has a harvest record.'},
+                status=400,
+            )
+
+    if crop:
+        farm = crop.farm
+    elif is_update:
+        farm = harvest.farm
+    else:
+        return JsonResponse({'error': 'Please select the crop being harvested.'}, status=400)
+
     quantity_raw = request.POST.get('quantity_harvested', '').strip()
     unit = request.POST.get('unit', '').strip()
     quality_grade = request.POST.get('quality_grade', '').strip()
+    quality_condition = request.POST.get('quality_condition', '').strip()
+    moisture_raw = request.POST.get('moisture_level', '').strip()
+    damaged_raw = request.POST.get('damaged_quantity', '').strip()
+    quality_observations = request.POST.get('quality_observations', '').strip()
     workers_raw = request.POST.get('workers_count', '').strip()
     harvested_by = request.POST.get('harvested_by', '').strip()
     supervised_by = request.POST.get('supervised_by', '').strip()
     notes = request.POST.get('notes', '').strip()
-
-    # Fall back to the linked schedule's details so a schedule can be
-    # recorded with as little typing as possible.
-    if schedule:
-        farm_id = farm_id or str(schedule.farm_id)
-        crop_id = crop_id or (str(schedule.crop_id) if schedule.crop_id else '')
-        location = location or schedule.field_name
-        crop_type = crop_type or (schedule.crop.name if schedule.crop else '')
-        workers_raw = workers_raw or str(schedule.workers_count)
-        harvested_by = harvested_by or schedule.assigned_to or schedule.supervisor
-        supervised_by = supervised_by or schedule.supervisor
-
-    if not farm_id:
-        return JsonResponse({'error': 'Please select a farm.'}, status=400)
-    try:
-        farm = Farm.objects.get(pk=farm_id, user=request.user)
-    except Farm.DoesNotExist:
-        return JsonResponse({'error': 'Selected farm does not exist.'}, status=400)
-
-    if schedule and schedule.farm_id != farm.id:
-        return JsonResponse(
-            {'error': 'The selected farm does not match the harvest schedule.'},
-            status=400,
-        )
-
-    crop = None
-    if crop_id:
-        try:
-            crop = Crop.objects.get(pk=crop_id, user=request.user)
-        except Crop.DoesNotExist:
-            return JsonResponse({'error': 'Selected crop does not exist.'}, status=400)
-
-        if crop.farm_id != farm.id:
-            return JsonResponse(
-                {'error': 'Selected crop belongs to a different farm.'},
-                status=400,
-            )
-
-        if schedule and schedule.crop_id and schedule.crop_id != crop.id:
-            return JsonResponse(
-                {'error': 'The selected crop does not match the harvest schedule.'},
-                status=400,
-            )
-
-    if not harvest_date_raw:
-        return JsonResponse({'error': 'Harvest date is required.'}, status=400)
-    harvest_date = parse_date(harvest_date_raw)
-    if harvest_date is None:
-        return JsonResponse({'error': 'Enter a valid harvest date.'}, status=400)
-
-    if not location:
-        return JsonResponse({'error': 'Field / harvest location is required.'}, status=400)
-    if not crop_type:
-        return JsonResponse({'error': 'Crop type is required.'}, status=400)
 
     quantity_value = _parse_decimal(quantity_raw)
     if quantity_value is None or quantity_value < 0:
@@ -654,92 +601,117 @@ def harvest_save_ajax(request):
     if quality_grade not in valid_grades:
         return JsonResponse({'error': 'Please select a valid quality grade.'}, status=400)
 
+    valid_conditions = dict(Harvest.Condition.choices)
+    if quality_condition and quality_condition not in valid_conditions:
+        return JsonResponse({'error': 'Please select a valid condition.'}, status=400)
+
+    moisture_level = None
+    if moisture_raw:
+        moisture_level = _parse_decimal(moisture_raw)
+        if moisture_level is None or moisture_level < 0 or moisture_level > 100:
+            return JsonResponse(
+                {'error': 'Moisture level must be a number between 0 and 100.'},
+                status=400,
+            )
+
+    damaged_quantity = None
+    if damaged_raw:
+        damaged_quantity = _parse_decimal(damaged_raw)
+        if damaged_quantity is None or damaged_quantity < 0:
+            return JsonResponse(
+                {'error': 'Damaged quantity must be a valid number (0 or greater).'},
+                status=400,
+            )
+
     if not harvested_by:
         return JsonResponse({'error': 'Harvest team lead is required.'}, status=400)
 
     harvest.farm = farm
     harvest.crop = crop
-    harvest.schedule = schedule
-    harvest.harvest_date = harvest_date
-    harvest.location = location
-    harvest.crop_type = crop_type
+    harvest.location = (farm.location or farm.name)
+    harvest.crop_type = crop.name if crop else harvest.crop_type
     harvest.quantity_harvested = quantity_value
     harvest.unit = unit
     harvest.quality_grade = quality_grade
+    harvest.quality_condition = quality_condition
+    harvest.moisture_level = moisture_level
+    harvest.damaged_quantity = damaged_quantity
+    harvest.quality_observations = quality_observations
     harvest.workers_count = workers_count
     harvest.harvested_by = harvested_by
     harvest.supervised_by = supervised_by
     harvest.notes = notes
 
+    if crop and crop.harvest_season:
+        harvest.harvest_season = crop.harvest_season
+
+    # The user never enters a harvest date. New records always receive the
+    # current date, while edits keep the date originally assigned.
+    if not is_update:
+        harvest.harvest_date = timezone.localdate()
+
+    was_ready = crop.is_ready_for_harvest if crop else False
+
     try:
         with transaction.atomic():
             harvest.save()
 
-            if schedule:
-                schedule.status = HarvestSchedule.Status.COMPLETED
-                schedule.save(update_fields=['status', 'updated_at'])
-
             if crop:
                 crop.status = Crop.Status.HARVESTED
-                crop.actual_harvest_date = harvest_date
+                crop.actual_harvest_date = harvest.harvest_date
                 crop.save(update_fields=['status', 'actual_harvest_date', 'updated_at'])
+                resolve_crop_notifications(crop)
 
             if previous_crop and previous_crop.pk != (crop.pk if crop else None):
-                has_other_harvests = Harvest.objects.filter(crop=previous_crop).exclude(pk=harvest.pk).exists()
-                if not has_other_harvests:
-                    previous_crop.actual_harvest_date = None
-                    if previous_crop.status == Crop.Status.HARVESTED:
-                        previous_crop.status = Crop.Status.READY_FOR_HARVEST
-                    previous_crop.save(update_fields=['status', 'actual_harvest_date', 'updated_at'])
-
-            if previous_schedule and previous_schedule.pk != (schedule.pk if schedule else None):
-                has_other_records = Harvest.objects.filter(
-                    schedule=previous_schedule,
+                has_other_harvests = Harvest.objects.filter(
+                    crop=previous_crop
                 ).exclude(pk=harvest.pk).exists()
-                if not has_other_records and previous_schedule.status == HarvestSchedule.Status.COMPLETED:
-                    previous_schedule.status = HarvestSchedule.Status.SCHEDULED
-                    previous_schedule.save(update_fields=['status', 'updated_at'])
+                if not has_other_harvests:
+                    _restore_crop_readiness(previous_crop)
     except Exception:
         return JsonResponse(
-            {'error': 'Could not save harvest record due to a conflict.'},
+            {'error': 'Could not save the harvest record due to a conflict.'},
             status=400,
         )
 
-    messages.success(
-        request,
-        f'Harvest record {harvest.harvest_code} for "{harvest.crop_type}" has been '
-        f'{"updated" if is_update else "recorded"} successfully.',
-    )
+    action = 'updated' if is_update else 'recorded'
+    if not is_update and not was_ready:
+        messages.warning(
+            request,
+            f'Harvest {harvest.harvest_code} for "{harvest.crop_type}" was {action} '
+            f'ahead of its estimated readiness date. The system assigned '
+            f'{harvest.harvest_date:%b %d, %Y}.',
+        )
+    else:
+        messages.success(
+            request,
+            f'Harvest {harvest.harvest_code} for "{harvest.crop_type}" has been '
+            f'{action} successfully. The system assigned {harvest.harvest_date:%b %d, %Y} '
+            f'as the harvest date.',
+        )
 
     return JsonResponse({
         'status': 'success',
         **_harvest_json(harvest),
+        'was_ready': was_ready,
     })
 
 
 @login_required(login_url='login')
 @require_POST
 def harvest_delete_ajax(request, pk):
-    """Delete a harvest record and release its linked schedule/crop."""
+    """Delete a harvest record and return its crop to harvest readiness."""
     harvest = get_object_or_404(
-        Harvest.objects.select_related('schedule', 'crop'),
+        Harvest.objects.select_related('crop'),
         pk=pk,
         user=request.user,
     )
     harvest_desc = harvest.harvest_code or str(harvest)
-    schedule = harvest.schedule
     crop = harvest.crop
     harvest.delete()
 
-    if schedule and schedule.status == HarvestSchedule.Status.COMPLETED:
-        schedule.status = HarvestSchedule.Status.SCHEDULED
-        schedule.save(update_fields=['status', 'updated_at'])
-
     if crop and not Harvest.objects.filter(crop=crop).exists():
-        crop.actual_harvest_date = None
-        if crop.status == Crop.Status.HARVESTED:
-            crop.status = Crop.Status.READY_FOR_HARVEST
-        crop.save(update_fields=['status', 'actual_harvest_date', 'updated_at'])
+        _restore_crop_readiness(crop)
 
     messages.success(request, f'Harvest record "{harvest_desc}" has been deleted successfully.')
     return JsonResponse({
@@ -749,190 +721,54 @@ def harvest_delete_ajax(request, pk):
 
 
 @login_required(login_url='login')
-def harvest_schedule_list_ajax(request):
-    """Return the signed-in user's harvest schedules as JSON."""
-    status = request.GET.get('status', '').strip()
-    schedules = get_harvest_schedules(request.user)
-
-    valid_statuses = dict(HarvestSchedule.Status.choices)
-    if status in valid_statuses:
-        schedules = schedules.filter(status=status)
-
-    schedules = list(schedules)
-    return JsonResponse({
-        'data': [_schedule_json(schedule) for schedule in schedules],
-        'total': len(schedules),
-    })
-
-
-@login_required(login_url='login')
-def harvest_schedule_get_ajax(request, pk):
-    """Return one of the signed-in user's harvest schedules as JSON."""
-    schedule = get_object_or_404(
-        HarvestSchedule.objects.select_related('farm', 'crop', 'harvest_record'),
-        pk=pk,
-        user=request.user,
-    )
-    return JsonResponse(_schedule_json(schedule))
-
-
-@login_required(login_url='login')
 @require_POST
-def harvest_schedule_save_ajax(request):
-    """Validate and create or update a harvest schedule."""
-    schedule_id = request.POST.get('id', '').strip()
+def harvest_notification_read_ajax(request):
+    """Mark one notification, or every notification, as read."""
+    notification_id = request.POST.get('id', '').strip()
 
-    if schedule_id:
-        schedule = get_object_or_404(HarvestSchedule, pk=schedule_id, user=request.user)
-        is_update = True
-    else:
-        schedule = HarvestSchedule(user=request.user)
-        is_update = False
-
-    farm_id = request.POST.get('farm_id', '').strip()
-    crop_id = request.POST.get('crop_id', '').strip()
-    field_name = request.POST.get('field_name', '').strip()
-    scheduled_date_raw = request.POST.get('scheduled_date', '').strip()
-    expected_quantity_raw = request.POST.get('expected_quantity', '').strip()
-    unit = request.POST.get('unit', '').strip()
-    workers_raw = request.POST.get('workers_count', '').strip()
-    assigned_to = request.POST.get('assigned_to', '').strip()
-    supervisor = request.POST.get('supervisor', '').strip()
-    status = request.POST.get('status', '').strip()
-    notes = request.POST.get('notes', '').strip()
-
-    if not farm_id:
-        return JsonResponse({'error': 'Please select a farm.'}, status=400)
-    try:
-        farm = Farm.objects.get(pk=farm_id, user=request.user)
-    except Farm.DoesNotExist:
-        return JsonResponse({'error': 'Selected farm does not exist.'}, status=400)
-
-    crop = None
-    if crop_id:
-        try:
-            crop = Crop.objects.get(pk=crop_id, user=request.user)
-        except Crop.DoesNotExist:
-            return JsonResponse({'error': 'Selected crop does not exist.'}, status=400)
-
-        if crop.farm_id != farm.id:
-            return JsonResponse(
-                {'error': 'Selected crop belongs to a different farm.'},
-                status=400,
-            )
-
-    if not field_name:
-        return JsonResponse({'error': 'Location is required.'}, status=400)
-
-    if not scheduled_date_raw:
-        return JsonResponse({'error': 'Scheduled date is required.'}, status=400)
-    scheduled_date = parse_date(scheduled_date_raw)
-    if scheduled_date is None:
-        return JsonResponse({'error': 'Enter a valid scheduled date.'}, status=400)
-
-    expected_quantity = None
-    if expected_quantity_raw:
-        expected_quantity = _parse_decimal(expected_quantity_raw)
-        if expected_quantity is None or expected_quantity < 0:
-            return JsonResponse(
-                {'error': 'Expected quantity must be a valid number (0 or greater).'},
-                status=400,
-            )
-
-    workers_count = _parse_int(workers_raw)
-    if workers_count is None or workers_count < 1:
-        return JsonResponse(
-            {'error': 'Please assign at least one worker to the harvest.'},
-            status=400,
-        )
-
-    if not unit:
-        unit = 'kg'
-
-    valid_statuses = dict(HarvestSchedule.Status.choices)
-    if status not in valid_statuses:
-        return JsonResponse({'error': 'Please select a valid schedule status.'}, status=400)
-
-    existing_record = _schedule_harvest_record(schedule) if schedule.pk else None
-    if existing_record:
-        if status != HarvestSchedule.Status.COMPLETED:
-            return JsonResponse(
-                {'error': f'This schedule is linked to harvest {existing_record.harvest_code}. '
-                          'Delete that harvest record before reopening the schedule.'},
-                status=400,
-            )
-        if schedule.farm_id != farm.id or schedule.crop_id != (crop.id if crop else None):
-            return JsonResponse(
-                {'error': 'This schedule already has a harvest record, so its farm and crop cannot be changed.'},
-                status=400,
-            )
-
-    if crop and status in HarvestSchedule.STATUS_ACTIVE:
-        duplicate = HarvestSchedule.objects.filter(
+    if notification_id:
+        notification = get_object_or_404(
+            HarvestNotification,
+            pk=notification_id,
             user=request.user,
-            crop=crop,
-            status__in=HarvestSchedule.STATUS_ACTIVE,
         )
-        if schedule.pk:
-            duplicate = duplicate.exclude(pk=schedule.pk)
-        if duplicate.exists():
-            return JsonResponse(
-                {'error': 'This crop already has an active harvest schedule. Edit that schedule instead.'},
-                status=400,
-            )
+        notification.mark_read()
+        messages.success(request, 'Harvest notification marked as read.')
+    else:
+        mark_all_notifications_read(request.user)
+        messages.success(request, 'All harvest notifications marked as read.')
 
-    schedule.farm = farm
-    schedule.crop = crop
-    schedule.field_name = field_name
-    schedule.scheduled_date = scheduled_date
-    schedule.expected_quantity = expected_quantity
-    schedule.unit = unit
-    schedule.workers_count = workers_count
-    schedule.assigned_to = assigned_to
-    schedule.supervisor = supervisor
-    schedule.status = status
-    schedule.notes = notes
+    unread_count = get_unread_notification_count(request.user)
 
-    try:
-        schedule.save()
-    except Exception:
-        return JsonResponse(
-            {'error': 'Could not save harvest schedule due to a conflict.'},
-            status=400,
+    # The global banner uses a plain HTML form, while the harvest board uses
+    # fetch(). Only the fetch call expects JSON.
+    if 'text/html' in request.headers.get('Accept', ''):
+        next_url = (
+            request.POST.get('next')
+            or request.META.get('HTTP_REFERER')
+            or reverse('harvests:harvest_list')
         )
-
-    messages.success(
-        request,
-        f'Harvest schedule for "{field_name}" has been '
-        f'{"updated" if is_update else "created"} successfully.',
-    )
+        return redirect(next_url)
 
     return JsonResponse({
         'status': 'success',
-        **_schedule_json(schedule),
+        'unread_count': unread_count,
     })
 
 
 @login_required(login_url='login')
 @require_POST
-def harvest_schedule_delete_ajax(request, pk):
-    """Delete a harvest schedule that has not yet produced a harvest record."""
-    schedule = get_object_or_404(
-        HarvestSchedule.objects.select_related('farm', 'crop', 'harvest_record'),
-        pk=pk,
-        user=request.user,
+def harvest_refresh_readiness_ajax(request):
+    """Run a manual readiness check and return the resulting counts."""
+    board = get_harvest_board(request.user)
+    messages.success(
+        request,
+        f'Readiness check completed. {board["ready_count"]} crop(s) ready for harvest.',
     )
-    record = _schedule_harvest_record(schedule)
-    if record:
-        return JsonResponse(
-            {'error': f'This schedule is linked to harvest {record.harvest_code}. Delete that harvest record first.'},
-            status=400,
-        )
-
-    schedule_desc = str(schedule)
-    schedule.delete()
-    messages.success(request, f'Harvest schedule "{schedule_desc}" has been deleted successfully.')
     return JsonResponse({
-        'status': 'deleted',
-        'message': f'Harvest schedule "{schedule_desc}" has been deleted successfully.',
+        'status': 'success',
+        'ready_count': board['ready_count'],
+        'approaching_count': board['approaching_count'],
+        'upcoming_count': board['upcoming_count'],
+        'unread_count': get_unread_notification_count(request.user),
     })

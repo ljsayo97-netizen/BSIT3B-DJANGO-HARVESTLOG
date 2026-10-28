@@ -319,9 +319,7 @@
             <td>
               <a href="{% url 'harvests:harvest_list' %}?q={{ harvest.harvest_code|urlencode }}"
                  class="fw-semibold text-primary">{{ harvest.harvest_code|default:"—" }}</a>
-              {% if harvest.schedule_id %}
-              <div class="text-muted small"><i class="fas fa-calendar-check me-1"></i>Scheduled harvest</div>
-              {% endif %}
+              <div class="text-muted small">Assigned by system</div>
             </td>
             <td class="text-muted">{{ harvest.harvest_date|date:"M j, Y" }}</td>
             <td class="fw-semibold">{{ harvest.farm.name }}</td>

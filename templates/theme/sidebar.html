@@ -70,6 +70,9 @@
               <i class="nav-icon fas fa-clipboard-list"></i>
             </span>
             <span class="nav-link-title">Harvests</span>
+            {% if harvest_unread_count %}
+            <span class="badge bg-warning text-dark ms-auto" title="{{ harvest_unread_count }} harvest notification{{ harvest_unread_count|pluralize }}">{{ harvest_unread_count }}</span>
+            {% endif %}
           </a>
         </li>
 

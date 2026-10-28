@@ -97,7 +97,8 @@
               <th>Crop</th>
               <th>Variety</th>
               <th>Planting Date</th>
-              <th>Expected Harvest Date</th>
+              <th>Assigned Harvest</th>
+              <th>Days to Maturity</th>
               <th>Quality</th>
               <th>Status</th>
             </tr>
@@ -109,8 +110,10 @@
               <td class="text-muted">{{ crop.variety|default:"—" }}</td>
               <td class="text-muted">{{ crop.planting_date|date:"M j, Y" }}</td>
               <td class="text-muted">
-                {% if crop.expected_harvest_date %}{{ crop.expected_harvest_date|date:"M j, Y" }}{% else %}—{% endif %}
+                {{ crop.expected_harvest_date|date:"M j, Y"|default:"—" }}
+                <div class="small">{{ crop.days_to_harvest_label }}</div>
               </td>
+              <td class="text-muted">{{ crop.days_to_maturity }} days</td>
               <td>
                 {% include "crops/_quality_badge.html" with grade=crop.quality label=crop.get_quality_display %}
               </td>
@@ -142,7 +145,7 @@
             <tr>
               <th>Crop</th>
               <th>Planting Date</th>
-              <th>Expected Harvest Date</th>
+              <th>Assigned Harvest</th>
               <th>Actual Harvest Date</th>
               <th>Quality</th>
               <th>Status</th>
@@ -153,11 +156,9 @@
             <tr>
               <td class="fw-semibold">{{ crop.name }}</td>
               <td class="text-muted">{{ crop.planting_date|date:"M j, Y" }}</td>
+              <td class="text-muted">{{ crop.expected_harvest_date|date:"M j, Y"|default:"—" }}</td>
               <td class="text-muted">
-                {% if crop.expected_harvest_date %}{{ crop.expected_harvest_date|date:"M j, Y" }}{% else %}—{% endif %}
-              </td>
-              <td class="text-muted">
-                {% if crop.actual_harvest_date %}{{ crop.actual_harvest_date|date:"M j, Y" }}{% else %}—{% endif %}
+                {% if crop.actual_harvest_date %}{{ crop.actual_harvest_date|date:"M j, Y" }}{% else %}-{% endif %}
               </td>
               <td>
                 {% if crop.quality %}
@@ -230,7 +231,8 @@
             <th>Crop Name</th>
             <th>Variety</th>
             <th>Planting Date</th>
-            <th>Expected Harvest</th>
+            <th>System Harvest Date</th>
+            <th>Days to Maturity</th>
             <th>Area (ha)</th>
             <th>Status</th>
             <th class="w-1">Actions</th>
@@ -246,10 +248,14 @@
             <td class="text-muted">
               {% if crop.expected_harvest_date %}
               {{ crop.expected_harvest_date|date:"M j, Y" }}
+              <div class="small {% if crop.maturity_status == 'ready' %}text-success{% elif crop.maturity_status == 'approaching' %}text-warning{% endif %}">
+                {{ crop.days_to_harvest_label }}
+              </div>
               {% else %}
               —
               {% endif %}
             </td>
+            <td class="text-muted">{{ crop.days_to_maturity }} days</td>
             <td class="text-muted">{{ crop.area_hectares }}</td>
             <td>
               {% if crop.status == 'planting' %}
@@ -264,11 +270,6 @@
               <span class="badge bg-success-lt text-success">{{ crop.get_status_display }}</span>
               {% else %}
               <span class="badge bg-danger-lt text-danger">{{ crop.get_status_display }}</span>
-              {% endif %}
-              {% if crop.days_to_harvest is not None and crop.status == 'growing' %}
-              <br><span class="text-muted small">{{ crop.days_to_harvest }} days to harvest</span>
-              {% elif crop.days_since_planting is not None %}
-              <br><span class="text-muted small">{{ crop.days_since_planting }} days since planting</span>
               {% endif %}
             </td>
             <td>
@@ -287,7 +288,7 @@
         </tr>
         {% empty %}
         <tr>
-            <td colspan="8">
+            <td colspan="9">
                 <div class="empty py-5">
                     <div class="empty-icon">
                         <i class="fas fa-leaf fa-2x text-muted"></i>
@@ -380,8 +381,14 @@
               <input type="date" name="planting_date" id="crop_planting_date" class="form-control" required>
             </div>
             <div class="col-6">
-              <label class="form-label">Expected Harvest Date</label>
-              <input type="date" name="expected_harvest_date" id="crop_expected_harvest_date" class="form-control">
+              <label class="form-label">Days to Maturity</label>
+              <input type="number" name="days_to_maturity" id="crop_days_to_maturity" class="form-control" min="1" step="1" placeholder="e.g. 110">
+              <small class="form-hint">Days from planting until harvest. Leave blank to use the typical estimate for the crop.</small>
+            </div>
+            <div class="col-12">
+              <div class="alert alert-info mb-0" id="crop_harvest_preview" role="status">
+                The system assigns the harvest date from the planting date and days to maturity.
+              </div>
             </div>
             <div class="col-6">
               <label class="form-label">Area (hectares) <span class="text-danger"></span></label>
@@ -439,12 +446,17 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ maturity_suggestions|json_script:"crop-maturity-suggestions" }}
 <script>
 (function () {
   const LIST_URL    = '{% url "crops:crop_list_ajax" %}';
   const SAVE_URL    = '{% url "crops:crop_save_ajax" %}';
   const GET_URL     = '{% url "crops:crop_get_ajax" 0 %}'.replace('/0/', '/');
   const DELETE_BASE = '{% url "crops:crop_delete_ajax" 0 %}'.replace('/0/', '/');
+
+  const DEFAULT_MATURITY_DAYS = {{ default_maturity_days|default:90 }};
+  const maturityDataEl = document.getElementById('crop-maturity-suggestions');
+  const MATURITY_DAYS = maturityDataEl ? JSON.parse(maturityDataEl.textContent) : {};
 
   const modalEl     = document.getElementById('cropModal');
   const deleteModal = document.getElementById('deleteCropModal');
@@ -455,6 +467,10 @@
   const deleteBtn   = document.getElementById('confirmDeleteCropBtn');
   const deleteName  = document.getElementById('deleteCropName');
   const clearBtn    = document.getElementById('cropClearBtn');
+  const nameInput   = document.getElementById('crop_name');
+  const plantingInput = document.getElementById('crop_planting_date');
+  const daysInput   = document.getElementById('crop_days_to_maturity');
+  const previewBox  = document.getElementById('crop_harvest_preview');
   let currentId     = null;
   let currentMode   = 'create';
 
@@ -463,6 +479,58 @@
     return m ? decodeURIComponent(m[2]) : null;
   }
   const csrftoken = getCookie('csrftoken');
+
+  function suggestedDays(name) {
+    const normalized = (name || '').toLowerCase().trim().replace(/\s+/g, ' ');
+    if (!normalized) return DEFAULT_MATURITY_DAYS;
+    if (Object.prototype.hasOwnProperty.call(MATURITY_DAYS, normalized)) {
+      return MATURITY_DAYS[normalized];
+    }
+    const keyword = Object.keys(MATURITY_DAYS).find(function (key) {
+      return normalized.indexOf(key) !== -1;
+    });
+    return keyword ? MATURITY_DAYS[keyword] : DEFAULT_MATURITY_DAYS;
+  }
+
+  function parseIsoDate(value) {
+    const parts = (value || '').split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+    return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+  }
+
+  function formatDate(value) {
+    return value.toLocaleDateString(undefined, {
+      month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+    });
+  }
+
+  function updateHarvestPreview() {
+    if (!previewBox) return;
+    const planting = parseIsoDate(plantingInput.value);
+    const entered = parseInt(daysInput.value, 10);
+    const fallback = suggestedDays(nameInput.value);
+    const days = !Number.isNaN(entered) && entered > 0 ? entered : fallback;
+
+    daysInput.placeholder = 'Typical for this crop: ' + fallback + ' days';
+    previewBox.className = 'alert alert-info mb-0';
+
+    if (!planting) {
+      previewBox.textContent = 'Select a planting date and the system will assign the harvest date automatically.';
+      return;
+    }
+
+    const harvestDate = new Date(planting.getTime());
+    harvestDate.setUTCDate(harvestDate.getUTCDate() + days);
+    const source = !Number.isNaN(entered) && entered > 0
+      ? 'days to maturity'
+      : 'the typical ' + fallback + '-day estimate';
+    previewBox.innerHTML = '<i class="fas fa-robot me-1"></i> The system will assign <strong>' +
+      formatDate(harvestDate) + '</strong> as the harvest date (' + days + ' ' + source + ' after planting).';
+  }
+
+  nameInput.addEventListener('input', updateHarvestPreview);
+  plantingInput.addEventListener('input', updateHarvestPreview);
+  daysInput.addEventListener('input', updateHarvestPreview);
 
   function showFormError(msg) {
     alertBox.textContent = msg;
@@ -496,6 +564,8 @@
     clearFormError();
     document.getElementById('crop_status').value = 'planting';
     document.getElementById('crop_planting_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('crop_days_to_maturity').value = '';
+    updateHarvestPreview();
   }
 
   modalEl.addEventListener('show.bs.modal', function (event) {
@@ -529,10 +599,11 @@
         document.getElementById('crop_name').value         = data.name || '';
         document.getElementById('crop_variety').value      = data.variety || '';
         document.getElementById('crop_planting_date').value = data.planting_date ? data.planting_date.slice(0, 10) : '';
-        document.getElementById('crop_expected_harvest_date').value = data.expected_harvest_date ? data.expected_harvest_date.slice(0, 10) : '';
+        document.getElementById('crop_days_to_maturity').value = data.days_to_maturity || '';
         document.getElementById('crop_area_hectares').value = data.area_hectares || '';
         document.getElementById('crop_status').value       = data.status || 'planting';
         document.getElementById('crop_quality').value      = data.quality || '';
+        updateHarvestPreview();
       })
       .catch(() => { showFormError('Could not load crop details.'); });
     } else {

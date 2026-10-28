@@ -1,9 +1,13 @@
 """Crop management models."""
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+
+from .maturity import DEFAULT_MATURITY_DAYS, suggest_maturity_days
 
 
 HARVEST_APPROACHING_DAYS = 14
@@ -39,8 +43,20 @@ class Crop(models.Model):
     name = models.CharField('crop name', max_length=255)
     variety = models.CharField('variety', max_length=255, blank=True)
     planting_date = models.DateField('planting date', default=timezone.localdate)
-    expected_harvest_date = models.DateField('expected harvest date', blank=True, null=True)
+    days_to_maturity = models.PositiveIntegerField(
+        'days to maturity',
+        default=DEFAULT_MATURITY_DAYS,
+        validators=[MinValueValidator(1)],
+        help_text='Estimated number of days from planting until the crop can be harvested.',
+    )
+    expected_harvest_date = models.DateField(
+        'system-assigned harvest date',
+        blank=True,
+        null=True,
+        help_text='Automatically calculated from the planting date and days to maturity.',
+    )
     actual_harvest_date = models.DateField('actual harvest date', blank=True, null=True)
+    harvest_season = models.CharField('harvest season', max_length=100, blank=True, default='')
     status = models.CharField(
         max_length=30,
         choices=Status.choices,
@@ -78,6 +94,34 @@ class Crop(models.Model):
         verbose_name = 'crop'
         verbose_name_plural = 'crops'
 
+    def generate_harvest_season(self):
+        """Auto-generate harvest season based on the assigned harvest date."""
+        ref_date = self.expected_harvest_date or self.planting_date
+        if not ref_date:
+            return ''
+        month = ref_date.month
+        year = ref_date.year
+        # Common Philippine seasons (adjust as needed) - can be customized
+        if month in (12, 1, 2, 3, 4, 5):
+            return f'Dry Season {year}'
+        return f'Wet Season {year}'
+
+    def calculate_expected_harvest_date(self):
+        """Return the system-assigned harvest date for the crop."""
+        if not self.planting_date:
+            return None
+        days = self.days_to_maturity or suggest_maturity_days(self.name)
+        return self.planting_date + timedelta(days=days)
+
+    def save(self, *args, **kwargs):
+        # The harvest date is always assigned by the system; the crop form
+        # only collects the planting date and the days to maturity.
+        if not self.days_to_maturity:
+            self.days_to_maturity = suggest_maturity_days(self.name)
+        self.expected_harvest_date = self.calculate_expected_harvest_date()
+        self.harvest_season = self.generate_harvest_season()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f'{self.name} ({self.variety or "n/a"}) on {self.farm.name}'
 
@@ -94,6 +138,19 @@ class Crop(models.Model):
         return None
 
     @property
+    def is_ready_for_harvest(self):
+        """Whether the crop can be harvested right now."""
+        if self.actual_harvest_date or self.status in (
+            self.Status.HARVESTED,
+            self.Status.FAILED,
+        ):
+            return False
+        if self.status == self.Status.READY_FOR_HARVEST:
+            return True
+        days = self.days_to_harvest
+        return days is not None and days <= 0
+
+    @property
     def maturity_status(self):
         """Return the crop's harvest-readiness stage."""
         if self.actual_harvest_date or self.status == self.Status.HARVESTED:
@@ -101,9 +158,10 @@ class Crop(models.Model):
         if self.status == self.Status.FAILED:
             return 'failed'
 
-        days = self.days_to_harvest
-        if self.status == self.Status.READY_FOR_HARVEST or (days is not None and days <= 0):
+        if self.is_ready_for_harvest:
             return 'ready'
+
+        days = self.days_to_harvest
         if days is not None and days <= HARVEST_APPROACHING_DAYS:
             return 'approaching'
         return 'upcoming'

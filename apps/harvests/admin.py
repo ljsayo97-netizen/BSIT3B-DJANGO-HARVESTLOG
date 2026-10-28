@@ -1,24 +1,23 @@
 from django.contrib import admin
 
-from .models import Harvest, HarvestSchedule
+from .models import Harvest, HarvestNotification
 
 
-@admin.register(HarvestSchedule)
-class HarvestScheduleAdmin(admin.ModelAdmin):
+@admin.register(HarvestNotification)
+class HarvestNotificationAdmin(admin.ModelAdmin):
     list_display = (
         'id',
-        'scheduled_date',
-        'farm',
         'crop',
-        'field_name',
-        'workers_count',
-        'assigned_to',
-        'status',
+        'kind',
+        'expected_harvest_date',
+        'is_read',
+        'created_at',
     )
-    list_filter = ('status', 'scheduled_date', 'farm')
-    search_fields = ('field_name', 'assigned_to', 'supervisor', 'notes', 'farm__name', 'crop__name')
-    list_editable = ('status',)
-    ordering = ['scheduled_date']
+    list_filter = ('kind', 'is_read', 'expected_harvest_date')
+    search_fields = ('crop__name', 'crop__farm__name', 'message')
+    list_editable = ('is_read',)
+    readonly_fields = ('message', 'created_at', 'read_at')
+    ordering = ['-created_at']
 
 
 @admin.register(Harvest)
@@ -27,6 +26,7 @@ class HarvestAdmin(admin.ModelAdmin):
         'harvest_code',
         'harvest_date',
         'farm',
+        'crop',
         'crop_type',
         'quantity_harvested',
         'unit',
@@ -38,6 +38,7 @@ class HarvestAdmin(admin.ModelAdmin):
     search_fields = (
         'harvest_code',
         'crop_type',
+        'crop__name',
         'location',
         'harvested_by',
         'supervised_by',
@@ -46,5 +47,5 @@ class HarvestAdmin(admin.ModelAdmin):
         'farm__name',
     )
     list_editable = ('quality_grade',)
-    readonly_fields = ('harvest_code',)
+    readonly_fields = ('harvest_code', 'harvest_date', 'harvest_season')
     ordering = ['-harvest_date']

@@ -5,30 +5,29 @@
     <div class="container-xl">
       <div class="row align-items-center">
         <div class="col">
-          <div class="page-pretitle">Harvests &amp; Scheduling</div>
+          <div class="page-pretitle">Crop-driven harvests</div>
           <div class="d-flex align-items-center gap-3 flex-wrap d-none d-md-flex">
-            <h2 class="page-title mb-0">Harvest Management</h2>
+            <h2 class="page-title mb-0">Harvest Board</h2>
           </div>
-          <h2 class="page-title mb-0 d-md-none">Harvest Management</h2>
+          <h2 class="page-title mb-0 d-md-none">Harvest Board</h2>
+          <div class="text-muted mt-1">
+            The system watches your crops and assigns a harvest date from each crop's planting date and days to maturity.
+          </div>
         </div>
         <div class="col-auto">
           <div class="btn-list">
-            <button type="button"
-               class="btn btn-outline-primary"
-               data-bs-toggle="modal"
-               data-bs-target="#scheduleModal"
-               data-mode="create">
-              <i class='fas fa-calendar-plus me-2'></i> Schedule Harvest
+            <button type="button" class="btn btn-outline-primary" id="readinessRefreshBtn" title="Re-check every crop's readiness now">
+              <i class="fas fa-arrows-rotate me-2"></i> Check readiness
             </button>
             <button type="button"
                class="btn btn-primary"
                data-bs-toggle="modal"
                data-bs-target="#harvestModal"
                data-mode="create">
-              <i class='fas fa-plus-circle me-2'></i> Record Harvest
+              <i class="fas fa-plus-circle me-2"></i> Record Harvest
             </button>
             <a href="{% url 'harvests:harvest_history' %}" class="btn btn-outline-secondary">
-              <i class='fas fa-history me-2'></i> Harvest History
+              <i class="fas fa-history me-2"></i> Harvest History
             </a>
           </div>
         </div>
@@ -50,48 +49,16 @@
 
   <div id="harvestAlert" class="alert alert-danger d-none" role="alert"></div>
 
-  <!-- Harvest overview cards -->
+  <!-- Readiness overview -->
   <div class="row row-cards mb-3">
     <div class="col-sm-6 col-xl-3">
       <div class="card">
         <div class="card-body">
           <div class="d-flex align-items-center">
             <div class="flex-grow-1">
-              <span class="badge bg-warning-lt text-warning rounded-pill">Upcoming</span>
-              <h2 class="card-title mb-1 mt-2">{{ upcoming_harvests|length }}</h2>
-              <p class="text-muted small mb-0">Crops approaching harvest</p>
-            </div>
-            <div class="flex-shrink-0">
-              <i class="fas fa-seedling fa-2x text-warning"></i>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1">
-              <span class="badge bg-primary-lt text-primary rounded-pill">Scheduled</span>
-              <h2 class="card-title mb-1 mt-2">{{ active_schedule_count }}</h2>
-              <p class="text-muted small mb-0">Active harvest activities</p>
-            </div>
-            <div class="flex-shrink-0">
-              <i class="fas fa-calendar-check fa-2x text-primary"></i>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1">
-              <span class="badge bg-success-lt text-success rounded-pill">Harvest records</span>
-              <h2 class="card-title mb-1 mt-2">{{ total_harvests }}</h2>
-              <p class="text-muted small mb-0">Recorded harvests</p>
+              <span class="badge bg-success-lt text-success rounded-pill">Ready now</span>
+              <h2 class="card-title mb-1 mt-2">{{ ready_count }}</h2>
+              <p class="text-muted small mb-0">Crops the system flagged for harvest</p>
             </div>
             <div class="flex-shrink-0">
               <i class="fas fa-clipboard-check fa-2x text-success"></i>
@@ -105,9 +72,44 @@
         <div class="card-body">
           <div class="d-flex align-items-center">
             <div class="flex-grow-1">
+              <span class="badge bg-warning-lt text-warning rounded-pill">Approaching</span>
+              <h2 class="card-title mb-1 mt-2">{{ approaching_count }}</h2>
+              <p class="text-muted small mb-0">Crops due within 14 days</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-hourglass-half fa-2x text-warning"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-primary-lt text-primary rounded-pill">Harvest records</span>
+              <h2 class="card-title mb-1 mt-2">{{ total_harvests }}</h2>
+              <p class="text-muted small mb-0">{{ this_month_harvest_count }} recorded this month</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-clipboard-list fa-2x text-primary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
               <span class="badge bg-info-lt text-info rounded-pill">Total quantity</span>
-              <h2 class="card-title mb-1 mt-2">{{ total_quantity|floatformat:2 }} <span class="text-muted small">kg</span></h2>
-              <p class="text-muted small mb-0">Across all harvest records</p>
+              <h2 class="card-title mb-1 mt-2">
+                {{ total_quantity|floatformat:"-2" }}
+                {% if total_unit %}<span class="text-muted small">{{ total_unit }}</span>{% endif %}
+              </h2>
+              <p class="text-muted small mb-0">Across all recorded harvests</p>
             </div>
             <div class="flex-shrink-0">
               <i class="fas fa-weight-hanging fa-2x text-info"></i>
@@ -118,289 +120,276 @@
     </div>
   </div>
 
-  <!-- Upcoming harvests -->
-  <div class="card mb-3" id="upcoming-harvests">
-    <div class="card-header">
-      <div>
-        <h3 class="card-title mb-1">Upcoming Harvests</h3>
-        <div class="text-muted small">Crops marked ready for harvest or expected to mature within the next 30 days.</div>
-      </div>
-      <div class="card-actions">
-        <span class="badge bg-warning-lt text-warning">{{ upcoming_harvests|length }} crop{{ upcoming_harvests|length|pluralize }}</span>
+  <div class="row row-cards mb-3">
+    <!-- Notification centre -->
+    <div class="col-xl-5" id="harvest-notifications">
+      <div class="card h-100">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Harvest Notifications</h3>
+            <div class="text-muted small">
+              {% if unread_notification_count %}
+              {{ unread_notification_count }} unread alert{{ unread_notification_count|pluralize }}
+              {% else %}
+              You are all caught up.
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-actions">
+            <form method="post" action="{% url 'harvests:harvest_notification_read' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary" {% if not unread_notification_count %}disabled{% endif %}>
+                <i class="fas fa-check-double me-1"></i> Mark all read
+              </button>
+            </form>
+          </div>
+        </div>
+        {% if notifications %}
+        <div class="list-group list-group-flush" id="harvestNotificationList">
+          {% for notification in notifications %}
+          <div class="list-group-item {% if not notification.is_read %}bg-warning-lt{% endif %}" data-notification-item="{{ notification.id }}">
+            <div class="d-flex align-items-start gap-2">
+              <span class="badge {% if notification.kind == 'ready' %}bg-success-lt text-success{% else %}bg-warning-lt text-warning{% endif %} mt-1">
+                {{ notification.get_kind_display }}
+              </span>
+              <div class="flex-grow-1 min-w-0">
+                <div class="{% if not notification.is_read %}fw-semibold{% endif %}">{{ notification.message }}</div>
+                <div class="text-muted small mt-1">
+                  <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }} ago
+                  {% if notification.is_read %}&middot; read{% endif %}
+                </div>
+              </div>
+              {% if not notification.is_read %}
+              <button type="button"
+                      class="btn btn-sm btn-ghost-secondary"
+                      data-notification-read="{{ notification.id }}"
+                      title="Mark this notification as read">
+                <i class="fas fa-check"></i>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="card-body">
+          <div class="empty py-4">
+            <div class="empty-icon"><i class="fas fa-bell-slash fa-2x text-muted"></i></div>
+            <p class="empty-title">No harvest notifications</p>
+            <p class="empty-subtitle text-muted">
+              The system creates an alert as soon as one of your crops is ready to harvest.
+            </p>
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
-    <div class="table-responsive">
-      <table class="table table-vcenter table-hover card-table text-nowrap">
-        <thead>
-          <tr>
-            <th>Farm</th>
-            <th>Crop</th>
-            <th>Expected Harvest</th>
-            <th>Countdown</th>
-            <th>Status</th>
-            <th class="w-1">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for crop in upcoming_harvests %}
-          <tr>
-            <td>
-              <div class="fw-semibold">{{ crop.farm.name }}</div>
-              <div class="text-muted small">{{ crop.farm.location }}</div>
-            </td>
-            <td>
-              <div class="fw-semibold">{{ crop.name }}</div>
-              <div class="text-muted small">
-                {{ crop.variety|default:"No variety" }} &middot; {{ crop.area_hectares }} ha
-              </div>
-            </td>
-            <td class="text-muted">
-              {% if crop.expected_harvest_date %}
-              {{ crop.expected_harvest_date|date:"M j, Y" }}
-              {% else %}
-              —
-              {% endif %}
-            </td>
-            <td class="text-muted">{{ crop.days_to_harvest_label }}</td>
-            <td>
-              {% if crop.maturity_status == 'ready' %}
-              <span class="badge bg-success-lt text-success">Ready for harvest</span>
-              {% elif crop.maturity_status == 'approaching' %}
-              <span class="badge bg-warning-lt text-warning">Approaching harvest</span>
-              {% else %}
-              <span class="badge bg-info-lt text-info">Upcoming harvest</span>
-              {% endif %}
-              {% if crop.active_schedule %}
-              <br>
-              <span class="badge bg-primary-lt text-primary mt-1">
-                <i class="fas fa-calendar-check me-1"></i>Scheduled {{ crop.active_schedule.scheduled_date|date:"M j" }}
-              </span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="d-flex gap-1">
-                {% if crop.active_schedule %}
-                <button type="button"
-                        class="btn btn-sm btn-outline-primary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#scheduleModal"
-                        data-mode="edit"
-                        data-id="{{ crop.active_schedule.id }}"
-                        title="Edit harvest schedule">
-                  <i class="fas fa-edit me-1"></i> Reschedule
-                </button>
-                <button type="button"
-                        class="btn btn-sm btn-outline-success"
-                        data-bs-toggle="modal"
-                        data-bs-target="#harvestModal"
-                        data-mode="from-schedule"
-                        data-schedule-id="{{ crop.active_schedule.id }}"
-                        data-farm-id="{{ crop.farm_id }}"
-                        data-crop-id="{{ crop.id }}"
-                        data-crop-type="{{ crop.name }}"
-                        data-location="{{ crop.active_schedule.field_name }}"
-                        data-harvest-date="{{ crop.active_schedule.scheduled_date|date:'Y-m-d' }}"
-                        data-workers="{{ crop.active_schedule.workers_count }}"
-                        data-harvested-by="{{ crop.active_schedule.assigned_to }}"
-                        data-supervised-by="{{ crop.active_schedule.supervisor }}"
-                        title="Record the harvest for this schedule">
-                  <i class="fas fa-clipboard-check me-1"></i> Record
-                </button>
-                {% else %}
-                <button type="button"
-                        class="btn btn-sm btn-outline-primary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#scheduleModal"
-                        data-mode="create"
-                        data-farm-id="{{ crop.farm_id }}"
-                        data-crop-id="{{ crop.id }}"
-                        data-scheduled-date="{{ crop.expected_harvest_date|date:'Y-m-d' }}"
-                        data-notes="Scheduled harvest for {{ crop.name }} on {{ crop.farm.name }}."
-                        title="Schedule a harvest activity">
-                  <i class="fas fa-calendar-plus me-1"></i> Schedule
-                </button>
-                <button type="button"
-                        class="btn btn-sm btn-outline-success"
-                        data-bs-toggle="modal"
-                        data-bs-target="#harvestModal"
-                        data-mode="from-crop"
-                        data-farm-id="{{ crop.farm_id }}"
-                        data-crop-id="{{ crop.id }}"
-                        data-crop-type="{{ crop.name }}"
-                        data-harvest-date="{{ crop.expected_harvest_date|date:'Y-m-d' }}"
-                        title="Record the harvest for this crop">
-                  <i class="fas fa-clipboard-check me-1"></i> Record
-                </button>
-                {% endif %}
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6">
-              <div class="empty py-4">
-                <div class="empty-icon">
-                  <i class="fas fa-seedling fa-2x text-muted"></i>
-                </div>
-                <p class="empty-title">No crops approaching harvest</p>
-                <p class="empty-subtitle">Add an expected harvest date to a crop, or mark it ready for harvest, and it will appear here.</p>
-                <div class="empty-action">
-                  <a href="{% url 'crops:crop_list' %}" class="btn btn-outline-primary">
-                    <i class="fas fa-leaf me-1"></i> Manage Crops
-                  </a>
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+
+    <!-- Ready crops -->
+    <div class="col-xl-7">
+      <div class="card h-100">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Ready for Harvest</h3>
+            <div class="text-muted small">
+              The system assigned these harvest dates. Record the harvest when the crop is gathered.
+            </div>
+          </div>
+          <div class="card-actions">
+            <span class="badge bg-success-lt text-success">{{ ready_count }} ready</span>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table text-nowrap">
+            <thead>
+              <tr>
+                <th>Crop</th>
+                <th>Farm</th>
+                <th>Assigned date</th>
+                <th>Countdown</th>
+                <th class="w-1">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for crop in ready_crops %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ crop.name }}</div>
+                  <div class="text-muted small">{{ crop.variety|default:"No variety" }} &middot; {{ crop.area_hectares }} ha</div>
+                </td>
+                <td class="text-muted">{{ crop.farm.name }}</td>
+                <td class="text-muted">{{ crop.expected_harvest_date|date:"M j, Y" }}</td>
+                <td>
+                  <span class="badge bg-success-lt text-success">{{ crop.days_to_harvest_label }}</span>
+                </td>
+                <td>
+                  <button type="button"
+                          class="btn btn-sm btn-success"
+                          data-bs-toggle="modal"
+                          data-bs-target="#harvestModal"
+                          data-mode="create"
+                          data-crop-id="{{ crop.id }}">
+                    <i class="fas fa-clipboard-check me-1"></i> Record
+                  </button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5">
+                  <div class="empty py-4">
+                    <div class="empty-icon"><i class="fas fa-seedling fa-2x text-muted"></i></div>
+                    <p class="empty-title">Nothing is ready right now</p>
+                    <p class="empty-subtitle text-muted">
+                      Crops appear here automatically when their assigned harvest date arrives.
+                    </p>
+                    <div class="empty-action">
+                      <a href="{% url 'crops:crop_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-leaf me-1"></i> Review crops
+                      </a>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Harvest schedules -->
-  <div class="card mb-3" id="harvest-schedules">
+  <!-- Harvest watch -->
+  <div class="card mb-3" id="harvest-watch">
     <div class="card-header">
       <div>
-        <h3 class="card-title mb-1">Harvest Schedules</h3>
-        <div class="text-muted small">Planned harvest activities and the workers assigned to them.</div>
+        <h3 class="card-title mb-1">Harvest Watch</h3>
+        <div class="text-muted small">Crops the system is tracking on the way to harvest.</div>
       </div>
       <div class="card-actions">
-        <button type="button"
-                class="btn btn-sm btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#scheduleModal"
-                data-mode="create">
-          <i class="fas fa-calendar-plus me-1"></i> New Schedule
-        </button>
+        <span class="badge bg-secondary-lt text-secondary">{{ upcoming_count }} crop{{ upcoming_count|pluralize }} watched</span>
       </div>
     </div>
-    <div class="table-responsive">
-      <table class="table table-vcenter table-hover card-table text-nowrap">
-        <thead>
-          <tr>
-            <th>Scheduled Date</th>
-            <th>Farm</th>
-            <th>Crop</th>
-            <th>Location</th>
-            <th>Workers</th>
-            <th>Assigned Team</th>
-            <th>Status</th>
-            <th>Harvest Record</th>
-            <th class="w-1">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for schedule in schedules %}
-          <tr>
-            <td>
-              <div class="fw-semibold">{{ schedule.scheduled_date|date:"M j, Y" }}</div>
-              <div class="text-muted small">
-                {% if schedule.days_until == 0 %}Today
-                {% elif schedule.days_until == 1 %}Tomorrow
-                {% elif schedule.days_until > 1 %}In {{ schedule.days_until }} days
-                {% elif schedule.days_until < 0 %}{{ schedule.days_until }} days
-                {% endif %}
-              </div>
-            </td>
-            <td class="text-muted">{{ schedule.farm.name }}</td>
-            <td>
-              {% if schedule.crop %}
-              <div class="fw-semibold">{{ schedule.crop.name }}</div>
-              <div class="text-muted small">{{ schedule.crop.variety|default:"No variety" }}</div>
-              {% else %}
-              —
-              {% endif %}
-            </td>
-            <td class="text-muted">{{ schedule.field_name }}</td>
-            <td class="text-muted">{{ schedule.workers_count }}</td>
-            <td class="text-muted">{{ schedule.assigned_to|default:"—" }}</td>
-            <td>
-              {% if schedule.status == 'scheduled' %}
-              <span class="badge bg-primary-lt text-primary">{{ schedule.get_status_display }}</span>
-              {% elif schedule.status == 'in_progress' %}
-              <span class="badge bg-warning-lt text-warning">{{ schedule.get_status_display }}</span>
-              {% elif schedule.status == 'completed' %}
-              <span class="badge bg-success-lt text-success">{{ schedule.get_status_display }}</span>
-              {% else %}
-              <span class="badge bg-secondary-lt text-secondary">{{ schedule.get_status_display }}</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if schedule.harvest_record %}
-              <span class="badge bg-success-lt text-success">{{ schedule.harvest_record.harvest_code }}</span>
-              {% else %}
-              <span class="text-muted">Not recorded</span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="d-flex gap-1">
-                <button type="button"
-                        class="btn btn-ghost-secondary btn-icon btn-sm"
-                        data-bs-toggle="modal"
-                        data-bs-target="#scheduleModal"
-                        data-mode="edit"
-                        data-id="{{ schedule.id }}"
-                        title="Edit schedule">
-                  <i class="fas fa-edit text-primary"></i>
-                </button>
-                {% if schedule.is_active %}
-                <button type="button"
-                        class="btn btn-ghost-secondary btn-icon btn-sm"
-                        data-bs-toggle="modal"
-                        data-bs-target="#harvestModal"
-                        data-mode="from-schedule"
-                        data-schedule-id="{{ schedule.id }}"
-                        data-farm-id="{{ schedule.farm_id }}"
-                        data-crop-id="{{ schedule.crop_id }}"
-                        data-crop-type="{{ schedule.crop.name|default:'' }}"
-                        data-location="{{ schedule.field_name }}"
-                        data-harvest-date="{{ schedule.scheduled_date|date:'Y-m-d' }}"
-                        data-workers="{{ schedule.workers_count }}"
-                        data-harvested-by="{{ schedule.assigned_to }}"
-                        data-supervised-by="{{ schedule.supervisor }}"
-                        title="Record harvest">
-                  <i class="fas fa-clipboard-check text-success"></i>
-                </button>
-                {% endif %}
-                <button type="button"
-                        class="btn btn-ghost-secondary btn-icon btn-sm"
-                        data-bs-toggle="modal"
-                        data-bs-target="#deleteScheduleModal"
-                        data-id="{{ schedule.id }}"
-                        data-name="{{ schedule }}"
-                        title="Delete schedule">
-                  <i class="fas fa-trash-alt text-danger"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="9">
-              <div class="empty py-4">
-                <div class="empty-icon">
-                  <i class="fas fa-calendar-alt fa-2x text-muted"></i>
-                </div>
-                <p class="empty-title">No harvest schedules yet</p>
-                <p class="empty-subtitle">Schedule the next harvest and assign workers to the activity.</p>
-                <div class="empty-action">
-                  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleModal" data-mode="create">
-                    <i class="fas fa-calendar-plus me-1"></i> Schedule Harvest
+    <div class="card-body pb-0">
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#watch-approaching" type="button" role="tab">
+            Approaching <span class="badge bg-warning-lt text-warning ms-1">{{ approaching_count }}</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#watch-upcoming" type="button" role="tab">
+            Upcoming <span class="badge bg-info-lt text-info ms-1">{{ upcoming_crops|length }}</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="watch-approaching" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table text-nowrap">
+            <thead>
+              <tr>
+                <th>Crop</th>
+                <th>Farm</th>
+                <th>Assigned date</th>
+                <th>Countdown</th>
+                <th>Status</th>
+                <th class="w-1">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for crop in approaching_crops %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ crop.name }}</div>
+                  <div class="text-muted small">{{ crop.variety|default:"No variety" }}</div>
+                </td>
+                <td class="text-muted">{{ crop.farm.name }}</td>
+                <td class="text-muted">{{ crop.expected_harvest_date|date:"M j, Y" }}</td>
+                <td class="text-muted">{{ crop.days_to_harvest_label }}</td>
+                <td><span class="badge bg-warning-lt text-warning">Approaching</span></td>
+                <td>
+                  <button type="button"
+                          class="btn btn-sm btn-outline-primary"
+                          data-bs-toggle="modal"
+                          data-bs-target="#harvestModal"
+                          data-mode="create"
+                          data-crop-id="{{ crop.id }}">
+                    <i class="fas fa-clipboard-check me-1"></i> Record
                   </button>
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6">
+                  <div class="empty py-4">
+                    <div class="empty-icon"><i class="fas fa-hourglass-half fa-2x text-muted"></i></div>
+                    <p class="empty-title">No crops approaching harvest</p>
+                    <p class="empty-subtitle text-muted">Crops due within 14 days will be listed here.</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="watch-upcoming" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table text-nowrap">
+            <thead>
+              <tr>
+                <th>Crop</th>
+                <th>Farm</th>
+                <th>Assigned date</th>
+                <th>Countdown</th>
+                <th>Status</th>
+                <th class="w-1">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for crop in upcoming_crops %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ crop.name }}</div>
+                  <div class="text-muted small">{{ crop.variety|default:"No variety" }}</div>
+                </td>
+                <td class="text-muted">{{ crop.farm.name }}</td>
+                <td class="text-muted">{{ crop.expected_harvest_date|date:"M j, Y" }}</td>
+                <td class="text-muted">{{ crop.days_to_harvest_label }}</td>
+                <td><span class="badge bg-info-lt text-info">Upcoming</span></td>
+                <td>
+                  <button type="button"
+                          class="btn btn-sm btn-outline-primary"
+                          data-bs-toggle="modal"
+                          data-bs-target="#harvestModal"
+                          data-mode="create"
+                          data-crop-id="{{ crop.id }}">
+                    <i class="fas fa-clipboard-check me-1"></i> Record
+                  </button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6">
+                  <div class="empty py-4">
+                    <div class="empty-icon"><i class="fas fa-calendar-day fa-2x text-muted"></i></div>
+                    <p class="empty-title">No harvests in the next 30 days</p>
+                    <p class="empty-subtitle text-muted">Crops scheduled by the system further out are not shown here.</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Harvest records -->
   <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-1">
-    <form method="GET" class="w-100" style="max-width: 860px;">
+    <form method="GET" class="w-100" style="max-width: 1000px;">
       <div class="input-group">
         <span class="input-group-text"><i class="ti ti-search"></i></span>
         <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search a harvest ID, crop, farm, field, or person...">
@@ -410,10 +399,16 @@
           <option value="{{ value }}" {% if quality == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
-        <select name="farm" class="form-select" style="max-width: 160px;">
+        <select name="farm" class="form-select" style="max-width: 150px;">
           <option value="">All farms</option>
           {% for farm in farms %}
           <option value="{{ farm.id }}" {% if farm_id == farm.id|stringformat:"s" %}selected{% endif %}>{{ farm.name }}</option>
+          {% endfor %}
+        </select>
+        <select name="crop" class="form-select" style="max-width: 170px;">
+          <option value="">All crops</option>
+          {% for crop in crops %}
+          <option value="{{ crop.id }}" {% if crop_id == crop.id|stringformat:"s" %}selected{% endif %}>{{ crop.name }} — {{ crop.farm.name }}</option>
           {% endfor %}
         </select>
         <select name="sort" class="form-select" style="max-width: 160px;">
@@ -425,7 +420,7 @@
           <option value="-workers" {% if sort == '-workers' %}selected{% endif %}>Workers (high-low)</option>
           <option value="farm" {% if sort == 'farm' %}selected{% endif %}>Farm (A-Z)</option>
         </select>
-        {% if query or quality or farm_id %}
+        {% if query or quality or farm_id or crop_id %}
         <a href="{% url 'harvests:harvest_list' %}" class="btn btn-outline-secondary">Clear</a>
         {% endif %}
         <button type="submit" class="btn btn-primary">Search</button>
@@ -437,7 +432,7 @@
     <div class="card-header">
       <div class="card-title">
         Harvest Records
-        {% if query or quality or farm_id %}
+        {% if query or quality or farm_id or crop_id %}
         <span class="text-muted fw-normal">— {{ harvests.paginator.count }} result{{ harvests.paginator.count|pluralize }}</span>
         {% endif %}
       </div>
@@ -456,6 +451,7 @@
             <th>Harvest Date</th>
             <th>Farm</th>
             <th>Crop / Field</th>
+            <th>Season</th>
             <th>Quantity</th>
             <th>Quality / Grade</th>
             <th>Workers</th>
@@ -468,16 +464,22 @@
         <tr data-row-id="{{ harvest.id }}">
             <td>
               <span class="fw-semibold text-primary">{{ harvest.harvest_code|default:"—" }}</span>
-              {% if harvest.schedule_id %}
-              <div class="text-muted small"><i class="fas fa-calendar-check me-1"></i>Scheduled harvest</div>
+              {% if harvest.crop %}
+              <div class="text-muted small"><i class="fas fa-seedling me-1"></i>{{ harvest.crop.name }}</div>
               {% endif %}
             </td>
-            <td class="text-muted">{{ harvest.harvest_date|date:"M j, Y" }}</td>
+            <td class="text-muted">
+              {{ harvest.harvest_date|date:"M j, Y" }}
+              <div class="small">Assigned by system</div>
+            </td>
             <td class="fw-semibold">{{ harvest.farm.name }}</td>
             <td>
-              <div class="text-muted">{{ harvest.crop_type }}</div>
+              <div class="text-muted">
+                {% if harvest.crop %}{{ harvest.crop.name }}{% else %}{{ harvest.crop_type }}{% endif %}
+              </div>
               <div class="text-muted small">{{ harvest.location }}</div>
             </td>
+            <td class="text-muted">{{ harvest.harvest_season|default:"—" }}</td>
             <td class="text-muted">{{ harvest.quantity_harvested }} {{ harvest.unit }}</td>
             <td>
               {% if harvest.quality_grade == 'premium' %}
@@ -492,6 +494,9 @@
               <span class="badge bg-secondary-lt text-secondary">{{ harvest.get_quality_grade_display }}</span>
               {% else %}
               <span class="badge bg-dark-lt text-dark">{{ harvest.get_quality_grade_display }}</span>
+              {% endif %}
+              {% if harvest.quality_condition %}
+              <div class="text-muted small">{{ harvest.get_quality_condition_display }}</div>
               {% endif %}
             </td>
             <td class="text-muted">{{ harvest.workers_count }}</td>
@@ -517,13 +522,13 @@
         </tr>
         {% empty %}
         <tr>
-            <td colspan="9">
+            <td colspan="10">
                 <div class="empty py-5">
                     <div class="empty-icon">
                         <i class="fas fa-clipboard-list fa-2x text-muted"></i>
                     </div>
                     <p class="empty-title">No harvest records found</p>
-                    <p class="empty-subtitle">Schedule a harvest or record the first completed harvest.</p>
+                    <p class="empty-subtitle">Record a harvest once a crop is gathered. The system assigns the date.</p>
                     <div class="empty-action">
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#harvestModal" data-mode="create">
                             <i class="fas fa-plus-circle me-2"></i> Record Harvest
@@ -547,19 +552,19 @@
       <ul class="pagination m-0 ms-auto">
         {% if harvests.has_previous %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ harvests.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+          <a class="page-link" href="?page={{ harvests.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
             <i class="ti ti-chevron-left"></i> prev
           </a>
         </li>
         {% endif %}
         {% for num in harvests.paginator.page_range %}
         <li class="page-item {% if harvests.number == num %}active{% endif %}">
-          <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a>
+          <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a>
         </li>
         {% endfor %}
         {% if harvests.has_next %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ harvests.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+          <a class="page-link" href="?page={{ harvests.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
             next <i class="ti ti-chevron-right"></i>
           </a>
         </li>
@@ -567,103 +572,6 @@
       </ul>
     </div>
     {% endif %}
-  </div>
-</div>
-
-<!-- Harvest Schedule Modal (Create / Edit) -->
-<div class="modal modal-blur fade" id="scheduleModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="scheduleModalTitle">Schedule Harvest</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="scheduleForm">
-        {% csrf_token %}
-        <input type="hidden" name="id" id="schedule_id">
-        <div class="modal-body">
-          <div id="scheduleFormError" class="alert alert-danger d-none"></div>
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label">Farm <span class="text-danger"></span></label>
-              <select name="farm_id" id="schedule_farm_id" class="form-select" required>
-                <option value="">Select a farm</option>
-                {% for farm in farms %}
-                <option value="{{ farm.id }}" data-location="{{ farm.location }}">{{ farm.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Crop Type<span class="text-muted"></span></label>
-              <select name="crop_id" id="schedule_crop_id" class="form-select">
-                <option value="">Select a crop</option>
-                {% for crop in crops %}
-                <option value="{{ crop.id }}" data-farm="{{ crop.farm_id }}" data-name="{{ crop.name }}">{{ crop.name }} — {{ crop.farm.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Location <span class="text-danger"></span></label>
-              <input type="text" name="field_name" id="schedule_field_name" class="form-control" required list="schedule_location_suggestions" placeholder="e.g. North Field, Block A">
-              <datalist id="schedule_location_suggestions">
-                {% for loc in location_suggestions %}
-                <option value="{{ loc }}"></option>
-                {% endfor %}
-              </datalist>
-              <small class="text-muted">Selecting a farm fills in its location automatically. Existing locations are suggested while typing.</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Scheduled Date <span class="text-danger"></span></label>
-              <input type="date" name="scheduled_date" id="schedule_scheduled_date" class="form-control" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Status <span class="text-danger"></span></label>
-              <select name="status" id="schedule_status" class="form-select" required>
-                {% for value, label in schedule_status_choices %}
-                <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Expected Quantity</label>
-              <input type="number" name="expected_quantity" id="schedule_expected_quantity" class="form-control" step="0.01" min="0" placeholder="0.00">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Unit</label>
-              <select name="unit" id="schedule_unit" class="form-select">
-                <option value="kg">kg</option>
-                <option value="tons">tons</option>
-                <option value="baskets">baskets</option>
-                <option value="sacks">sacks</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Number of Workers <span class="text-danger"></span></label>
-              <input type="number" name="workers_count" id="schedule_workers_count" class="form-control" min="1" step="1" value="1" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Assigned Workers / Team</label>
-              <input type="text" name="assigned_to" id="schedule_assigned_to" class="form-control" placeholder="e.g. Harvest Team A">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Supervised By</label>
-              <input type="text" name="supervisor" id="schedule_supervisor" class="form-control" placeholder="e.g. Farm manager">
-            </div>
-            <div class="col-12">
-              <label class="form-label">Scheduling Notes</label>
-              <textarea name="notes" id="schedule_notes" class="form-control" rows="3" placeholder="Instructions, equipment, reminders, etc..."></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-ghost-secondary me-auto" id="scheduleClearBtn" title="Clear all fields">
-            <i class="ti ti-x me-1"></i>Clear
-          </button>
-          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="scheduleSubmitBtn">Save Schedule</button>
-        </div>
-      </form>
-    </div>
   </div>
 </div>
 
@@ -678,51 +586,70 @@
       <form id="harvestForm">
         {% csrf_token %}
         <input type="hidden" name="id" id="harvest_id">
-        <input type="hidden" name="schedule_id" id="harvest_schedule_id">
         <div class="modal-body">
           <div id="harvestFormError" class="alert alert-danger d-none"></div>
-          <div id="harvestScheduleNotice" class="alert alert-info d-none" role="status"></div>
           <div class="row g-3">
             <div class="col-12">
-              <label class="form-label">Harvest ID</label>
-              <div class="form-control-plaintext fw-semibold text-primary" id="harvest_code_display">Auto-generated</div>
-              <div class="form-hint">A sequential harvest reference is assigned automatically when the record is saved.</div>
+              <div class="alert alert-info mb-0" role="status">
+                <div class="d-flex gap-2">
+                  <i class="fas fa-robot mt-1"></i>
+                  <div>
+                    <strong>Harvest dates are assigned by the system.</strong>
+                    You do not need to enter a date. New harvests receive the current date automatically,
+                    and edits keep the date originally assigned.
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="col-md-8">
-              <label class="form-label">Farm <span class="text-danger"></span></label>
-              <select name="farm_id" id="harvest_farm_id" class="form-select" required>
-                <option value="">Select a farm</option>
-                {% for farm in farms %}
-                <option value="{{ farm.id }}">{{ farm.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Harvest Date <span class="text-danger"></span></label>
-              <input type="date" name="harvest_date" id="harvest_harvest_date" class="form-control" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Crop <span class="text-muted">(optional)</span></label>
+
+            <div class="col-12">
+              <label class="form-label">Crop <span class="text-muted">(required for new harvests)</span></label>
               <select name="crop_id" id="harvest_crop_id" class="form-select">
-                <option value="">Select a crop</option>
+                <option value="">Select the crop being harvested</option>
                 {% for crop in crops %}
-                <option value="{{ crop.id }}" data-farm="{{ crop.farm_id }}" data-name="{{ crop.name }}">{{ crop.name }} ({{ crop.variety|default:'n/a' }}) — {{ crop.farm.name }}</option>
+                <option value="{{ crop.id }}"
+                        data-farm-name="{{ crop.farm.name }}"
+                        data-location="{{ crop.farm.location|default:crop.farm.name }}"
+                        data-crop-name="{{ crop.name }}"
+                        data-expected-label="{{ crop.expected_harvest_date|date:'M j, Y' }}"
+                        data-days-label="{{ crop.days_to_harvest_label }}"
+                        data-readiness="{{ crop.maturity_status }}"
+                        data-readiness-label="{{ crop.maturity_label }}">
+                  {{ crop.name }} ({{ crop.variety|default:"n/a" }}) — {{ crop.farm.name }}
+                </option>
                 {% endfor %}
               </select>
+              <div class="form-hint">Only crops still in production are listed. A crop can have one harvest record.</div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Farm</label>
+              <div class="form-control-plaintext" id="harvest_farm_display">—</div>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Crop Type <span class="text-danger"></span></label>
-              <input type="text" name="crop_type" id="harvest_crop_type" class="form-control" required placeholder="e.g. Rice">
+              <label class="form-label">Field / Location</label>
+              <div class="form-control-plaintext" id="harvest_location_display">—</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Harvest date (system-assigned)</label>
+              <div class="form-control-plaintext fw-semibold" id="harvest_date_display">Today, assigned on save</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Crop readiness</label>
+              <div id="harvest_readiness_display">
+                <span class="badge bg-secondary-lt text-secondary">Select a crop</span>
+              </div>
+              <div class="text-muted small mt-1" id="harvest_expected_display">The crop's assigned harvest date appears here.</div>
             </div>
             <div class="col-12">
-              <label class="form-label">Field / Harvest Location <span class="text-danger"></span></label>
-              <input type="text" name="location" id="harvest_location" class="form-control" required placeholder="e.g. Field A, North field, Block A">
+              <div class="alert d-none mb-0" id="harvest_readiness_notice" role="status"></div>
             </div>
+
             <div class="col-md-4">
-              <label class="form-label">Quantity <span class="text-danger"></span></label>
+              <label class="form-label">Quantity <span class="text-danger">*</span></label>
               <input type="number" name="quantity_harvested" id="harvest_quantity_harvested" class="form-control" step="0.01" min="0" required placeholder="0.00">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
               <label class="form-label">Unit</label>
               <select name="unit" id="harvest_unit" class="form-select">
                 <option value="kg">kg</option>
@@ -731,8 +658,13 @@
                 <option value="sacks">sacks</option>
               </select>
             </div>
-            <div class="col-md-3">
-              <label class="form-label">Quality / Grade <span class="text-danger"></span></label>
+            <div class="col-md-5">
+              <label class="form-label">Harvest ID</label>
+              <div class="form-control-plaintext fw-semibold text-primary" id="harvest_code_display">Auto-generated</div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Quality / Grade <span class="text-danger">*</span></label>
               <select name="quality_grade" id="harvest_quality_grade" class="form-select" required>
                 <option value="premium">Premium</option>
                 <option value="grade_a">Grade A</option>
@@ -742,12 +674,40 @@
                 <option value="fair">Fair</option>
               </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
+              <label class="form-label">Condition</label>
+              <select name="quality_condition" id="harvest_quality_condition" class="form-select">
+                <option value="">Not specified</option>
+                {% for value, label in condition_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
               <label class="form-label">Workers</label>
               <input type="number" name="workers_count" id="harvest_workers_count" class="form-control" min="0" step="1" value="0" placeholder="0">
             </div>
             <div class="col-md-6">
-              <label class="form-label">Harvest Team Lead <span class="text-danger"></span></label>
+              <label class="form-label">Moisture level</label>
+              <div class="input-group">
+                <input type="number" name="moisture_level" id="harvest_moisture_level" class="form-control" min="0" max="100" step="0.01" placeholder="e.g. 14.50">
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Damaged quantity</label>
+              <div class="input-group">
+                <input type="number" name="damaged_quantity" id="harvest_damaged_quantity" class="form-control" min="0" step="0.01" placeholder="0.00">
+                <span class="input-group-text">same unit</span>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Quality observations</label>
+              <textarea name="quality_observations" id="harvest_quality_observations" class="form-control" rows="2" placeholder="Appearance, odor, sorting notes, issues found, etc."></textarea>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Harvest Team Lead <span class="text-danger">*</span></label>
               <input type="text" name="harvested_by" id="harvest_harvested_by" class="form-control" required placeholder="Person who led the harvest">
             </div>
             <div class="col-md-6">
@@ -756,7 +716,7 @@
             </div>
             <div class="col-12">
               <label class="form-label">Remarks</label>
-              <textarea name="notes" id="harvest_notes" class="form-control" rows="3" placeholder="Observations about quality, weather, issues, etc..."></textarea>
+              <textarea name="notes" id="harvest_notes" class="form-control" rows="3" placeholder="Observations about the harvest, weather, issues, etc..."></textarea>
             </div>
           </div>
         </div>
@@ -781,30 +741,11 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="text-muted">Are you sure you want to delete <strong id="deleteHarvestName"></strong>? This cannot be undone.</p>
+        <p class="text-muted">Are you sure you want to delete <strong id="deleteHarvestName"></strong>? The crop will return to the harvest board and this cannot be undone.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-danger" id="confirmDeleteHarvestBtn">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Delete Harvest Schedule Modal -->
-<div class="modal modal-blur fade" id="deleteScheduleModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog modal-sm modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title text-danger">Delete Harvest Schedule</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted">Are you sure you want to delete <strong id="deleteScheduleName"></strong>? This cannot be undone.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteScheduleBtn">Delete</button>
       </div>
     </div>
   </div>
@@ -814,39 +755,33 @@
 {% block extra_js %}
 <script>
 (function () {
-  const HARVEST_SAVE_URL     = '{% url "harvests:harvest_save_ajax" %}';
-  const HARVEST_GET_URL      = '{% url "harvests:harvest_get_ajax" 0 %}'.replace('/0/', '/');
-  const HARVEST_DELETE_BASE  = '{% url "harvests:harvest_delete_ajax" 0 %}'.replace('/0/', '/');
-  const SCHEDULE_SAVE_URL    = '{% url "harvests:harvest_schedule_save_ajax" %}';
-  const SCHEDULE_GET_URL     = '{% url "harvests:harvest_schedule_get_ajax" 0 %}'.replace('/0/', '/');
-  const SCHEDULE_DELETE_BASE = '{% url "harvests:harvest_schedule_delete_ajax" 0 %}'.replace('/0/', '/');
+  const HARVEST_SAVE_URL = '{% url "harvests:harvest_save_ajax" %}';
+  const HARVEST_GET_URL = '{% url "harvests:harvest_get_ajax" 0 %}'.replace('/0/', '/');
+  const HARVEST_DELETE_BASE = '{% url "harvests:harvest_delete_ajax" 0 %}'.replace('/0/', '/');
+  const NOTIFICATION_READ_URL = '{% url "harvests:harvest_notification_read" %}';
+  const READINESS_REFRESH_URL = '{% url "harvests:harvest_refresh_readiness" %}';
 
-  const scheduleModalEl = document.getElementById('scheduleModal');
-  const scheduleForm    = document.getElementById('scheduleForm');
-  const scheduleTitle   = document.getElementById('scheduleModalTitle');
-  const scheduleSubmit  = document.getElementById('scheduleSubmitBtn');
-  const scheduleError   = document.getElementById('scheduleFormError');
-  const scheduleClear   = document.getElementById('scheduleClearBtn');
+  const harvestModalEl = document.getElementById('harvestModal');
+  const harvestForm = document.getElementById('harvestForm');
+  const harvestTitle = document.getElementById('harvestModalTitle');
+  const harvestSubmit = document.getElementById('harvestSubmitBtn');
+  const harvestError = document.getElementById('harvestFormError');
+  const harvestClear = document.getElementById('harvestClearBtn');
+  const cropSelect = document.getElementById('harvest_crop_id');
+  const harvestAlert = document.getElementById('harvestAlert');
+  const readinessDisplay = document.getElementById('harvest_readiness_display');
+  const readinessNotice = document.getElementById('harvest_readiness_notice');
+  const expectedDisplay = document.getElementById('harvest_expected_display');
+  const harvestDateDisplay = document.getElementById('harvest_date_display');
+  const farmDisplay = document.getElementById('harvest_farm_display');
+  const locationDisplay = document.getElementById('harvest_location_display');
 
-  const harvestModalEl  = document.getElementById('harvestModal');
-  const harvestForm     = document.getElementById('harvestForm');
-  const harvestTitle    = document.getElementById('harvestModalTitle');
-  const harvestSubmit   = document.getElementById('harvestSubmitBtn');
-  const harvestError    = document.getElementById('harvestFormError');
-  const harvestNotice   = document.getElementById('harvestScheduleNotice');
-  const harvestCode     = document.getElementById('harvest_code_display');
-  const harvestClear    = document.getElementById('harvestClearBtn');
+  const deleteHarvestModal = document.getElementById('deleteHarvestModal');
+  const deleteHarvestBtn = document.getElementById('confirmDeleteHarvestBtn');
+  const deleteHarvestName = document.getElementById('deleteHarvestName');
+  const readinessRefreshBtn = document.getElementById('readinessRefreshBtn');
 
-  const deleteHarvestModal  = document.getElementById('deleteHarvestModal');
-  const deleteScheduleModal = document.getElementById('deleteScheduleModal');
-  const deleteHarvestBtn    = document.getElementById('confirmDeleteHarvestBtn');
-  const deleteScheduleBtn   = document.getElementById('confirmDeleteScheduleBtn');
-  const deleteHarvestName   = document.getElementById('deleteHarvestName');
-  const deleteScheduleName  = document.getElementById('deleteScheduleName');
-
-  const today = new Date().toISOString().split('T')[0];
   let currentHarvestId = null;
-  let currentScheduleId = null;
 
   function getCookie(name) {
     const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -858,6 +793,7 @@
     box.textContent = msg;
     box.classList.remove('d-none');
   }
+
   function clearError(box) {
     box.textContent = '';
     box.classList.add('d-none');
@@ -867,198 +803,147 @@
     bootstrap.Toast.getOrCreateInstance(el).show();
   });
 
-  / Filter crop options to the selected farm. */
-  function filterCropOptions(selectId, farmId, selectedId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-
-    Array.from(select.options).forEach(function (option) {
-      if (!option.value) return;
-      const matches = !!farmId && option.dataset.farm === String(farmId);
-      option.hidden = !matches;
-      option.disabled = !matches;
-    });
-    select.value = selectedId ? String(selectedId) : '';
+  function readinessBadgeClass(status) {
+    if (status === 'ready') return 'bg-success-lt text-success';
+    if (status === 'approaching') return 'bg-warning-lt text-warning';
+    if (status === 'harvested') return 'bg-primary-lt text-primary';
+    if (status === 'failed') return 'bg-danger-lt text-danger';
+    return 'bg-info-lt text-info';
   }
 
-  function syncCropTypeFromSelection() {
-    const cropSelect = document.getElementById('harvest_crop_id');
-    const selected = cropSelect.options[cropSelect.selectedIndex];
-    if (selected && selected.value && selected.dataset.name) {
-      document.getElementById('harvest_crop_type').value = selected.dataset.name;
+  function setText(el, value, fallback) {
+    el.textContent = value || fallback || '—';
+  }
+
+  function syncCropPreview() {
+    const option = cropSelect.options[cropSelect.selectedIndex];
+    const hasCrop = option && option.value;
+
+    farmDisplay.textContent = hasCrop ? (option.dataset.farmName || '—') : '—';
+    locationDisplay.textContent = hasCrop ? (option.dataset.location || '—') : '—';
+    expectedDisplay.textContent = hasCrop
+      ? 'Assigned harvest date: ' + (option.dataset.expectedLabel || '—') + ' · ' + (option.dataset.daysLabel || '')
+      : "The crop's assigned harvest date appears here.";
+
+    readinessNotice.classList.add('d-none');
+
+    if (!hasCrop) {
+      readinessDisplay.innerHTML = '<span class="badge bg-secondary-lt text-secondary">Select a crop</span>';
+      return;
     }
-  }
 
-  function resetScheduleForm() {
-    scheduleForm.reset();
-    currentScheduleId = null;
-    document.getElementById('schedule_id').value = '';
-    scheduleTitle.textContent = 'Schedule Harvest';
-    scheduleSubmit.textContent = 'Save Schedule';
-    scheduleSubmit.disabled = false;
-    clearError(scheduleError);
-    document.getElementById('schedule_scheduled_date').value = today;
-    document.getElementById('schedule_status').value = 'scheduled';
-    document.getElementById('schedule_workers_count').value = '1';
-    document.getElementById('schedule_unit').value = 'kg';
-    scheduleLocationAutoFilled = false;
-    filterCropOptions('schedule_crop_id', '', '');
+    const status = option.dataset.readiness || 'upcoming';
+    readinessDisplay.innerHTML = '<span class="badge ' + readinessBadgeClass(status) + '">' +
+      (option.dataset.readinessLabel || 'Upcoming harvest') + '</span>';
+
+    if (status === 'ready') {
+      readinessNotice.className = 'alert alert-success mb-0';
+      readinessNotice.textContent = 'This crop is ready for harvest. The system will assign today as the harvest date.';
+      readinessNotice.classList.remove('d-none');
+    } else if (status === 'approaching') {
+      readinessNotice.className = 'alert alert-warning mb-0';
+      readinessNotice.textContent = 'This crop is approaching harvest. Recording now is allowed, but the system still treats its assigned date as the target.';
+      readinessNotice.classList.remove('d-none');
+    } else if (status === 'harvested') {
+      readinessNotice.className = 'alert alert-success mb-0';
+      readinessNotice.textContent = 'This crop already has a harvest record. It stays linked to this crop when you save changes.';
+      readinessNotice.classList.remove('d-none');
+    } else {
+      readinessNotice.className = 'alert alert-info mb-0';
+      readinessNotice.textContent = 'This crop is not due yet. You can still record the harvest ahead of schedule; the system will assign today as the harvest date.';
+      readinessNotice.classList.remove('d-none');
+    }
   }
 
   function resetHarvestForm() {
     harvestForm.reset();
+    cropSelect.querySelectorAll('option[data-dynamic-crop="1"]').forEach(function (option) {
+      option.remove();
+    });
     currentHarvestId = null;
     document.getElementById('harvest_id').value = '';
-    document.getElementById('harvest_schedule_id').value = '';
     harvestTitle.textContent = 'Record Harvest';
     harvestSubmit.textContent = 'Record Harvest';
     harvestSubmit.disabled = false;
     harvestSubmit.classList.remove('d-none');
     clearError(harvestError);
-    harvestNotice.classList.add('d-none');
-    harvestCode.textContent = 'Auto-generated';
-    document.getElementById('harvest_harvest_date').value = today;
+    document.getElementById('harvest_code_display').textContent = 'Auto-generated';
+    harvestDateDisplay.textContent = 'Today, assigned on save';
     document.getElementById('harvest_quality_grade').value = 'standard';
+    document.getElementById('harvest_quality_condition').value = '';
     document.getElementById('harvest_unit').value = 'kg';
     document.getElementById('harvest_workers_count').value = '0';
-    filterCropOptions('harvest_crop_id', '', '');
     harvestForm.querySelectorAll('input, select, textarea').forEach(function (el) {
       el.disabled = false;
     });
+    syncCropPreview();
   }
 
   function setHarvestFields(data) {
-    document.getElementById('harvest_farm_id').value = data.farm_id || '';
-    document.getElementById('harvest_schedule_id').value = data.schedule_id || '';
-    filterCropOptions('harvest_crop_id', data.farm_id, data.crop_id);
-    document.getElementById('harvest_harvest_date').value = data.harvest_date ? data.harvest_date.slice(0, 10) : today;
-    document.getElementById('harvest_location').value = data.location || '';
-    document.getElementById('harvest_crop_type').value = data.crop_type || '';
-    document.getElementById('harvest_quantity_harvested').value = data.quantity_harvested !== undefined && data.quantity_harvested !== null ? data.quantity_harvested : '';
+    currentHarvestId = data.id;
+    document.getElementById('harvest_id').value = data.id || '';
+    document.getElementById('harvest_code_display').textContent = data.harvest_code || 'Auto-generated';
+
+    // Harvested crops are no longer on the active board. Add the record's crop
+    // back to the select so editing a harvest keeps its crop link visible.
+    if (data.crop_id && String(data.crop_id) !== '') {
+      const cropValue = String(data.crop_id);
+      const hasOption = Array.from(cropSelect.options).some(function (option) {
+        return option.value === cropValue;
+      });
+      if (!hasOption) {
+        const option = document.createElement('option');
+        option.value = cropValue;
+        option.textContent = (data.crop_name || 'Crop') + ' — ' + (data.farm_name || 'Farm');
+        option.dataset.farmName = data.farm_name || '';
+        option.dataset.location = data.location || '';
+        option.dataset.cropName = data.crop_name || '';
+        option.dataset.expectedLabel = '';
+        option.dataset.daysLabel = '';
+        option.dataset.readiness = 'harvested';
+        option.dataset.readinessLabel = 'Harvested';
+        option.dataset.dynamicCrop = '1';
+        cropSelect.appendChild(option);
+      }
+    }
+    cropSelect.value = data.crop_id ? String(data.crop_id) : '';
+
+    document.getElementById('harvest_quantity_harvested').value =
+      data.quantity_harvested !== undefined && data.quantity_harvested !== null ? data.quantity_harvested : '';
     document.getElementById('harvest_unit').value = data.unit || 'kg';
     document.getElementById('harvest_quality_grade').value = data.quality_grade || 'standard';
-    document.getElementById('harvest_workers_count').value = data.workers_count !== undefined && data.workers_count !== null ? data.workers_count : 0;
+    document.getElementById('harvest_quality_condition').value = data.quality_condition || '';
+    document.getElementById('harvest_moisture_level').value =
+      data.moisture_level !== undefined && data.moisture_level !== null ? data.moisture_level : '';
+    document.getElementById('harvest_damaged_quantity').value =
+      data.damaged_quantity !== undefined && data.damaged_quantity !== null ? data.damaged_quantity : '';
+    document.getElementById('harvest_quality_observations').value = data.quality_observations || '';
+    document.getElementById('harvest_workers_count').value =
+      data.workers_count !== undefined && data.workers_count !== null ? data.workers_count : 0;
     document.getElementById('harvest_harvested_by').value = data.harvested_by || '';
     document.getElementById('harvest_supervised_by').value = data.supervised_by || '';
     document.getElementById('harvest_notes').value = data.notes || '';
-    harvestCode.textContent = data.harvest_code || 'Auto-generated';
-  }
 
-  /* ---------- Harvest schedule modal ---------- */
-  let scheduleLocationAutoFilled = false;
+    syncCropPreview();
 
-  function scheduleFarmLocation() {
-    const farmSelect = document.getElementById('schedule_farm_id');
-    const option = farmSelect.options[farmSelect.selectedIndex];
-    return option && option.dataset.location ? option.dataset.location.trim() : '';
-  }
+    harvestDateDisplay.textContent = data.harvest_date || 'Assigned by system';
+    farmDisplay.textContent = data.farm_name || '—';
+    locationDisplay.textContent = data.location || '—';
 
-  /* Auto-fill the schedule location from the selected farm's location. */
-  function syncScheduleLocationFromFarm() {
-    const input = document.getElementById('schedule_field_name');
-    const farmLocation = scheduleFarmLocation();
-    if (!farmLocation) return;
-    if (!input.value.trim() || scheduleLocationAutoFilled || input.value.trim() === farmLocation) {
-      input.value = farmLocation;
-      scheduleLocationAutoFilled = true;
-    }
-  }
-
-  document.getElementById('schedule_field_name').addEventListener('input', function () {
-    scheduleLocationAutoFilled = false;
-  });
-
-  document.getElementById('schedule_farm_id').addEventListener('change', function () {
-    filterCropOptions('schedule_crop_id', this.value, '');
-    syncScheduleLocationFromFarm();
-  });
-
-  scheduleModalEl.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    if (!button || button.getAttribute('data-mode') === 'create') {
-      resetScheduleForm();
-      if (button) {
-        const farmId = button.getAttribute('data-farm-id');
-        const cropId = button.getAttribute('data-crop-id');
-        document.getElementById('schedule_farm_id').value = farmId || '';
-        filterCropOptions('schedule_crop_id', farmId, cropId);
-        syncScheduleLocationFromFarm();
-        const date = button.getAttribute('data-scheduled-date');
-        if (date) document.getElementById('schedule_scheduled_date').value = date;
-        const notes = button.getAttribute('data-notes');
-        if (notes) document.getElementById('schedule_notes').value = notes;
+    const option = cropSelect.options[cropSelect.selectedIndex];
+    if (option && option.value) {
+      if (option.dataset.expectedLabel) {
+        expectedDisplay.textContent = 'Assigned harvest date: ' +
+          option.dataset.expectedLabel + ' · ' + (option.dataset.daysLabel || '');
+      } else {
+        expectedDisplay.textContent = 'This crop already has a harvest record.';
       }
-      return;
+    } else {
+      expectedDisplay.textContent = 'This legacy record is not linked to a crop.';
     }
-
-    const id = button.getAttribute('data-id');
-    currentScheduleId = id;
-    document.getElementById('schedule_id').value = id;
-    scheduleTitle.textContent = 'Edit Harvest Schedule';
-    scheduleSubmit.textContent = 'Update Schedule';
-
-    fetch(SCHEDULE_GET_URL + id + '/', {
-      method: 'GET',
-      headers: { 'X-CSRFToken': csrftoken },
-    })
-      .then(function (response) { return response.json(); })
-      .then(function (data) {
-        document.getElementById('schedule_farm_id').value = data.farm_id || '';
-        filterCropOptions('schedule_crop_id', data.farm_id, data.crop_id);
-        document.getElementById('schedule_field_name').value = data.field_name || '';
-        scheduleLocationAutoFilled = false;
-        document.getElementById('schedule_scheduled_date').value = data.scheduled_date ? data.scheduled_date.slice(0, 10) : today;
-        document.getElementById('schedule_expected_quantity').value = data.expected_quantity !== null && data.expected_quantity !== undefined ? data.expected_quantity : '';
-        document.getElementById('schedule_unit').value = data.unit || 'kg';
-        document.getElementById('schedule_workers_count').value = data.workers_count || 1;
-        document.getElementById('schedule_assigned_to').value = data.assigned_to || '';
-        document.getElementById('schedule_supervisor').value = data.supervisor || '';
-        document.getElementById('schedule_status').value = data.status || 'scheduled';
-        document.getElementById('schedule_notes').value = data.notes || '';
-      })
-      .catch(function () { showError(scheduleError, 'Could not load harvest schedule details.'); });
-  });
-
-  scheduleModalEl.addEventListener('hidden.bs.modal', function () {
-    resetScheduleForm();
-  });
-
-  if (scheduleClear) {
-    scheduleClear.addEventListener('click', resetScheduleForm);
   }
 
-  scheduleForm.addEventListener('submit', function (event) {
-    event.preventDefault();
-    clearError(scheduleError);
-    scheduleSubmit.disabled = true;
-
-    fetch(SCHEDULE_SAVE_URL, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': csrftoken },
-      body: new FormData(scheduleForm),
-    })
-      .then(async function (response) {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Could not save harvest schedule.');
-        return data;
-      })
-      .then(function () {
-        bootstrap.Modal.getInstance(scheduleModalEl).hide();
-        location.reload();
-      })
-      .catch(function (error) {
-        showError(scheduleError, error.message);
-      })
-      .finally(function () {
-        scheduleSubmit.disabled = false;
-      });
-  });
-
-  /* ---------- Harvest record modal ---------- */
-  document.getElementById('harvest_farm_id').addEventListener('change', function () {
-    filterCropOptions('harvest_crop_id', this.value, '');
-  });
-  document.getElementById('harvest_crop_id').addEventListener('change', syncCropTypeFromSelection);
+  cropSelect.addEventListener('change', syncCropPreview);
 
   harvestModalEl.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
@@ -1066,12 +951,18 @@
 
     if (!button || mode === 'create') {
       resetHarvestForm();
+      if (button) {
+        const cropId = button.getAttribute('data-crop-id');
+        if (cropId) {
+          cropSelect.value = String(cropId);
+          syncCropPreview();
+        }
+      }
       return;
     }
 
     if (mode === 'edit' || mode === 'view') {
       const id = button.getAttribute('data-id');
-      currentHarvestId = id;
       resetHarvestForm();
       document.getElementById('harvest_id').value = id;
       harvestTitle.textContent = mode === 'edit' ? 'Edit Harvest' : 'Harvest Details';
@@ -1091,37 +982,13 @@
         .then(function (response) { return response.json(); })
         .then(function (data) {
           setHarvestFields(data);
-          if (data.schedule_id) {
-            harvestNotice.textContent = 'This harvest record is linked to a scheduled harvest activity.';
-            harvestNotice.classList.remove('d-none');
+          if (mode === 'view') {
+            harvestForm.querySelectorAll('input, select, textarea').forEach(function (el) {
+              el.disabled = true;
+            });
           }
         })
         .catch(function () { showError(harvestError, 'Could not load harvest details.'); });
-      return;
-    }
-
-    if (mode === 'from-schedule' || mode === 'from-crop') {
-      resetHarvestForm();
-      const scheduleId = button.getAttribute('data-schedule-id') || '';
-      const farmId = button.getAttribute('data-farm-id') || '';
-      const cropId = button.getAttribute('data-crop-id') || '';
-
-      document.getElementById('harvest_schedule_id').value = scheduleId;
-      document.getElementById('harvest_farm_id').value = farmId;
-      filterCropOptions('harvest_crop_id', farmId, cropId);
-
-      const date = button.getAttribute('data-harvest-date');
-      document.getElementById('harvest_harvest_date').value = date || today;
-      document.getElementById('harvest_crop_type').value = button.getAttribute('data-crop-type') || '';
-      document.getElementById('harvest_location').value = button.getAttribute('data-location') || '';
-      document.getElementById('harvest_workers_count').value = button.getAttribute('data-workers') || '0';
-      document.getElementById('harvest_harvested_by').value = button.getAttribute('data-harvested-by') || '';
-      document.getElementById('harvest_supervised_by').value = button.getAttribute('data-supervised-by') || '';
-
-      if (scheduleId) {
-        harvestNotice.textContent = 'Recording the harvest for the selected schedule. The schedule will be marked completed after saving.';
-        harvestNotice.classList.remove('d-none');
-      }
     }
   });
 
@@ -1145,7 +1012,7 @@
     })
       .then(async function (response) {
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Could not save harvest record.');
+        if (!response.ok) throw new Error(data.error || 'Could not save the harvest record.');
         return data;
       })
       .then(function () {
@@ -1160,20 +1027,60 @@
       });
   });
 
-  /* ---------- Delete modals ---------- */
+  /* ---------- Notifications ---------- */
+  document.querySelectorAll('[data-notification-read]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const id = button.getAttribute('data-notification-read');
+      if (!id) return;
+      button.disabled = true;
+
+      fetch(NOTIFICATION_READ_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: new URLSearchParams({ id: id }),
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error('Could not mark the notification as read.');
+          location.reload();
+        })
+        .catch(function (error) {
+          button.disabled = false;
+          showError(harvestError, error.message);
+        });
+    });
+  });
+
+  /* ---------- Readiness check ---------- */
+  if (readinessRefreshBtn) {
+    readinessRefreshBtn.addEventListener('click', function () {
+      const originalHtml = readinessRefreshBtn.innerHTML;
+      readinessRefreshBtn.disabled = true;
+      readinessRefreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking...';
+
+      fetch(READINESS_REFRESH_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+      })
+        .then(async function (response) {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Could not check harvest readiness.');
+          return data;
+        })
+        .then(function () { location.reload(); })
+        .catch(function (error) {
+          showError(harvestAlert, error.message);
+          readinessRefreshBtn.disabled = false;
+          readinessRefreshBtn.innerHTML = originalHtml;
+        });
+    });
+  }
+
+  /* ---------- Delete ---------- */
   deleteHarvestModal.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     if (button) {
       currentHarvestId = button.getAttribute('data-id');
       deleteHarvestName.textContent = button.getAttribute('data-name');
-    }
-  });
-
-  deleteScheduleModal.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    if (button) {
-      currentScheduleId = button.getAttribute('data-id');
-      deleteScheduleName.textContent = button.getAttribute('data-name');
     }
   });
 
@@ -1188,7 +1095,7 @@
     })
       .then(async function (response) {
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Could not delete harvest record.');
+        if (!response.ok) throw new Error(data.error || 'Could not delete the harvest record.');
         return data;
       })
       .then(function () {
@@ -1199,27 +1106,12 @@
       .finally(function () { button.disabled = false; });
   });
 
-  deleteScheduleBtn.addEventListener('click', function () {
-    if (!currentScheduleId) return;
-    const button = this;
-    button.disabled = true;
-
-    fetch(SCHEDULE_DELETE_BASE + currentScheduleId + '/', {
-      method: 'POST',
-      headers: { 'X-CSRFToken': csrftoken },
-    })
-      .then(async function (response) {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Could not delete harvest schedule.');
-        return data;
-      })
-      .then(function () {
-        bootstrap.Modal.getInstance(deleteScheduleModal).hide();
-        location.reload();
-      })
-      .catch(function (error) { alert(error.message); })
-      .finally(function () { button.disabled = false; });
-  });
+  /* Open the record modal straight from a dashboard quick link. */
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('new') === 'harvest') {
+    const modal = bootstrap.Modal.getOrCreateInstance(harvestModalEl);
+    modal.show();
+  }
 })();
 </script>
 {% endblock %}

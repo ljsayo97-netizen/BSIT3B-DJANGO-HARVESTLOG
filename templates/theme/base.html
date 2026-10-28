@@ -34,6 +34,9 @@
         {% endif %}
 
         <div class="page-wrapper">
+            {% if request.user.is_authenticated %}
+                {% include 'harvests/_notification_banner.html' %}
+            {% endif %}
             <div class="page-body">
                 <div class="container-xl">
                     {% block content %}
