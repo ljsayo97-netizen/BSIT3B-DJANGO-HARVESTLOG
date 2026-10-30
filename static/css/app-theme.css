@@ -868,3 +868,139 @@ html {
   font-size: 1rem;
 }
 
+
+/* Dashboard weather */
+.dh-weather-card {
+  overflow: hidden;
+  background:
+    radial-gradient(120% 160% at 100% 0%, rgba(var(--tblr-primary-rgb), 0.1) 0%, transparent 55%),
+    var(--tblr-bg-surface);
+}
+
+.dh-weather-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  border-radius: 1rem;
+  font-size: 1.45rem;
+}
+
+.dh-weather-icon.dh-weather-warning {
+  color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.12);
+}
+
+.dh-weather-icon.dh-weather-danger {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.12);
+}
+
+.dh-weather-icon.dh-weather-info {
+  color: #0ea5e9;
+  background-color: rgba(14, 165, 233, 0.12);
+}
+
+.dh-weather-icon.dh-weather-success {
+  color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.12);
+}
+
+.dh-weather-icon.dh-weather-secondary {
+  color: var(--tblr-secondary);
+  background-color: var(--tblr-bg-surface-secondary);
+}
+
+.dh-weather-temp {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.dh-weather-metric {
+  min-width: 5.5rem;
+  padding: 0.55rem 0.7rem;
+  text-align: center;
+  border: 1px solid var(--tblr-border-color);
+  border-radius: 0.75rem;
+  background-color: var(--tblr-bg-surface);
+}
+
+.dh-weather-metric i {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--tblr-secondary);
+}
+
+.dh-weather-metric span {
+  display: block;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.dh-weather-metric small {
+  display: block;
+  color: var(--tblr-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dh-weather-forecast {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.dh-weather-day {
+  padding: 0.65rem 0.4rem;
+  text-align: center;
+  border: 1px solid var(--tblr-border-color);
+  border-radius: 0.75rem;
+  background-color: var(--tblr-bg-surface);
+}
+
+.dh-weather-day-date {
+  font-size: 0.7rem;
+}
+
+.dh-weather-day-icon {
+  margin: 0.4rem 0;
+  font-size: 1.15rem;
+}
+
+.dh-weather-day-rain {
+  font-size: 0.72rem;
+}
+
+.dh-weather-advice {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.dh-weather-tip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 575.98px) {
+  .dh-weather-forecast {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dh-weather-metric {
+    min-width: 0;
+    flex: 1 1 30%;
+  }
+}

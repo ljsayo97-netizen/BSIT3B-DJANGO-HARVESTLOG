@@ -1,0 +1,695 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none" aria-label="Page header">
+    <div class="container-xl">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Reports &amp; Monitoring</div>
+          <div class="d-flex align-items-center gap-3 flex-wrap d-none d-md-flex">
+            <h2 class="page-title mb-0">Farm Progress Report</h2>
+          </div>
+          <h2 class="page-title mb-0 d-md-none">Farm Progress Report</h2>
+          <div class="text-muted mt-1">
+            Crop growth, harvest outcomes, farm work, and impact across every farm &middot;
+            {{ today|date:"F j, Y" }}
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{% url 'reports:farm_progress_export' %}{% if query_string %}?{{ query_string }}{% endif %}"
+               class="btn btn-primary">
+              <i class="fas fa-file-csv me-2"></i> Export CSV
+            </a>
+            <a href="{% url 'harvests:harvest_history' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-clock-rotate-left me-2"></i> Harvest History
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br>
+
+  {% if not farms %}
+  <div class="alert alert-info" role="alert">
+    <div class="d-flex">
+      <div class="alert-icon"><i class="fas fa-tractor"></i></div>
+      <div>
+        <h4 class="alert-heading">Register a farm to start monitoring progress</h4>
+        <div class="alert-description">
+          Farm reports compare crop progress, harvest quality, damaged produce, and scheduled work
+          so you can see which farms are having a positive or negative impact.
+        </div>
+        <a href="{% url 'farms:farm_list' %}?new=farm" class="btn btn-sm btn-primary mt-2">
+          <i class="fas fa-plus-circle me-2"></i> Register your first farm
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+
+  <!-- Filters -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="GET" action="{% url 'reports:farm_progress' %}" class="row g-3 align-items-end">
+        <div class="col-lg-4">
+          <label class="form-label">Search</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text"
+                   name="q"
+                   value="{{ query }}"
+                   class="form-control"
+                   placeholder="Farm, owner, location, crop, or variety">
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Farm</label>
+          <select name="farm" class="form-select">
+            <option value="">All farms</option>
+            {% for farm in farms %}
+            <option value="{{ farm.id }}" {% if farm_id == farm.id %}selected{% endif %}>
+              {{ farm.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Crop status</label>
+          <select name="status" class="form-select">
+            <option value="">All crop stages</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Farm impact</label>
+          <select name="impact" class="form-select">
+            <option value="">All impact levels</option>
+            {% for value, label in impact_choices %}
+            <option value="{{ value }}" {% if impact == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-grow-1">
+            <i class="fas fa-filter me-1"></i> Apply
+          </button>
+          <a href="{% url 'reports:farm_progress' %}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Highlights -->
+  {% if summary.positive_farm_count or summary.negative_farm_count %}
+  <div class="row row-cards mb-3">
+    {% if summary.positive_farm_count %}
+    <div class="col-lg">
+      <div class="alert alert-success h-100 mb-0" role="alert">
+        <div class="d-flex">
+          <div class="alert-icon"><i class="fas fa-arrow-trend-up"></i></div>
+          <div>
+            <h4 class="alert-heading mb-1">
+              Positive impact on {{ summary.positive_farm_count }} farm{{ summary.positive_farm_count|pluralize }}
+            </h4>
+            <div class="alert-description">
+              Healthy crops, good harvest outcomes, or strong completion of scheduled work.
+            </div>
+            <div class="fw-semibold mt-2">{{ summary.positive_farm_names|join:", " }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if summary.negative_farm_count %}
+    <div class="col-lg">
+      <div class="alert alert-danger h-100 mb-0" role="alert">
+        <div class="d-flex">
+          <div class="alert-icon"><i class="fas fa-arrow-trend-down"></i></div>
+          <div>
+            <h4 class="alert-heading mb-1">
+              Needs attention on {{ summary.negative_farm_count }} farm{{ summary.negative_farm_count|pluralize }}
+            </h4>
+            <div class="alert-description">
+              Failed or overdue crops, damaged produce, or unfinished farm work are pulling progress down.
+            </div>
+            <div class="fw-semibold mt-2">{{ summary.negative_farm_names|join:", " }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Summary metrics -->
+  <div class="row row-cards mb-3">
+    <div class="col-sm-6 col-xl-2">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <div class="text-muted small text-uppercase">Farms</div>
+              <div class="h1 mb-1">{{ summary.farm_count }}</div>
+              <div class="small text-muted">
+                {{ summary.positive_farm_count }} positive &middot; {{ summary.negative_farm_count }} negative
+              </div>
+            </div>
+            <span class="avatar bg-primary-lt text-primary"><i class="fas fa-tractor"></i></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <div class="text-muted small text-uppercase">Crops monitored</div>
+              <div class="h1 mb-1">{{ summary.monitored_crop_count }}</div>
+              <div class="small text-muted">
+                {{ summary.total_crop_count }} total &middot; {{ summary.harvested_crop_count }} harvested
+              </div>
+            </div>
+            <span class="avatar bg-success-lt text-success"><i class="fas fa-seedling"></i></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div class="flex-grow-1">
+              <div class="text-muted small text-uppercase">Avg. crop progress</div>
+              <div class="h1 mb-1">{{ summary.average_progress }}%</div>
+              <div class="progress progress-sm mt-1">
+                <div class="progress-bar bg-info" style="width: {{ summary.average_progress }}%"
+                     role="progressbar" aria-valuenow="{{ summary.average_progress }}"
+                     aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+            <span class="avatar bg-info-lt text-info"><i class="fas fa-gauge-high"></i></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <div class="text-muted small text-uppercase">Harvest output</div>
+              <div class="h1 mb-1">
+                {{ summary.primary_unit_total|floatformat:"-2" }}
+                <span class="h3 text-muted">{{ summary.primary_unit }}</span>
+              </div>
+              <div class="small text-muted">
+                {{ summary.harvest_count }} record{{ summary.harvest_count|pluralize }} &middot;
+                {{ summary.damage_rate }}% damaged
+              </div>
+            </div>
+            <span class="avatar bg-warning-lt text-warning"><i class="fas fa-weight-hanging"></i></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <div class="text-muted small text-uppercase">Work completed</div>
+              <div class="h1 mb-1">{{ summary.activity_completion_rate }}%</div>
+              <div class="small text-muted">
+                {{ summary.activity_completed }}/{{ summary.activity_total }} tasks &middot;
+                {{ summary.activity_overdue }} overdue
+              </div>
+            </div>
+            <span class="avatar bg-primary-lt text-primary"><i class="fas fa-calendar-check"></i></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <div class="text-muted small text-uppercase">Needs attention</div>
+              <div class="h1 mb-1 text-danger">{{ summary.overdue_crop_count }}</div>
+              <div class="small text-muted">
+                overdue crop{{ summary.overdue_crop_count|pluralize }} &middot;
+                {{ summary.failed_crop_count }} failed
+              </div>
+            </div>
+            <span class="avatar bg-danger-lt text-danger"><i class="fas fa-triangle-exclamation"></i></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row row-cards mb-3">
+    <div class="col-lg-8">
+      <div class="card h-100">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Crop Progress by Farm</h3>
+            <div class="text-muted small">
+              Average growth progress of active crops. Bar colors show each farm's impact rating.
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if farm_rows %}
+          <div id="farmProgressChart"></div>
+          {% else %}
+          <div class="empty py-5">
+            <div class="empty-icon"><i class="fas fa-chart-simple fa-2x"></i></div>
+            <p class="empty-title">No farms match these filters</p>
+            <p class="empty-subtitle text-muted">Try another impact level or reset the filters.</p>
+            <div class="empty-action">
+              <a href="{% url 'reports:farm_progress' %}" class="btn btn-outline-secondary">Reset filters</a>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Crop Pipeline</h3>
+            <div class="text-muted small">Crop stages across the farms in this report.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% for row in status_rows %}
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="d-flex align-items-center gap-2">
+              <span class="dh-legend-dot" style="background-color: {{ row.color }}"></span>
+              <span class="text-muted">{{ row.label }}</span>
+            </span>
+            <span class="fw-semibold">{{ row.count }}
+              <span class="text-muted small">({{ row.percent }}%)</span>
+            </span>
+          </div>
+          <div class="progress progress-sm mb-3">
+            <div class="progress-bar" style="width: {{ row.percent }}%; background-color: {{ row.color }};"
+                 role="progressbar" aria-valuenow="{{ row.percent }}"
+                 aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          {% empty %}
+          <p class="text-muted mb-0">No crop data for this report.</p>
+          {% endfor %}
+
+          <hr>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted">Positive impact</span>
+            <span class="badge bg-success-lt text-success">{{ summary.positive_farm_count }} farm{{ summary.positive_farm_count|pluralize }}</span>
+          </div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted">Neutral impact</span>
+            <span class="badge bg-secondary-lt text-secondary">{{ summary.neutral_farm_count }} farm{{ summary.neutral_farm_count|pluralize }}</span>
+          </div>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="text-muted">Negative impact</span>
+            <span class="badge bg-danger-lt text-danger">{{ summary.negative_farm_count }} farm{{ summary.negative_farm_count|pluralize }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Farm impact overview -->
+  <div class="card mb-3">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title mb-1">Farm Impact Overview</h3>
+        <div class="text-muted small">
+          Impact combines crop outcomes, harvest quality and damage, and completion of scheduled farm work.
+        </div>
+      </div>
+      <div class="card-actions">
+        <span class="badge bg-primary-lt text-primary">
+          {{ summary.farm_count }} farm{{ summary.farm_count|pluralize }}
+        </span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table">
+        <thead>
+          <tr>
+            <th>Farm</th>
+            <th>Impact</th>
+            <th>Crop progress</th>
+            <th>Crops</th>
+            <th>Harvest output</th>
+            <th>Damage</th>
+            <th>Farm work</th>
+            <th>At risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in farm_rows %}
+          <tr>
+            <td style="min-width: 260px;">
+              <div class="d-flex align-items-start gap-2">
+                <span class="avatar avatar-sm {{ row.impact_badge_class }}">
+                  <i class="{{ row.impact_icon }}"></i>
+                </span>
+                <div>
+                  <a href="{% url 'crops:crop_list' %}?farm={{ row.farm_id }}&farm_detail={{ row.farm_id }}"
+                     class="fw-semibold text-decoration-none">{{ row.farm_name }}</a>
+                  <div class="text-muted small">
+                    {{ row.farm_code|default:"—" }} &middot; {{ row.farm.owner }} &middot; {{ row.farm.location }}
+                  </div>
+                  <div class="d-flex flex-wrap gap-1 mt-1">
+                    {% for reason in row.reasons|slice:":3" %}
+                    <span class="badge fw-normal {% if reason.tone == 'bad' %}bg-danger-lt text-danger{% elif reason.tone == 'good' %}bg-success-lt text-success{% else %}bg-secondary-lt text-secondary{% endif %}">
+                      {{ reason.text }}
+                    </span>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td style="min-width: 130px;">
+              <span class="badge {{ row.impact_badge_class }}">
+                <i class="{{ row.impact_icon }} me-1"></i>{{ row.impact_label }}
+              </span>
+              <div class="small text-muted mt-1">Score {{ row.impact_score }}</div>
+            </td>
+            <td style="min-width: 150px;">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="fw-semibold">{{ row.crop_progress }}%</span>
+                <span class="text-muted small">{{ row.active_crop_count }} active</span>
+              </div>
+              <div class="progress progress-sm">
+                <div class="progress-bar {{ row.impact_progress_class }}"
+                     style="width: {{ row.crop_progress }}%"
+                     role="progressbar" aria-valuenow="{{ row.crop_progress }}"
+                     aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </td>
+            <td class="text-nowrap">
+              <div><span class="text-success fw-semibold">{{ row.harvested_crop_count }}</span> harvested</div>
+              <div class="small text-muted">{{ row.active_crop_count }} growing &middot;
+                <span class="{% if row.failed_crop_count %}text-danger{% endif %}">{{ row.failed_crop_count }} failed</span>
+              </div>
+            </td>
+            <td class="text-nowrap">
+              {% if row.harvest_count %}
+              <div class="fw-semibold">{{ row.harvest_quantity|floatformat:"-2" }} {{ row.harvest_unit }}</div>
+              <div class="small text-muted">
+                {{ row.harvest_count }} record{{ row.harvest_count|pluralize }}
+                {% if row.unit_count > 1 %}&middot; {{ row.unit_count }} units{% endif %}
+              </div>
+              {% else %}
+              <span class="text-muted">No harvest yet</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.harvest_count %}
+              <span class="{% if row.damage_rate >= 5 %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                {{ row.damage_rate }}%
+              </span>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td style="min-width: 150px;">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="fw-semibold">{{ row.activity_completion_rate }}%</span>
+                <span class="text-muted small">{{ row.activity_completed }}/{{ row.activity_total }}</span>
+              </div>
+              <div class="progress progress-sm">
+                <div class="progress-bar {% if row.activity_overdue %}bg-danger{% else %}bg-success{% endif %}"
+                     style="width: {{ row.activity_completion_rate }}%"
+                     role="progressbar" aria-valuenow="{{ row.activity_completion_rate }}"
+                     aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              {% if row.activity_overdue %}
+              <div class="small text-danger mt-1">{{ row.activity_overdue }} overdue</div>
+              {% endif %}
+            </td>
+            <td class="text-nowrap">
+              {% if row.overdue_crop_count %}
+              <span class="badge bg-danger-lt text-danger">
+                {{ row.overdue_crop_count }} overdue crop{{ row.overdue_crop_count|pluralize }}
+              </span>
+              {% elif row.failed_crop_count %}
+              <span class="badge bg-warning-lt text-warning">
+                {{ row.failed_crop_count }} failed crop{{ row.failed_crop_count|pluralize }}
+              </span>
+              {% else %}
+              <span class="badge bg-success-lt text-success">On track</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="empty py-5">
+                <div class="empty-icon"><i class="fas fa-tractor fa-2x text-muted"></i></div>
+                <p class="empty-title">No farms match these filters</p>
+                <p class="empty-subtitle">Try a different impact level or clear the search.</p>
+                <div class="empty-action">
+                  <a href="{% url 'reports:farm_progress' %}" class="btn btn-outline-secondary">Reset filters</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer text-muted small">
+      <i class="fas fa-circle-info me-1"></i>
+      Positive impact = score of 20 or higher; negative impact = score of -20 or lower. Scores use crop success,
+      harvest quality, damaged produce, overdue crops, and completed farm activities.
+    </div>
+  </div>
+
+  <!-- Crop progress monitor -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title mb-1">Crop Progress Monitor</h3>
+        <div class="text-muted small">
+          Every crop in the selected farms, ordered by risk so problems are visible first.
+        </div>
+      </div>
+      <div class="card-actions">
+        <span class="badge bg-primary-lt text-primary">
+          {{ crop_rows|length }} crop{{ crop_rows|length|pluralize }}
+        </span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table">
+        <thead>
+          <tr>
+            <th>Crop</th>
+            <th>Farm</th>
+            <th>Stage</th>
+            <th>Progress</th>
+            <th>Assigned harvest</th>
+            <th>Latest harvest</th>
+            <th>Activities</th>
+            <th>Impact</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in crop_rows %}
+          <tr>
+            <td style="min-width: 170px;">
+              <div class="fw-semibold">{{ row.name }}</div>
+              <div class="text-muted small">
+                {{ row.variety|default:"No variety" }} &middot;
+                {{ row.area_hectares|floatformat:"-2" }} ha
+              </div>
+              {% if row.harvest_season %}
+              <div class="text-muted small">{{ row.harvest_season }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'crops:crop_list' %}?farm={{ row.farm_id }}&farm_detail={{ row.farm_id }}"
+                 class="text-decoration-none">{{ row.farm_name }}</a>
+              <div class="text-muted small">{{ row.farm_code|default:"—" }}</div>
+            </td>
+            <td class="text-nowrap">
+              <span class="badge {{ row.status_badge_class }}">{{ row.status_label }}</span>
+              <div class="text-muted small mt-1">{{ row.maturity_label }}</div>
+            </td>
+            <td style="min-width: 160px;">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="fw-semibold">{{ row.progress }}%</span>
+                <span class="text-muted small">{{ row.progress_label }}</span>
+              </div>
+              <div class="progress progress-sm">
+                <div class="progress-bar {{ row.impact_progress_class }}"
+                     style="width: {{ row.progress }}%"
+                     role="progressbar" aria-valuenow="{{ row.progress }}"
+                     aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              {% if row.days_overdue %}
+              <div class="small text-danger mt-1">
+                <i class="fas fa-triangle-exclamation me-1"></i>{{ row.days_overdue }} day{{ row.days_overdue|pluralize }} late
+              </div>
+              {% endif %}
+            </td>
+            <td class="text-nowrap">
+              {% if row.expected_harvest_date %}
+              <div>{{ row.expected_harvest_date|date:"M j, Y" }}</div>
+              {% else %}
+              <div class="text-muted">Not assigned</div>
+              {% endif %}
+              <div class="text-muted small">{{ row.days_to_harvest_label }}</div>
+            </td>
+            <td class="text-nowrap">
+              {% if row.harvest %}
+              <div class="fw-semibold">{{ row.harvest_quantity|floatformat:"-2" }} {{ row.harvest_unit }}</div>
+              <div class="mt-1">
+                <span class="badge {{ row.harvest_quality_badge_class }}">{{ row.harvest_quality_label }}</span>
+              </div>
+              {% if row.harvest_damaged %}
+              <div class="small text-danger mt-1">
+                {{ row.harvest_damaged|floatformat:"-2" }} {{ row.harvest_unit }} damaged
+              </div>
+              {% endif %}
+              {% else %}
+              <span class="text-muted">Not harvested</span>
+              {% if row.harvest_quality_label %}
+              <div class="small text-muted mt-1">Crop grade: {{ row.harvest_quality_label }}</div>
+              {% endif %}
+              {% endif %}
+            </td>
+            <td class="text-nowrap">
+              <div>{{ row.activity_completed }} / {{ row.activity_total }} completed</div>
+              {% if row.activity_overdue %}
+              <div class="small text-danger mt-1">{{ row.activity_overdue }} overdue</div>
+              {% elif row.activity_total %}
+              <div class="small text-success mt-1">On schedule</div>
+              {% else %}
+              <div class="small text-muted mt-1">No activities</div>
+              {% endif %}
+            </td>
+            <td style="min-width: 170px;">
+              <span class="badge {{ row.impact_badge_class }}">
+                <i class="{{ row.impact_icon }} me-1"></i>{{ row.impact_short_label }}
+              </span>
+              <span class="text-muted small ms-1">{{ row.impact_score }} pts</span>
+              <div class="small text-muted mt-1" title="{{ row.impact_summary }}">
+                {{ row.impact_summary|truncatechars:70 }}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="empty py-5">
+                <div class="empty-icon"><i class="fas fa-seedling fa-2x text-muted"></i></div>
+                <p class="empty-title">No crops match these filters</p>
+                <p class="empty-subtitle">Try another crop stage, farm, or search term.</p>
+                <div class="empty-action">
+                  <a href="{% url 'reports:farm_progress' %}" class="btn btn-outline-secondary">Reset filters</a>
+                  <a href="{% url 'crops:crop_list' %}?new=crop" class="btn btn-primary">Add a crop</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ progress_chart|json_script:"farm-progress-chart-data" }}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    if (!window.ApexCharts) {
+      return;
+    }
+
+    const chartEl = document.getElementById("farmProgressChart");
+    const dataEl = document.getElementById("farm-progress-chart-data");
+    if (!chartEl || !dataEl) {
+      return;
+    }
+
+    const data = JSON.parse(dataEl.textContent);
+    if (!data.labels.length) {
+      return;
+    }
+
+    const isDark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+    const textColor = isDark ? "#9aa4bf" : "#7a81a3";
+
+    new ApexCharts(chartEl, {
+      chart: {
+        type: "bar",
+        height: Math.max(260, data.labels.length * 44),
+        fontFamily: "inherit",
+        toolbar: { show: false },
+        parentHeightOffset: 0,
+        animations: { enabled: false }
+      },
+      series: [{
+        name: "Crop progress",
+        data: data.series
+      }],
+      colors: data.colors,
+      plotOptions: {
+        bar: {
+          horizontal: true,
+          distributed: true,
+          borderRadius: 4,
+          barHeight: "55%"
+        }
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: function (value) { return value + "%"; },
+        style: { fontSize: "11px", fontWeight: 600 }
+      },
+      stroke: { width: 0 },
+      grid: {
+        strokeDashArray: 4,
+        xaxis: { lines: { show: true } }
+      },
+      xaxis: {
+        categories: data.labels,
+        min: 0,
+        max: 100,
+        labels: {
+          style: { colors: textColor, fontSize: "12px" },
+          formatter: function (value) { return Math.round(value) + "%"; }
+        },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+      },
+      yaxis: {
+        labels: { style: { colors: textColor, fontSize: "12px" } }
+      },
+      legend: { show: false },
+      tooltip: {
+        theme: isDark ? "dark" : "light",
+        y: {
+          formatter: function (value) { return value + "% crop progress"; }
+        }
+      }
+    }).render();
+  });
+</script>
+{% endblock %}

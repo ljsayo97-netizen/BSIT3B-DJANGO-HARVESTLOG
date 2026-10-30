@@ -37,8 +37,8 @@
                   <i class="fas fa-clipboard-check me-2"></i> Harvest Board
                 </a>
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item" href="{% url 'harvests:harvest_history' %}">
-                  <i class="fas fa-chart-line me-2"></i> Harvest Reports
+                <a class="dropdown-item" href="{% url 'reports:farm_progress' %}">
+                  <i class="fas fa-chart-line me-2"></i> Farm Progress Report
                 </a>
                 {% if user.is_staff %}
                 <a class="dropdown-item" href="{% url 'users:user_list' %}?new=1">
@@ -155,6 +155,33 @@
           </div>
         </div>
       </a>
+    </div>
+  </div>
+
+  <!-- Weather -->
+  <div class="row row-cards mb-3">
+    <div class="col-12">
+      <div class="card dh-weather-card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Farm Weather</h3>
+            <div class="text-muted small">Automatic forecast and field guidance for your primary farm.</div>
+          </div>
+          <div class="card-actions">
+            <span class="badge bg-success-lt text-success">
+              <i class="fas fa-bolt me-1"></i>Auto
+            </span>
+          </div>
+        </div>
+        <div id="dashboardWeather" data-weather-url="{% url 'weather_widget' %}">
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-2 text-muted">
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span>Checking the weather for your farms&hellip;</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -553,12 +580,23 @@
       </a>
     </div>
     <div class="col-6 col-md-4 col-xl">
+      <a href="{% url 'reports:farm_progress' %}" class="card dh-feature-card h-100 text-decoration-none">
+        <div class="card-body d-flex align-items-start gap-3">
+          <span class="dh-feature-icon bg-danger-lt text-danger"><i class="fas fa-chart-line"></i></span>
+          <span class="min-w-0">
+            <span class="d-block fw-semibold">Farm Reports</span>
+            <span class="d-block text-muted small">Impact &amp; crop progress</span>
+          </span>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
       <a href="{% url 'harvests:harvest_history' %}" class="card dh-feature-card h-100 text-decoration-none">
         <div class="card-body d-flex align-items-start gap-3">
-          <span class="dh-feature-icon bg-purple-lt text-purple"><i class="fas fa-chart-line"></i></span>
+          <span class="dh-feature-icon bg-purple-lt text-purple"><i class="fas fa-clock-rotate-left"></i></span>
           <span class="min-w-0">
             <span class="d-block fw-semibold">Harvest History</span>
-            <span class="d-block text-muted small">Reports &amp; CSV export</span>
+            <span class="d-block text-muted small">Records &amp; CSV export</span>
           </span>
         </div>
       </a>
@@ -735,6 +773,74 @@
         }
       }).render();
     }
+  });
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const container = document.getElementById("dashboardWeather");
+    if (!container) {
+      return;
+    }
+
+    const weatherUrl = container.dataset.weatherUrl;
+    const refreshMs = 30 * 60 * 1000;
+    let loading = false;
+    let lastLoaded = 0;
+
+    function showError() {
+      container.innerHTML =
+        '<div class="card-body">' +
+        '<div class="d-flex flex-wrap align-items-center justify-content-between gap-2">' +
+        '<div class="d-flex align-items-center gap-2 text-muted">' +
+        '<i class="fas fa-circle-exclamation"></i>' +
+        "<div>" +
+        '<div class="fw-semibold">Local weather is unavailable</div>' +
+        '<div class="small">Open-Meteo could not be reached. It will retry automatically.</div>' +
+        "</div>" +
+        "</div>" +
+        '<button type="button" class="btn btn-sm btn-outline-secondary" data-weather-retry>' +
+        '<i class="fas fa-rotate-right me-1"></i> Retry' +
+        "</button>" +
+        "</div>" +
+        "</div>";
+    }
+
+    async function loadWeather() {
+      if (loading) {
+        return;
+      }
+      loading = true;
+      try {
+        const response = await fetch(weatherUrl, {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          cache: "no-store",
+          credentials: "same-origin"
+        });
+        if (!response.ok || response.redirected) {
+          throw new Error("Weather request failed");
+        }
+        container.innerHTML = await response.text();
+        lastLoaded = Date.now();
+      } catch (error) {
+        showError();
+      } finally {
+        loading = false;
+      }
+    }
+
+    container.addEventListener("click", function (event) {
+      if (event.target.closest("[data-weather-retry]")) {
+        loadWeather();
+      }
+    });
+
+    loadWeather();
+    window.setInterval(loadWeather, refreshMs);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && Date.now() - lastLoaded > 5 * 60 * 1000) {
+        loadWeather();
+      }
+    });
   });
 </script>
 {% endblock %}

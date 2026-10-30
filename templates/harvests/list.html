@@ -23,7 +23,8 @@
                class="btn btn-primary"
                data-bs-toggle="modal"
                data-bs-target="#harvestModal"
-               data-mode="create">
+               data-mode="create"
+               {% if not ready_count %}disabled title="No crop is ready for harvest yet. Check readiness or wait for the assigned harvest date."{% endif %}>
               <i class="fas fa-plus-circle me-2"></i> Record Harvest
             </button>
             <a href="{% url 'harvests:harvest_history' %}" class="btn btn-outline-secondary">
@@ -309,14 +310,9 @@
                 <td class="text-muted">{{ crop.days_to_harvest_label }}</td>
                 <td><span class="badge bg-warning-lt text-warning">Approaching</span></td>
                 <td>
-                  <button type="button"
-                          class="btn btn-sm btn-outline-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#harvestModal"
-                          data-mode="create"
-                          data-crop-id="{{ crop.id }}">
-                    <i class="fas fa-clipboard-check me-1"></i> Record
-                  </button>
+                  <span class="text-muted small" title="Only crops that are ready for harvest can be recorded.">
+                    <i class="fas fa-hourglass-half me-1"></i>Not harvestable yet
+                  </span>
                 </td>
               </tr>
               {% empty %}
@@ -359,14 +355,9 @@
                 <td class="text-muted">{{ crop.days_to_harvest_label }}</td>
                 <td><span class="badge bg-info-lt text-info">Upcoming</span></td>
                 <td>
-                  <button type="button"
-                          class="btn btn-sm btn-outline-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#harvestModal"
-                          data-mode="create"
-                          data-crop-id="{{ crop.id }}">
-                    <i class="fas fa-clipboard-check me-1"></i> Record
-                  </button>
+                  <span class="text-muted small" title="Only crops that are ready for harvest can be recorded.">
+                    <i class="fas fa-hourglass-half me-1"></i>Not harvestable yet
+                  </span>
                 </td>
               </tr>
               {% empty %}
@@ -389,7 +380,7 @@
 
   <!-- Harvest records -->
   <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-1">
-    <form method="GET" class="w-100" style="max-width: 1000px;">
+    <form method="GET" action="{% url 'harvests:harvest_list' %}#harvest-records" class="w-100" style="max-width: 1000px;">
       <div class="input-group">
         <span class="input-group-text"><i class="ti ti-search"></i></span>
         <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search a harvest ID, crop, farm, field, or person...">
@@ -421,14 +412,14 @@
           <option value="farm" {% if sort == 'farm' %}selected{% endif %}>Farm (A-Z)</option>
         </select>
         {% if query or quality or farm_id or crop_id %}
-        <a href="{% url 'harvests:harvest_list' %}" class="btn btn-outline-secondary">Clear</a>
+        <a href="{% url 'harvests:harvest_list' %}#harvest-records" class="btn btn-outline-secondary">Clear</a>
         {% endif %}
         <button type="submit" class="btn btn-primary">Search</button>
       </div>
     </form>
   </div>
 
-  <div class="card" id="harvest-records">
+  <div class="card" id="harvest-records" style="scroll-margin-top: 5rem;">
     <div class="card-header">
       <div class="card-title">
         Harvest Records
@@ -530,7 +521,8 @@
                     <p class="empty-title">No harvest records found</p>
                     <p class="empty-subtitle">Record a harvest once a crop is gathered. The system assigns the date.</p>
                     <div class="empty-action">
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#harvestModal" data-mode="create">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#harvestModal" data-mode="create"
+                                {% if not ready_count %}disabled title="No crop is ready for harvest yet. Check readiness or wait for the assigned harvest date."{% endif %}>
                             <i class="fas fa-plus-circle me-2"></i> Record Harvest
                         </button>
                     </div>
@@ -552,19 +544,19 @@
       <ul class="pagination m-0 ms-auto">
         {% if harvests.has_previous %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ harvests.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+          <a class="page-link" href="?page={{ harvests.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}#harvest-records">
             <i class="ti ti-chevron-left"></i> prev
           </a>
         </li>
         {% endif %}
         {% for num in harvests.paginator.page_range %}
         <li class="page-item {% if harvests.number == num %}active{% endif %}">
-          <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a>
+          <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}#harvest-records">{{ num }}</a>
         </li>
         {% endfor %}
         {% if harvests.has_next %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ harvests.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+          <a class="page-link" href="?page={{ harvests.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if quality %}&quality={{ quality }}{% endif %}{% if farm_id %}&farm={{ farm_id }}{% endif %}{% if crop_id %}&crop={{ crop_id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}#harvest-records">
             next <i class="ti ti-chevron-right"></i>
           </a>
         </li>
@@ -605,8 +597,8 @@
             <div class="col-12">
               <label class="form-label">Crop <span class="text-muted">(required for new harvests)</span></label>
               <select name="crop_id" id="harvest_crop_id" class="form-select">
-                <option value="">Select the crop being harvested</option>
-                {% for crop in crops %}
+                <option value="">Select a crop that is ready for harvest</option>
+                {% for crop in ready_crops %}
                 <option value="{{ crop.id }}"
                         data-farm-name="{{ crop.farm.name }}"
                         data-location="{{ crop.farm.location|default:crop.farm.name }}"
@@ -617,9 +609,11 @@
                         data-readiness-label="{{ crop.maturity_label }}">
                   {{ crop.name }} ({{ crop.variety|default:"n/a" }}) — {{ crop.farm.name }}
                 </option>
+                {% empty %}
+                <option value="" disabled>No crops are ready for harvest yet</option>
                 {% endfor %}
               </select>
-              <div class="form-hint">Only crops still in production are listed. A crop can have one harvest record.</div>
+              <div class="form-hint">Only crops that are ready for harvest are listed. A crop can have one harvest record.</div>
             </div>
 
             <div class="col-md-6">

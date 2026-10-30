@@ -1,0 +1,138 @@
+{% if weather.available %}
+<div class="card-body">
+  <div class="row g-3 align-items-center">
+    <div class="col-lg-7">
+      <div class="d-flex align-items-center gap-2 text-muted small text-uppercase fw-bold">
+        <i class="fas fa-location-dot"></i>
+        <span class="text-truncate">{{ weather.location.name }}</span>
+        {% if weather.location.is_default %}
+        <span class="badge bg-secondary-lt text-secondary">Default</span>
+        {% endif %}
+      </div>
+      <div class="d-flex align-items-center gap-3 mt-3">
+        <span class="dh-weather-icon dh-weather-{{ weather.current.tone }}">
+          <i class="{{ weather.current.icon }}"></i>
+        </span>
+        <div>
+          <div class="d-flex align-items-baseline gap-2 flex-wrap">
+            <span class="dh-weather-temp">{{ weather.current.temperature|floatformat:0 }}&deg;C</span>
+            <span class="text-muted">{{ weather.current.label }}</span>
+          </div>
+          <div class="text-muted small mt-1">
+            Feels like {{ weather.current.apparent|floatformat:0 }}&deg;C
+            {% if weather.location.farm_name %}
+            &middot; {{ weather.location.farm_name }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% if weather.location.is_default %}
+      <div class="text-muted small mt-2">
+        <i class="fas fa-circle-info me-1"></i>
+        Using the default location. Add a city or municipality to your farm&rsquo;s
+        location for local weather.
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-lg-5">
+      <div class="d-flex justify-content-lg-end gap-2 flex-wrap">
+        <div class="dh-weather-metric">
+          <i class="fas fa-droplet"></i>
+          <span>
+            {% if weather.current.humidity is not None %}
+            {{ weather.current.humidity|floatformat:0 }}%
+            {% else %}
+            &mdash;
+            {% endif %}
+          </span>
+          <small>Humidity</small>
+        </div>
+        <div class="dh-weather-metric">
+          <i class="fas fa-wind"></i>
+          <span>
+            {% if weather.current.wind is not None %}
+            {{ weather.current.wind|floatformat:0 }} km/h
+            {% else %}
+            &mdash;
+            {% endif %}
+          </span>
+          <small>Wind</small>
+        </div>
+        <div class="dh-weather-metric">
+          <i class="fas fa-cloud-rain"></i>
+          <span>
+            {% if weather.daily.0.rain_probability is not None %}
+            {{ weather.daily.0.rain_probability|floatformat:0 }}%
+            {% else %}
+            &mdash;
+            {% endif %}
+          </span>
+          <small>Rain today</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-lg-7">
+      <div class="dh-weather-forecast">
+        {% for day in weather.daily %}
+        <div class="dh-weather-day">
+          <div class="fw-semibold small">{{ day.day_label|default:day.date_label }}</div>
+          <div class="text-muted dh-weather-day-date">{{ day.date_label }}</div>
+          <i class="{{ day.icon }} dh-weather-day-icon text-{{ day.tone }}"></i>
+          <div class="small">
+            <span class="fw-semibold">{{ day.max|floatformat:0 }}&deg;</span>
+            <span class="text-muted">/ {{ day.min|floatformat:0 }}&deg;</span>
+          </div>
+          <div class="text-muted dh-weather-day-rain">
+            <i class="fas fa-droplet"></i>
+            {{ day.rain_probability|default_if_none:0 }}%
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="dh-weather-advice">
+        {% for tip in weather.advice %}
+        <div class="d-flex align-items-start gap-2">
+          <span class="dh-weather-tip-icon bg-{{ tip.tone }}-lt text-{{ tip.tone }}">
+            <i class="{{ tip.icon }}"></i>
+          </span>
+          <div class="min-w-0">
+            <div class="fw-semibold small">{{ tip.title }}</div>
+            <div class="text-muted small">{{ tip.text }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 text-muted small mt-3">
+    <span>
+      <i class="fas fa-clock me-1"></i>
+      Updated {{ weather.current.observed_at|default:"just now" }} &middot; refreshes automatically every 30 minutes
+    </span>
+    <a href="{{ weather.source_url }}" target="_blank" rel="noopener noreferrer" class="text-muted">
+      Weather by {{ weather.source }}
+    </a>
+  </div>
+</div>
+{% else %}
+<div class="card-body">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div class="d-flex align-items-center gap-2 text-muted">
+      <i class="fas fa-circle-exclamation"></i>
+      <div>
+        <div class="fw-semibold">Local weather is unavailable</div>
+        <div class="small">Open-Meteo could not be reached. It will retry automatically.</div>
+      </div>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-weather-retry>
+      <i class="fas fa-rotate-right me-1"></i> Retry
+    </button>
+  </div>
+</div>
+{% endif %}

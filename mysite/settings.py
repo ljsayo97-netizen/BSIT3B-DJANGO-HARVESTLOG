@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.crops',
     'apps.harvests',
     'apps.activities',
+    'apps.reports',
 ]
 
 MIDDLEWARE = [
@@ -140,3 +141,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Use a project test runner that shims template-context copying for Python 3.14.
 TEST_RUNNER = 'mysite.test_runner.ProjectTestRunner'
+
+
+# Weather widget (Open-Meteo). No API key is required.
+WEATHER_CACHE_SECONDS = 60 * 30
+WEATHER_GEOCODE_CACHE_SECONDS = 60 * 60 * 24 * 30
+WEATHER_FAILURE_CACHE_SECONDS = 60 * 5
+WEATHER_REQUEST_TIMEOUT = 6
+# The geocoding endpoint is slower than the forecast endpoint.
+WEATHER_GEOCODE_TIMEOUT = 10
+# Prefer results from this country when geocoding free-text farm locations.
+# Set to '' to accept the first geocoding match from any country.
+WEATHER_COUNTRY_CODE = 'PH'
+WEATHER_DEFAULT_LOCATION_NAME = 'Manila, Philippines'
+WEATHER_DEFAULT_LATITUDE = 14.5995
+WEATHER_DEFAULT_LONGITUDE = 120.9842

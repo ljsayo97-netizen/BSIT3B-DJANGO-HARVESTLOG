@@ -545,7 +545,7 @@ class HarvestWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('already has a harvest record', response.json()['error'])
 
-    def test_recording_ahead_of_schedule_is_allowed(self):
+    def test_crop_that_is_not_ready_cannot_be_harvested(self):
         future = make_crop(
             self.user,
             self.farm,
@@ -557,10 +557,46 @@ class HarvestWorkflowTests(TestCase):
             reverse('harvests:harvest_save_ajax'),
             self.harvest_payload(crop_id=future.id, quantity_harvested='500'),
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('not ready for harvest', response.json()['error'])
+
         future.refresh_from_db()
-        self.assertEqual(future.status, Crop.Status.HARVESTED)
-        self.assertFalse(response.json()['was_ready'])
+        self.assertEqual(future.status, Crop.Status.GROWING)
+        self.assertFalse(Harvest.objects.filter(crop=future).exists())
+
+    def test_harvest_search_keeps_the_records_section_in_view(self):
+        request = RequestFactory().get(reverse('harvests:harvest_list'))
+        request.user = self.user
+        content = harvest_list_page(request).content.decode()
+
+        self.assertIn(
+            f'action="{reverse("harvests:harvest_list")}#harvest-records"',
+            content,
+        )
+        self.assertIn('id="harvest-records"', content)
+
+    def test_harvest_modal_only_lists_harvestable_crops(self):
+        future = make_crop(
+            self.user,
+            self.farm,
+            name='Corn',
+            planting_date=timezone.localdate(),
+            days_to_maturity=90,
+        )
+        request = RequestFactory().get(reverse('harvests:harvest_list'))
+        request.user = self.user
+        content = harvest_list_page(request).content.decode()
+
+        match = re.search(
+            r'<select name="crop_id" id="harvest_crop_id".*?</select>',
+            content,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        crop_options = match.group(0)
+
+        self.assertIn(f'<option value="{self.crop.id}"', crop_options)
+        self.assertNotIn(f'<option value="{future.id}"', crop_options)
 
     def test_deleting_harvest_returns_crop_to_ready_and_reopens_notification(self):
         evaluate_crop(self.crop)
@@ -589,13 +625,19 @@ class HarvestWorkflowTests(TestCase):
             self.user,
             self.farm,
             name='Corn',
-            planting_date=timezone.localdate(),
+            planting_date=timezone.localdate() - timedelta(days=100),
             days_to_maturity=90,
         )
         harvest_id = self.client.post(
             reverse('harvests:harvest_save_ajax'),
             self.harvest_payload(crop_id=future.id),
         ).json()['id']
+
+        # Reassign the crop's harvest date into the future after harvesting.
+        future.refresh_from_db()
+        future.planting_date = timezone.localdate()
+        future.days_to_maturity = 90
+        future.save()
 
         self.client.post(reverse('harvests:harvest_delete_ajax', args=[harvest_id]))
 
@@ -777,6 +819,16 @@ class HarvestHistoryTests(TestCase):
         self.assertIn('History by Crop', content)
         self.assertIn('Export CSV', content)
         self.assertNotIn('harvest.schedule', content)
+
+    def test_history_filters_keep_the_records_section_in_view(self):
+        response = self.history_request()
+        content = response.content.decode()
+
+        self.assertIn(
+            f'action="{reverse("harvests:harvest_history")}#history-records"',
+            content,
+        )
+        self.assertIn('id="history-records"', content)
 
     def test_history_filters_by_date_range(self):
         old = make_harvest(

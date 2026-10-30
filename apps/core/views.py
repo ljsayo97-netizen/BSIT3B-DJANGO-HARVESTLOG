@@ -6,11 +6,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_GET, require_http_methods
 
 from .dashboard import build_dashboard_context
+from .weather import build_weather_widget
 
 User = get_user_model()
 
@@ -144,6 +147,21 @@ def logout_view(request):
 def home(request):
     """Render the farm operations dashboard for the signed-in user."""
     return render(request, 'home.html', build_dashboard_context(request.user))
+
+
+@login_required(login_url='login')
+@require_GET
+def weather_widget(request):
+    """Return the automatically refreshed dashboard weather card."""
+    weather = build_weather_widget(request.user)
+    html = render_to_string(
+        'core/_weather_widget.html',
+        {'weather': weather},
+        request=request,
+    )
+    response = HttpResponse(html)
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @require_http_methods(['GET', 'POST'])

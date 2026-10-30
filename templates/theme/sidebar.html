@@ -7,7 +7,6 @@
         </span>
         <span class="lh-1">
           <span class="dh-brand-name">Harvest<span class="text-warning">PH</span></span>
-          <span class="dh-brand-sub">Management System</span>
         </span>
       </a>
     </div>
@@ -82,6 +81,15 @@
               <i class="fa fa-calendar-check"></i>
             </span>
             <span class="nav-link-title">Activity Schedule</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'reports' %}active{% endif %}" href="{% url 'reports:farm_progress' %}">
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="fa fa-chart-line"></i>
+            </span>
+            <span class="nav-link-title">Farm Reports</span>
           </a>
         </li>
         <br>  

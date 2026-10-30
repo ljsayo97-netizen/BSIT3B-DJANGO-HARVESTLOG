@@ -21,6 +21,7 @@ from apps.farms.models import Farm
 
 from .models import Harvest, HarvestNotification
 from .services import (
+    evaluate_crop,
     get_harvest_board,
     get_notifications,
     get_unread_notification_count,
@@ -186,6 +187,24 @@ def _harvest_json(harvest):
         'notes': harvest.notes,
         'created_at': harvest.created_at.isoformat(),
     }
+
+
+def _not_harvestable_message(crop):
+    """Explain why a crop cannot be recorded as a harvest yet."""
+    if crop.actual_harvest_date:
+        return (
+            f'This crop was already harvested on '
+            f'{crop.actual_harvest_date:%b %d, %Y} and is not harvestable.'
+        )
+    if crop.expected_harvest_date:
+        days = crop.days_to_harvest
+        if days is not None and days > 0:
+            return (
+                'This crop is not ready for harvest yet. The system expects it to be '
+                f'harvestable on {crop.expected_harvest_date:%b %d, %Y} '
+                f'(in {days} day{"s" if days != 1 else ""}).'
+            )
+    return 'This crop is not ready for harvest yet.'
 
 
 def _restore_crop_readiness(crop):
@@ -561,6 +580,23 @@ def harvest_save_ajax(request):
                 status=400,
             )
 
+    # Only harvestable crops are inserted into the harvest records. An
+    # existing harvest keeps its original crop even after it has been marked
+    # harvested, so editing a record does not require it to be ready again.
+    keep_existing_crop = (
+        is_update
+        and crop is not None
+        and previous_crop is not None
+        and crop.pk == previous_crop.pk
+    )
+    if crop and not keep_existing_crop:
+        evaluate_crop(crop)
+        if not crop.is_ready_for_harvest:
+            return JsonResponse(
+                {'error': _not_harvestable_message(crop)},
+                status=400,
+            )
+
     if crop:
         farm = crop.farm
     elif is_update:
@@ -650,8 +686,6 @@ def harvest_save_ajax(request):
     if not is_update:
         harvest.harvest_date = timezone.localdate()
 
-    was_ready = crop.is_ready_for_harvest if crop else False
-
     try:
         with transaction.atomic():
             harvest.save()
@@ -675,25 +709,16 @@ def harvest_save_ajax(request):
         )
 
     action = 'updated' if is_update else 'recorded'
-    if not is_update and not was_ready:
-        messages.warning(
-            request,
-            f'Harvest {harvest.harvest_code} for "{harvest.crop_type}" was {action} '
-            f'ahead of its estimated readiness date. The system assigned '
-            f'{harvest.harvest_date:%b %d, %Y}.',
-        )
-    else:
-        messages.success(
-            request,
-            f'Harvest {harvest.harvest_code} for "{harvest.crop_type}" has been '
-            f'{action} successfully. The system assigned {harvest.harvest_date:%b %d, %Y} '
-            f'as the harvest date.',
-        )
+    messages.success(
+        request,
+        f'Harvest {harvest.harvest_code} for "{harvest.crop_type}" has been '
+        f'{action} successfully. The system assigned {harvest.harvest_date:%b %d, %Y} '
+        f'as the harvest date.',
+    )
 
     return JsonResponse({
         'status': 'success',
         **_harvest_json(harvest),
-        'was_ready': was_ready,
     })
 
 
