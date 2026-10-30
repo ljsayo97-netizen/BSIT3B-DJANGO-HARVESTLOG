@@ -1,0 +1,74 @@
+# HarvestLog: A Web-Based Crop Harvest Recording and Monitoring System for Small-Scale Farmers
+
+## Introduction
+
+### Background of the Project
+
+Agriculture plays an important role in providing food and supporting the livelihood of many communities. Small-scale farmers need to monitor their farms, planted crops, planting schedules, harvesting activities, and harvest quantities to manage their agricultural operations effectively. However, maintaining these records manually may result in misplaced information, inaccurate records, and difficulties in monitoring crop development and scheduled farm activities.
+
+To address these challenges, the researchers proposed a web-based Crop Harvest Recording and Monitoring System for Small-Scale Farmers called **HarvestLog**. The system aims to help farmers reduce manual recordkeeping, inform farmers a thorough activity report on several farms and let them determine when the crops can be harvested after planting, minimize errors in recording harvest quantities, and monitor crop production more efficiently. It will allow farmers to record planted crops, track expected harvest dates, schedule harvesting activities, and maintain historical harvest records to compare production across different periods.
+
+Additionally, the system will help farmers monitor harvest-related income, review previous production results, and organize farm activities through a centralized platform. User management features will also support the secure and organized administration of system accounts, making farm records easier to access, update, and maintain.
+
+The project will be developed using **Python and Django**, with HTML, CSS, and Bootstrap for the user interface and SQLite or MySQL for the database.
+
+Through these functionalities, HarvestLog will aim to help small-scale farmers organize agricultural records, monitor their farming activities, and maintain more accessible and organized harvest information. The system will serve as a digital tool for improving the recording and monitoring of farm operations.
+
+## Statement of the Problem or Project Objectives
+
+The main objective of this project is to develop a web-based Crop Harvest Recording and Monitoring System for Small-Scale Farmers called HarvestLog to organize farm records, monitor crop schedules, and manage harvesting activities.
+
+Specifically, the project aims to accomplish the following technical objectives:
+
+1. Develop a Farm Management module that will allow users to register, search, and manage farm information.
+2. Develop a Crop Management module that will allow users to record planted crops, identify crop varieties, monitor planting dates, and track expected harvest dates.
+3. Implement a Harvest Management module that will allow users to schedule harvests, record harvested quantities, and review harvest history.
+4. Develop an Activity Scheduling module that will allow users to schedule farm activities, assign workers when supported by the system, monitor activity status and priority, and export activity records to CSV files.
+5. Implement a User Management module that will allow authorized administrators to manage user accounts and monitor account roles and statuses.
+6. Evaluate the system's functionality and usability through appropriate testing with intended users.
+
+## Significance of the Project
+
+The following beneficiaries will directly benefit from the proposed system:
+
+- **Small Scale Farmers**. In a centralized platform, the system will assist farmers in keeping track of crop records, organizing farm data, tracking anticipated harvest dates, and recording harvested quantities.
+
+- **Farm Workers**. Farm workers will be able to refer to planned farming activities and harvest schedules when they are included as intended users, which will assist them in organizing their assigned tasks.
+
+- **Farm Managers**. Farm records, crop and harvest data, planned activities, and system user accounts can all be managed by administrators.
+
+- **Students and Future Researchers**. Future research on crop monitoring, digital harvest recordkeeping, and web-based agricultural information systems will use the project as a reference.
+
+## Alignment with Institutional Research Agenda and Sustainable Development Goals
+
+- **Institutional Research Agenda Alignment**: **HarvestLog** may align with the institution's research priorities in information technology, software development, and agricultural technology through the development of a web-based system for managing and monitoring farm records. The final alignment will depend on the official research agenda of the institution.
+
+- **Sustainable Development Goal Alignment:**
+  - **SDG 2: Zero Hunger.** **HarvestLog** may contribute to agricultural information management by helping small-scale farmers organize crop and harvest records. The system's contribution will focus on recordkeeping and monitoring rather than directly increasing food production.
+  - **SDG 9: Industry, Innovation, and Infrastructure.** The project will apply web technology to develop a digital platform for organizing agricultural records and monitoring farm activities.
+
+## Scope and Limitations
+
+### System Scope
+
+**HarvestLog** will focus on the digital management and monitoring of farm information, planted crops, harvest schedules, harvested quantities, and agricultural activities. The system will provide Farm Management, Crop Management, Harvest Management, Activity Scheduling, User Management, and Dashboard modules.
+
+The Farm Management module will support the registration and management of farm information. The Crop Management module will maintain crop names, varieties, planting dates, expected harvest dates, and related farm records. The Harvest Management module will support harvest scheduling, harvest recording, and access to harvest history. The Activity Scheduling module will organize farming activities and provide tools for filtering and exporting activity records. The User Management module will support the administration of user accounts and their assigned roles.
+
+The system will be intended for small-scale farmers and authorized users responsible for managing farm records and agricultural activities.
+
+### Technical Architecture
+
+**HarvestLog** will use a web-based architecture. The backend framework, programming languages, database management system, and frontend technologies will be identified according to the actual technologies implemented in the project. The system will provide a browser-based interface for accessing its supported modules.
+
+### Target Users
+
+The intended users will include small-scale farmers, farm administrators, and other authorized users involved in managing farm information, crop records, harvest activities, and farm schedules.
+
+### Limitations
+
+- The initial version of **HarvestLog** will focus on farm recordkeeping, crop monitoring, harvest recording, activity scheduling, and user account management. Its coverage will be limited to the functionalities implemented within the project.
+
+- The system will not automatically determine crop conditions, predict harvest yields using artificial intelligence, or provide real-time environmental monitoring unless these features are specifically developed and integrated. Its usefulness will also depend on the accuracy and completeness of the information entered by its users.
+
+- Additional limitations, including internet connectivity requirements, supported devices, deployment environment, and data backup procedures, will be specified according to the final system implementation.
