@@ -122,72 +122,8 @@
   </div>
 
   <div class="row row-cards mb-3">
-    <!-- Notification centre -->
-    <div class="col-xl-5" id="harvest-notifications">
-      <div class="card h-100">
-        <div class="card-header">
-          <div>
-            <h3 class="card-title mb-1">Harvest Notifications</h3>
-            <div class="text-muted small">
-              {% if unread_notification_count %}
-              {{ unread_notification_count }} unread alert{{ unread_notification_count|pluralize }}
-              {% else %}
-              You are all caught up.
-              {% endif %}
-            </div>
-          </div>
-          <div class="card-actions">
-            <form method="post" action="{% url 'harvests:harvest_notification_read' %}">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-outline-secondary" {% if not unread_notification_count %}disabled{% endif %}>
-                <i class="fas fa-check-double me-1"></i> Mark all read
-              </button>
-            </form>
-          </div>
-        </div>
-        {% if notifications %}
-        <div class="list-group list-group-flush" id="harvestNotificationList">
-          {% for notification in notifications %}
-          <div class="list-group-item {% if not notification.is_read %}bg-warning-lt{% endif %}" data-notification-item="{{ notification.id }}">
-            <div class="d-flex align-items-start gap-2">
-              <span class="badge {% if notification.kind == 'ready' %}bg-success-lt text-success{% else %}bg-warning-lt text-warning{% endif %} mt-1">
-                {{ notification.get_kind_display }}
-              </span>
-              <div class="flex-grow-1 min-w-0">
-                <div class="{% if not notification.is_read %}fw-semibold{% endif %}">{{ notification.message }}</div>
-                <div class="text-muted small mt-1">
-                  <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }} ago
-                  {% if notification.is_read %}&middot; read{% endif %}
-                </div>
-              </div>
-              {% if not notification.is_read %}
-              <button type="button"
-                      class="btn btn-sm btn-ghost-secondary"
-                      data-notification-read="{{ notification.id }}"
-                      title="Mark this notification as read">
-                <i class="fas fa-check"></i>
-              </button>
-              {% endif %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <div class="card-body">
-          <div class="empty py-4">
-            <div class="empty-icon"><i class="fas fa-bell-slash fa-2x text-muted"></i></div>
-            <p class="empty-title">No harvest notifications</p>
-            <p class="empty-subtitle text-muted">
-              The system creates an alert as soon as one of your crops is ready to harvest.
-            </p>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-
     <!-- Ready crops -->
-    <div class="col-xl-7">
+    <div class="col-12">
       <div class="card h-100">
         <div class="card-header">
           <div>
@@ -752,7 +688,6 @@
   const HARVEST_SAVE_URL = '{% url "harvests:harvest_save_ajax" %}';
   const HARVEST_GET_URL = '{% url "harvests:harvest_get_ajax" 0 %}'.replace('/0/', '/');
   const HARVEST_DELETE_BASE = '{% url "harvests:harvest_delete_ajax" 0 %}'.replace('/0/', '/');
-  const NOTIFICATION_READ_URL = '{% url "harvests:harvest_notification_read" %}';
   const READINESS_REFRESH_URL = '{% url "harvests:harvest_refresh_readiness" %}';
 
   const harvestModalEl = document.getElementById('harvestModal');
@@ -1010,7 +945,7 @@
         return data;
       })
       .then(function () {
-        bootstrap.Modal.getInstance(harvestModalEl).hide();
+        bootstrap.Modal.getOrCreateInstance(harvestModalEl).hide();
         location.reload();
       })
       .catch(function (error) {
@@ -1019,29 +954,6 @@
       .finally(function () {
         harvestSubmit.disabled = false;
       });
-  });
-
-  /* ---------- Notifications ---------- */
-  document.querySelectorAll('[data-notification-read]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      const id = button.getAttribute('data-notification-read');
-      if (!id) return;
-      button.disabled = true;
-
-      fetch(NOTIFICATION_READ_URL, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': csrftoken },
-        body: new URLSearchParams({ id: id }),
-      })
-        .then(function (response) {
-          if (!response.ok) throw new Error('Could not mark the notification as read.');
-          location.reload();
-        })
-        .catch(function (error) {
-          button.disabled = false;
-          showError(harvestError, error.message);
-        });
-    });
   });
 
   /* ---------- Readiness check ---------- */
@@ -1093,7 +1005,7 @@
         return data;
       })
       .then(function () {
-        bootstrap.Modal.getInstance(deleteHarvestModal).hide();
+        bootstrap.Modal.getOrCreateInstance(deleteHarvestModal).hide();
         location.reload();
       })
       .catch(function (error) { alert(error.message); })

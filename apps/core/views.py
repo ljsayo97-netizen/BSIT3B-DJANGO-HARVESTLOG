@@ -14,6 +14,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from .dashboard import build_dashboard_context
 from .weather import build_weather_widget
+from apps.harvests.services import get_topbar_notifications
 
 User = get_user_model()
 
@@ -147,6 +148,22 @@ def logout_view(request):
 def home(request):
     """Render the farm operations dashboard for the signed-in user."""
     return render(request, 'home.html', build_dashboard_context(request.user))
+
+
+@login_required(login_url='login')
+def notification_center(request):
+    """Render the dedicated Notification Center page with the full feed."""
+    unread_only = request.GET.get('filter') == 'unread'
+
+    feed = get_topbar_notifications(request.user, limit=100)
+    unread_items = [item for item in feed if item.get('is_unread')]
+
+    return render(request, 'core/notification_center.html', {
+        'notification_items': unread_items if unread_only else feed,
+        'notification_total_count': len(feed),
+        'unread_notification_count': len(unread_items),
+        'unread_only': unread_only,
+    })
 
 
 @login_required(login_url='login')

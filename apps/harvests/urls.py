@@ -16,6 +16,7 @@ urlpatterns = [
     path('ajax/save/', views.harvest_save_ajax, name='harvest_save_ajax'),
     path('ajax/delete/<int:pk>/', views.harvest_delete_ajax, name='harvest_delete_ajax'),
     # Notifications / readiness (AJAX)
+    path('notifications/ajax/feed/', views.topbar_notifications_ajax, name='topbar_notifications_feed'),
     path('notifications/ajax/read/', views.harvest_notification_read_ajax, name='harvest_notification_read'),
     path('readiness/ajax/refresh/', views.harvest_refresh_readiness_ajax, name='harvest_refresh_readiness'),
 ]

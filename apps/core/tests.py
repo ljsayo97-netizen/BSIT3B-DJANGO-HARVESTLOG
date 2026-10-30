@@ -118,6 +118,14 @@ class DashboardDataTests(TestCase):
             response.context['harvest_chart_data']['records'][-1],
             1,
         )
+        self.assertEqual(response.context['unread_notification_count'], 1)
+        self.assertEqual(response.context['notification_feed'][0]['title'], 'Rice')
+        self.assertTrue(response.context['notification_feed'][0]['is_new'])
+        self.assertEqual(response.context['harvest_progress']['total'], 1)
+        self.assertEqual(response.context['harvest_progress']['in_progress'], 1)
+        self.assertEqual(response.context['harvest_progress']['completed'], 0)
+        self.assertEqual(response.context['harvest_progress']['completed_percent'], 0)
+        self.assertEqual(response.context['harvest_progress']['in_progress_percent'], 100)
 
     def test_dashboard_is_scoped_to_the_signed_in_user(self):
         self._create_farm()
@@ -155,5 +163,106 @@ class DashboardDataTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Register your first farm')
-        self.assertContains(response, 'No harvest activity yet')
-        self.assertContains(response, 'No crops yet')
+        self.assertContains(response, 'No harvests recorded yet')
+        self.assertContains(response, 'No crops in your pipeline yet')
+
+
+class NotificationCenterPageTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='notification-owner',
+            password='secret1234',
+            first_name='Mia',
+        )
+        self.today = timezone.localdate()
+        self.client.force_login(self.user)
+
+    def _create_ready_crop(self, name='Rice'):
+        farm = Farm.objects.create(
+            user=self.user,
+            name='Green Valley Farm',
+            owner='Mia Santos',
+            location='North Field',
+            size_hectares=Decimal('12.50'),
+            date_registered=timezone.now(),
+        )
+        return Crop.objects.create(
+            user=self.user,
+            farm=farm,
+            name=name,
+            variety='IR64',
+            planting_date=self.today - timedelta(days=100),
+            days_to_maturity=90,
+            area_hectares=Decimal('2.00'),
+            status=Crop.Status.MATURING,
+        )
+
+    def test_notification_center_requires_login(self):
+        self.client.logout()
+
+        response = self.client.get(reverse('notification_center'))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_notification_center_renders_with_the_unified_feed(self):
+        self._create_ready_crop()
+
+        response = self.client.get(reverse('notification_center'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'core/notification_center.html')
+        self.assertContains(response, 'Notification Center')
+        self.assertContains(response, 'Mark all as read')
+        self.assertContains(response, 'Rice')
+        self.assertEqual(response.context['unread_notification_count'], 1)
+        self.assertTrue(
+            any(
+                item['is_unread']
+                for item in response.context['notification_items']
+            )
+        )
+
+    def test_notification_center_unread_filter_hides_read_items(self):
+        self._create_ready_crop()
+        # The first load runs readiness sync, which files the crop alert.
+        self.client.get(reverse('notification_center'))
+        HarvestNotification.objects.filter(user=self.user).update(is_read=True)
+
+        response = self.client.get(
+            reverse('notification_center') + '?filter=unread'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['unread_only'])
+        self.assertEqual(response.context['unread_notification_count'], 0)
+        self.assertEqual(list(response.context['notification_items']), [])
+
+    def test_notification_center_is_scoped_to_the_signed_in_user(self):
+        self._create_ready_crop(name='Rice')
+        other_user = get_user_model().objects.create_user(
+            username='other-owner',
+            password='secret1234',
+        )
+        other_farm = Farm.objects.create(
+            user=other_user,
+            name='Hidden Farm',
+            owner='Other Owner',
+            location='South Field',
+            size_hectares=Decimal('8.00'),
+            date_registered=timezone.now(),
+        )
+        Crop.objects.create(
+            user=other_user,
+            farm=other_farm,
+            name='Secret Corn',
+            planting_date=self.today - timedelta(days=100),
+            days_to_maturity=90,
+            area_hectares=Decimal('1.00'),
+            status=Crop.Status.MATURING,
+        )
+
+        response = self.client.get(reverse('notification_center'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Rice')
+        self.assertNotContains(response, 'Secret Corn')

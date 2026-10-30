@@ -1,152 +1,130 @@
-<aside class="navbar navbar-vertical navbar-expand-lg navbar-dark dh-sidebar">
-  <div class="container-fluid">
-    <div class="navbar-brand navbar-brand-autodark dh-brand">
-      <a href="." class="d-flex align-items-center gap-2 text-decoration-none">
-        <span class="dh-brand-mark">
-          <i class="fas fa-tractor"></i>
-        </span>
-        <span class="lh-1">
-          <span class="dh-brand-name">Harvest<span class="text-warning">PH</span></span>
-        </span>
-      </a>
-    </div>
-
-    <button
-      class="navbar-toggler"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#sidebar-menu"
-      aria-controls="sidebar-menu"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-      >
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse" id="sidebar-menu">
-      <ul class="navbar-nav pt-lg-2 py-lg-2">
-
-        <li class="nav-item">
-          <span class="dh-nav-section">
-            Menu
-          </span>
-        </li>
-        <li class="nav-item mb-1">
-          <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="fa fa-chart-pie"></i>
-            </span>
-            <span class="nav-link-title">Dashboard</span>
+{% load static %}
+<aside class="dh-sidebar" id="appSidebar" aria-label="Primary navigation">
+  <div class="dh-sidebar-scroll">
+    <nav class="dh-nav-group" aria-label="Menu">
+      <div class="dh-nav-section">MENU</div>
+      <ul class="dh-nav-list">
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}"
+             href="{% url 'dashboard' %}"
+             data-tooltip="Dashboard"
+             title="Dashboard"
+             {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>
+            <i class="fas fa-house" aria-hidden="true"></i>
+            <span class="dh-nav-label">Dashboard</span>
           </a>
         </li>
-        
-        <li class="nav-item">
-          <span class="dh-nav-section">
-            Main Section
-          </span>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'farms' %}active{% endif %}" href="{% url 'farms:farm_list' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-map-marker-alt"></i>
-            </span>
-            <span class="nav-link-title">Farm Field</span>
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'farms' %}is-active{% endif %}"
+             href="{% url 'farms:farm_list' %}"
+             data-tooltip="Farm Field"
+             title="Farm Field"
+             {% if request.resolver_match.app_name == 'farms' %}aria-current="page"{% endif %}>
+            <i class="fas fa-location-dot" aria-hidden="true"></i>
+            <span class="dh-nav-label">Farm Field</span>
           </a>
         </li>
-
-        <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'crops' %}active{% endif %}" href="{% url 'crops:crop_list' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-seedling"></i>
-            </span>
-            <span class="nav-link-title">Crop Management</span>
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'crops' %}is-active{% endif %}"
+             href="{% url 'crops:crop_list' %}"
+             data-tooltip="Crop Management"
+             title="Crop Management"
+             {% if request.resolver_match.app_name == 'crops' %}aria-current="page"{% endif %}>
+            <i class="fas fa-seedling" aria-hidden="true"></i>
+            <span class="dh-nav-label">Crop Management</span>
           </a>
         </li>
-
-        <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'harvests' and request.resolver_match.url_name != 'harvest_history' %}active{% endif %}" href="{% url 'harvests:harvest_list' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-clipboard-list"></i>
-            </span>
-            <span class="nav-link-title">Harvests</span>
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'harvests' %}is-active{% endif %}"
+             href="{% url 'harvests:harvest_list' %}"
+             data-tooltip="Harvests"
+             title="Harvests"
+             {% if request.resolver_match.app_name == 'harvests' %}aria-current="page"{% endif %}>
+            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+            <span class="dh-nav-label">Harvests</span>
+          </a>
+        </li>
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'activities' %}is-active{% endif %}"
+             href="{% url 'activities:activity_list' %}"
+             data-tooltip="Activity Schedule"
+             title="Activity Schedule"
+             {% if request.resolver_match.app_name == 'activities' %}aria-current="page"{% endif %}>
+            <i class="fas fa-calendar-days" aria-hidden="true"></i>
+            <span class="dh-nav-label">Activity Schedule</span>
+          </a>
+        </li>
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'reports' %}is-active{% endif %}"
+             href="{% url 'reports:farm_progress' %}"
+             data-tooltip="Farm Reports"
+             title="Farm Reports"
+             {% if request.resolver_match.app_name == 'reports' %}aria-current="page"{% endif %}>
+            <i class="fas fa-chart-line" aria-hidden="true"></i>
+            <span class="dh-nav-label">Farm Reports</span>
+          </a>
+        </li>
+         <li>
+          <a class="dh-nav-link {% if request.resolver_match.url_name == 'notification_center' %}is-active{% endif %}"
+             href="{% url 'notification_center' %}"
+             data-tooltip="Notifications"
+             title="{% if harvest_unread_count %}{{ harvest_unread_count }} unread notification{{ harvest_unread_count|pluralize }}{% else %}Notifications{% endif %}"
+             {% if request.resolver_match.url_name == 'notification_center' %}aria-current="page"{% endif %}>
+            <i class="fas fa-bell" aria-hidden="true"></i>
+            <span class="dh-nav-label">Notifications</span>
             {% if harvest_unread_count %}
-            <span class="badge bg-warning text-dark ms-auto" title="{{ harvest_unread_count }} harvest notification{{ harvest_unread_count|pluralize }}">{{ harvest_unread_count }}</span>
+            <span class="dh-nav-badge" aria-label="{{ harvest_unread_count }} unread notification{{ harvest_unread_count|pluralize }}">{{ harvest_unread_count }}</span>
             {% endif %}
           </a>
         </li>
-
-        <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'activities' %}active{% endif %}" href="{% url 'activities:activity_list' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="fa fa-calendar-check"></i>
-            </span>
-            <span class="nav-link-title">Activity Schedule</span>
-          </a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'reports' %}active{% endif %}" href="{% url 'reports:farm_progress' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="fa fa-chart-line"></i>
-            </span>
-            <span class="nav-link-title">Farm Reports</span>
-          </a>
-        </li>
-        <br>  
-        <li class="nav-item">
-          <span class="dh-nav-section">
-            Admin
-          </span>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}" href="{% url 'users:user_list' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-users"></i>
-            </span>
-            <span class="nav-link-title">Users</span>
-          </a>
-        </li>
-
-        {% comment %} <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'info' %}active{% endif %}" href="{% url 'info:info_list' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-address-card"></i>
-            </span>
-            <span class="nav-link-title">Info</span>
-          </a>
-        </li> {% endcomment %}
-
-        {% if user.is_authenticated %}
-        <li class="nav-item d-lg-none">
-          <a class="nav-link" href="{% url 'logout' %}">
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <i class="nav-icon fas fa-sign-out-alt"></i>
-            </span>
-            <span class="nav-link-title">Logout</span>
-          </a>
-        </li>
-        {% endif %}
-
-        <li class="nav-item mt-auto dh-nav-sidebar-footer">
-          <div class="dh-user-card">
-            <a href="{% url 'users:user_list' %}" class="d-flex align-items-center gap-2 text-decoration-none text-white min-w-0 w-100">
-              <span class="dh-avatar">{{ user.username|first|upper }}</span>
-              <span class="min-w-0 flex-grow-1">
-                <span class="dh-user-name">{{ user.username }}</span>
-                <span class="dh-user-role">
-                  {% if user.is_superuser %}{% elif user.is_authenticated %}Log-out{% endif %}
-                </span>
-              </span>
-            </a>
-            {% if user.is_authenticated %}
-            <a href="{% url 'logout' %}" class="dh-user-logout" title="Logout">
-              <i class="fas fa-sign-out-alt"></i>
-            </a>
-            {% endif %}
-          </div>
-        </li>
-
       </ul>
+    </nav>
+
+    <nav class="dh-nav-group dh-nav-admin" aria-label="Admin">
+      <div class="dh-nav-section">ADMIN</div>
+      <ul class="dh-nav-list">
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'users' %}is-active{% endif %}"
+             href="{% url 'users:user_list' %}"
+             data-tooltip="Users"
+             title="Users"
+             {% if request.resolver_match.app_name == 'users' %}aria-current="page"{% endif %}>
+            <i class="fas fa-users" aria-hidden="true"></i>
+            <span class="dh-nav-label">Users</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="dh-sidebar-foot">
+      <svg class="dh-sidebar-art" viewBox="0 0 160 70" fill="none" stroke="#1d4ed8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <!-- Windmill tower -->
+        <polygon points="36,22 30,60 42,60 38,22" />
+        <line x1="31" y1="36" x2="41" y2="36" />
+        <line x1="31" y1="48" x2="41" y2="48" />
+        <!-- Windmill blades -->
+        <circle cx="37" cy="20" r="2" fill="#1d4ed8" />
+        <line x1="37" y1="20" x2="22" y2="12" />
+        <line x1="37" y1="20" x2="52" y2="28" />
+        <line x1="37" y1="20" x2="29" y2="35" />
+        <line x1="37" y1="20" x2="45" y2="5" />
+        <polygon points="22,12 24,18 35,20" fill="#1d4ed8" fill-opacity="0.15" />
+        <polygon points="52,28 50,22 39,20" fill="#1d4ed8" fill-opacity="0.15" />
+        <polygon points="29,35 35,33 37,22" fill="#1d4ed8" fill-opacity="0.15" />
+        <polygon points="45,5 39,7 37,18" fill="#1d4ed8" fill-opacity="0.15" />
+        <!-- House / Barn -->
+        <polygon points="62,44 62,60 82,60 82,44 72,35" />
+        <polygon points="72,35 82,44 94,44 84,35" />
+        <line x1="82" y1="60" x2="94" y2="60" />
+        <line x1="94" y1="44" x2="94" y2="60" />
+        <!-- Trees -->
+        <path d="M104,60 C100,54 100,46 104,44 C102,41 107,37 110,40 C114,37 118,41 116,45 C120,47 118,54 114,54 L114,60" />
+        <path d="M124,60 C121,56 122,50 126,49 C126,45 131,46 133,48 C136,49 135,55 133,56 L133,60" />
+        <!-- Rolling field hills -->
+        <path d="M0,62 Q40,55 80,60 T160,57" />
+        <path d="M0,67 Q50,62 100,66 T160,63" />
+      </svg>
+      <p class="dh-sidebar-tagline"><em>Better Harvests.<br>Brighter Futures.</em></p>
     </div>
   </div>
 </aside>

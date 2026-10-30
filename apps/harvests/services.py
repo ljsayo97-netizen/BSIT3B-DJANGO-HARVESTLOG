@@ -285,3 +285,125 @@ def reopen_crop_notifications(crop):
         kind=HarvestNotification.Kind.READY,
         expected_harvest_date=crop.expected_harvest_date,
     ).update(is_read=False, read_at=None)
+
+
+def get_topbar_notifications(user, limit=6):
+    """Return unified notifications for the topbar dropdown.
+
+    Includes readiness alerts from HarvestNotification, recent harvests,
+    and upcoming activity checks.
+    """
+    from django.urls import reverse
+    from apps.activities.models import FarmActivity
+    from .models import Harvest
+
+    sync_harvest_readiness(user)
+
+    items = []
+    # 1. Harvest notifications (unread first, then recent read)
+    h_notes = list(
+        HarvestNotification.objects.filter(user=user)
+        .select_related('crop', 'crop__farm')
+        .order_by('is_read', '-created_at')[:limit]
+    )
+
+    for note in h_notes:
+        crop = note.crop
+        is_ready = note.kind == HarvestNotification.Kind.READY
+        crop_name = crop.name.title() if crop else 'Crop'
+        farm_name = crop.farm.name if (crop and crop.farm) else ''
+        items.append({
+            'id': note.id,
+            'title': crop_name,
+            'badge': 'Ready' if is_ready else 'Approaching',
+            'description': note.message or (
+                '1 crop is ready for harvest.' if is_ready else 'The harvest window is approaching.'
+            ),
+            'meta': farm_name,
+            'timestamp': note.created_at,
+            'icon': 'fas fa-seedling' if is_ready else 'fas fa-hourglass-half',
+            'tone': 'ready' if is_ready else 'approaching',
+            'url': (
+                reverse('crops:crop_list') + '?status=READY_FOR_HARVEST'
+                if is_ready
+                else reverse('crops:crop_list')
+            ),
+            'is_unread': not note.is_read,
+            'can_mark_read': not note.is_read,
+        })
+
+    # 2. Add recent harvest record if space remains
+    remaining = limit - len(items)
+    if remaining > 0:
+        latest_harvest = (
+            Harvest.objects.filter(user=user)
+            .select_related('farm', 'crop')
+            .order_by('-created_at')
+            .first()
+        )
+        if latest_harvest:
+            quantity = latest_harvest.quantity_harvested
+            items.append({
+                'id': None,
+                'title': 'Harvest Records',
+                'badge': '',
+                'description': f'New harvest record was added ({quantity:g} {latest_harvest.unit}).',
+                'meta': latest_harvest.farm.name if latest_harvest.farm else '',
+                'timestamp': latest_harvest.created_at,
+                'icon': 'fas fa-calendar-days',
+                'tone': 'info',
+                'url': reverse('harvests:harvest_history'),
+                'is_unread': False,
+                'can_mark_read': False,
+            })
+            remaining -= 1
+
+    # 3. Add scheduled activity if space remains
+    if remaining > 0:
+        latest_activity = (
+            FarmActivity.objects.filter(user=user)
+            .select_related('farm', 'crop')
+            .order_by('-created_at')
+            .first()
+        )
+        if latest_activity:
+            activity_label = latest_activity.get_activity_type_display()
+            is_inspection = (
+                latest_activity.activity_type == FarmActivity.ActivityType.CROP_INSPECTION
+            )
+            items.append({
+                'id': None,
+                'title': 'Field Check' if is_inspection else activity_label,
+                'badge': '',
+                'description': (
+                    'Field inspection scheduled.'
+                    if is_inspection
+                    else f'{activity_label} scheduled.'
+                ),
+                'meta': latest_activity.farm.name if latest_activity.farm else '',
+                'timestamp': latest_activity.created_at,
+                'icon': 'fas fa-calendar-check',
+                'tone': 'schedule',
+                'url': reverse('activities:activity_list'),
+                'is_unread': False,
+                'can_mark_read': False,
+            })
+            remaining -= 1
+
+    # 4. Add system update if space remains
+    if remaining > 0:
+        items.append({
+            'id': None,
+            'title': 'System Update',
+            'badge': '',
+            'description': 'New features are now available.',
+            'meta': 'HarvestPH',
+            'timestamp': timezone.now() - timedelta(days=2),
+            'icon': 'fas fa-circle-exclamation',
+            'tone': 'warning',
+            'url': reverse('dashboard'),
+            'is_unread': False,
+            'can_mark_read': False,
+        })
+
+    return items[:limit]

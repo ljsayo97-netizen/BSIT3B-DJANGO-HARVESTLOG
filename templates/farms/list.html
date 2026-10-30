@@ -97,6 +97,7 @@
             <th class="farm-col-size">Size (ha)</th>
             <th class="farm-col-date d-none d-xl-table-cell">Registered</th>
             <th class="farm-col-status">Status</th>
+            <th class="w-1">Actions</th>
           </tr>
         </thead>
         <tbody id="farmsTableBody">
@@ -120,10 +121,28 @@
               <span class="badge bg-danger-lt text-danger">{{ farm.get_status_display }}</span>
               {% endif %}
             </td>
+            <td>
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="view" data-id="{{ farm.id }}" title="View details">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="edit" data-id="{{ farm.id }}" title="Edit farm">
+                  <i class="fas fa-edit"></i>
+                </button>
+                {% if farm.status != 'archived' %}
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-action="archive" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Archive farm">
+                  <i class="fas fa-box-archive text-warning"></i>
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#deleteFarmModal" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Delete farm">
+                  <i class="fas fa-trash-alt text-danger"></i>
+                </button>
+              </div>
+            </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="5">
+            <td colspan="6">
                 <div class="empty py-5">
                     <div class="empty-icon">
                         <i class="fas fa-map-marker-alt fa-2x text-muted"></i>
@@ -303,17 +322,15 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Email</label>
-              <!-- FIXED: Removed maxlength="11" and updated placeholder -->
               <input type="email" name="email" id="farm_email" class="form-control" placeholder="example@domain.com">
             </div>
             <div class="col-md-6">
               <label class="form-label">Contact Number</label>
-              <!-- FIXED: Updated pattern and title to allow the hyphens added by JS -->
               <input type="text" name="contact_number" id="farm_contact_number" class="form-control" placeholder="09XX-XXX-XXXX" maxlength="13" inputmode="numeric" pattern="[0-9]{4}-[0-9]{3}-[0-9]{4}" title="Please enter exactly 11 digits (e.g., 0912-345-6789)">
             </div>
             <div class="col-12">
               <label class="form-label">ZIP Code</label>
-              <input type="text" name="zip_code" id="farm_zip_code" class="form-control" placeholder=" 3300">
+              <input type="text" name="zip_code" id="farm_zip_code" class="form-control" placeholder="e.g. 3300">
             </div>
             <div class="col-6">
               <label class="form-label">Farm Size (hectares) <span class="text-danger"></span></label>
@@ -325,7 +342,7 @@
             </div>
             <div class="col-12">
               <label class="form-label">Description</label>
-              <textarea name="description" id="farm_description" class="form-control" rows="3" placeholder="Brief description of the farm..."></textarea>
+              <textarea name="description" id="farm_description" class="form-control" rows="3" placeholder=""></textarea>
             </div>
             <div class="col-12">
               <label class="form-label">Farm Status <span class="text-danger"></span></label>

@@ -642,7 +642,7 @@
           return data;
         })
         .then(function () {
-          bootstrap.Modal.getInstance(modalEl).hide();
+          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
           location.reload();
         })
         .catch(function (error) {

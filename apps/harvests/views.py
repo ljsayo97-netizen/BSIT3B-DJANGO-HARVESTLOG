@@ -23,7 +23,7 @@ from .models import Harvest, HarvestNotification
 from .services import (
     evaluate_crop,
     get_harvest_board,
-    get_notifications,
+    get_topbar_notifications,
     get_unread_notification_count,
     mark_all_notifications_read,
     reopen_crop_notifications,
@@ -224,7 +224,7 @@ def _restore_crop_readiness(crop):
 
 @login_required(login_url='login')
 def harvest_list_page(request):
-    """Render crop readiness, harvest notifications, and harvest records."""
+    """Render crop readiness and harvest records."""
     harvests_list, filters = _filter_harvests(request)
     board = get_harvest_board(request.user)
 
@@ -244,9 +244,6 @@ def harvest_list_page(request):
         harvest_date__gte=timezone.localdate().replace(day=1)
     ).count()
 
-    notifications = get_notifications(request.user, limit=15)
-    unread_notifications = [item for item in notifications if not item.is_read]
-
     return render(request, 'harvests/list.html', {
         'harvests': harvests,
         'farms': Farm.objects.filter(user=request.user).order_by('name'),
@@ -257,9 +254,6 @@ def harvest_list_page(request):
         'ready_count': board['ready_count'],
         'approaching_count': board['approaching_count'],
         'upcoming_count': board['upcoming_count'],
-        'notifications': notifications,
-        'unread_notifications': unread_notifications,
-        'unread_notification_count': len(unread_notifications),
         'total_harvests': total_harvests,
         'total_quantity': total_quantity,
         'total_unit': total_unit,
@@ -765,13 +759,13 @@ def harvest_notification_read_ajax(request):
 
     unread_count = get_unread_notification_count(request.user)
 
-    # The global banner uses a plain HTML form, while the harvest board uses
-    # fetch(). Only the fetch call expects JSON.
+    # The dashboard notification center uses a plain HTML form and expects a
+    # redirect back, while fetch() callers expect JSON.
     if 'text/html' in request.headers.get('Accept', ''):
         next_url = (
             request.POST.get('next')
             or request.META.get('HTTP_REFERER')
-            or reverse('harvests:harvest_list')
+            or reverse('dashboard')
         )
         return redirect(next_url)
 
@@ -796,4 +790,36 @@ def harvest_refresh_readiness_ajax(request):
         'approaching_count': board['approaching_count'],
         'upcoming_count': board['upcoming_count'],
         'unread_count': get_unread_notification_count(request.user),
+    })
+
+
+@login_required(login_url='login')
+def topbar_notifications_ajax(request):
+    """Return JSON feed for the topbar notifications dropdown."""
+    from django.utils.timesince import timesince
+
+    items = get_topbar_notifications(request.user, limit=8)
+    unread_count = get_unread_notification_count(request.user)
+
+    data = []
+    for item in items:
+        ts = item.get('timestamp')
+        data.append({
+            'id': item.get('id'),
+            'title': item.get('title'),
+            'badge': item.get('badge', ''),
+            'description': item.get('description', ''),
+            'meta': item.get('meta', ''),
+            'time_ago': f'{timesince(ts)} ago' if ts else '',
+            'icon': item.get('icon', 'fas fa-bell'),
+            'tone': item.get('tone', 'info'),
+            'url': item.get('url', '#'),
+            'is_unread': bool(item.get('is_unread')),
+            'can_mark_read': bool(item.get('can_mark_read')),
+        })
+
+    return JsonResponse({
+        'status': 'success',
+        'unread_count': unread_count,
+        'notifications': data,
     })

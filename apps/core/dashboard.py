@@ -1,21 +1,27 @@
 """Dashboard data aggregation helpers."""
 
-from datetime import date
+from datetime import date, timedelta
 
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.activities.models import FarmActivity
 from apps.crops.models import Crop
 from apps.farms.models import Farm
-from apps.harvests.models import Harvest
-from apps.harvests.services import get_harvest_board
+from apps.harvests.models import Harvest, HarvestNotification
+from apps.harvests.services import (
+    get_harvest_board,
+    get_notifications,
+    get_unread_notification_count,
+)
 
 DASHBOARD_MONTHS = 6
 UPCOMING_HARVESTS_LIMIT = 6
 RECENT_HARVESTS_LIMIT = 5
 ACTIVITY_QUEUE_LIMIT = 5
+NOTIFICATION_FEED_LIMIT = 4
 
 CROP_STATUS_LABELS = {
     Crop.Status.PLANTING: 'Planted',
@@ -69,6 +75,118 @@ def _greeting():
     return 'Good evening'
 
 
+def _percent_change(current, previous):
+    """Return the month-over-month change as a signed percentage."""
+    if not previous:
+        return 100 if current else 0
+    return round((current - previous) * 100 / previous)
+
+
+def _harvest_progress(crops):
+    """Summarize the crop pipeline as completed, in-progress, and pending."""
+    completed = crops.filter(status=Crop.Status.HARVESTED).count()
+    in_progress = crops.filter(
+        status__in=[
+            Crop.Status.GROWING,
+            Crop.Status.MATURING,
+            Crop.Status.READY_FOR_HARVEST,
+        ]
+    ).count()
+    pending = crops.filter(status=Crop.Status.PLANTING).count()
+    total = completed + in_progress + pending
+
+    if total:
+        completed_percent = round(completed * 100 / total)
+        in_progress_percent = round(in_progress * 100 / total)
+        pending_percent = max(0, 100 - completed_percent - in_progress_percent)
+    else:
+        completed_percent = in_progress_percent = pending_percent = 0
+
+    return {
+        'completed': completed,
+        'in_progress': in_progress,
+        'pending': pending,
+        'total': total,
+        'completed_percent': completed_percent,
+        'in_progress_percent': in_progress_percent,
+        'pending_percent': pending_percent,
+    }
+
+
+def _notification_feed(notifications, latest_harvest, latest_activity):
+    """Build the compact dashboard notification feed from live farm data."""
+    feed = []
+
+    if notifications:
+        notification = notifications[0]
+        crop = notification.crop
+        is_ready = notification.kind == HarvestNotification.Kind.READY
+        feed.append({
+            'title': crop.name.title() if crop else 'Watermelon',
+            'badge': 'Ready' if is_ready else 'Approaching',
+            'description': (
+                '1 crop is ready for harvest.'
+                if is_ready
+                else 'The harvest window is approaching.'
+            ),
+            'meta': crop.farm.name if crop else '',
+            'timestamp': notification.created_at,
+            'icon': 'fas fa-seedling' if is_ready else 'fas fa-hourglass-half',
+            'tone': 'ready' if is_ready else 'approaching',
+            'url': reverse('harvests:harvest_list'),
+            'is_new': not notification.is_read,
+        })
+
+    if latest_harvest:
+        quantity = latest_harvest.quantity_harvested
+        feed.append({
+            'title': 'Harvest Records',
+            'badge': '',
+            'description': 'New harvest record was added.',
+            'meta': (
+                f'{latest_harvest.harvest_code or "Harvest"} '
+                f'({quantity:g} {latest_harvest.unit})'
+            ),
+            'timestamp': latest_harvest.created_at,
+            'icon': 'fas fa-calendar-days',
+            'tone': 'info',
+            'url': reverse('harvests:harvest_history'),
+            'is_new': False,
+        })
+
+    if latest_activity:
+        activity_label = latest_activity.get_activity_type_display()
+        feed.append({
+            'title': 'Field Check' if latest_activity.activity_type == FarmActivity.ActivityType.CROP_INSPECTION else activity_label,
+            'badge': '',
+            'description': (
+                'Field inspection scheduled.'
+                if latest_activity.activity_type == FarmActivity.ActivityType.CROP_INSPECTION
+                else f'{activity_label} scheduled.'
+            ),
+            'meta': latest_activity.farm.name,
+            'timestamp': latest_activity.created_at,
+            'icon': 'fas fa-calendar-check',
+            'tone': 'schedule',
+            'url': reverse('activities:activity_list'),
+            'is_new': False,
+        })
+
+    feed.append({
+        'title': 'System Update',
+        'badge': '',
+        'description': 'New features are now available.',
+        'meta': 'HarvestPH',
+        'timestamp': timezone.now() - timedelta(days=2),
+        'icon': 'fas fa-circle-exclamation',
+        'tone': 'warning',
+        'url': '',
+        'is_new': False,
+    })
+
+    return feed[:NOTIFICATION_FEED_LIMIT]
+
+
 def build_dashboard_context(user):
     """Collect the signed-in user's farm data for the dashboard."""
     today = timezone.localdate()
@@ -77,7 +195,7 @@ def build_dashboard_context(user):
     last_month_start = month_starts[-2]
 
     # Refresh readiness first so status counts, dashboard cards, and the
-    # notification banner all agree on which crops are ready.
+    # notification center all agree on which crops are ready.
     harvest_board = get_harvest_board(user)
 
     farms = Farm.objects.filter(user=user)
@@ -227,6 +345,20 @@ def build_dashboard_context(user):
         .order_by('scheduled_date', 'id')[:ACTIVITY_QUEUE_LIMIT]
     )
 
+    notifications = get_notifications(user, limit=NOTIFICATION_FEED_LIMIT)
+    unread_notification_count = get_unread_notification_count(user)
+    latest_harvest = harvests.order_by('-created_at', '-id').first()
+    latest_activity = activities.order_by('-created_at', '-id').first()
+    notification_feed = _notification_feed(
+        notifications, latest_harvest, latest_activity
+    )
+    harvest_progress = _harvest_progress(crops)
+    harvest_change = (
+        _percent_change(this_month_harvest_count, last_month_harvest_count)
+        if last_month_harvest_count
+        else None
+    )
+
     return {
         'today': today,
         'greeting': _greeting(),
@@ -244,6 +376,7 @@ def build_dashboard_context(user):
         'primary_unit_total': primary_unit_total,
         'this_month_harvest_count': this_month_harvest_count,
         'last_month_harvest_count': last_month_harvest_count,
+        'harvest_change': harvest_change,
         'harvest_chart_data': harvest_chart_data,
         'quality_rows': quality_rows,
         'approaching_crop_count': harvest_board['approaching_count'],
@@ -254,4 +387,7 @@ def build_dashboard_context(user):
         'active_activity_count': active_activity_count,
         'completion_rate': completion_rate,
         'activity_queue': activity_queue,
+        'notification_feed': notification_feed,
+        'unread_notification_count': unread_notification_count,
+        'harvest_progress': harvest_progress,
     }

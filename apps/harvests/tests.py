@@ -448,6 +448,8 @@ class HarvestWorkflowTests(TestCase):
         self.assertIn('Harvest Board', content)
         self.assertIn('Ready for Harvest', content)
         self.assertIn(self.crop.name, content)
+        self.assertNotIn('Harvest Notifications', content)
+        self.assertNotIn('Mark all read', content)
         self.assertNotIn('Harvest Schedules', content)
         self.assertNotIn('Schedule Harvest', content)
         self.assertNotIn('name="harvest_date"', content)
@@ -706,12 +708,11 @@ class HarvestNotificationViewTests(TestCase):
             HarvestNotification.objects.filter(user=self.user, is_read=False).exists()
         )
 
-    def test_banner_form_redirects_back_to_the_page(self):
+    def test_dashboard_form_redirects_back_to_the_page(self):
         response = self.client.post(
             reverse('harvests:harvest_notification_read'),
-            {},
+            {'next': reverse('dashboard')},
             HTTP_ACCEPT='text/html',
-            HTTP_REFERER=reverse('dashboard'),
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('dashboard'))
@@ -747,11 +748,13 @@ class HarvestNotificationViewTests(TestCase):
         self.assertEqual(data['ready_count'], 1)
         self.assertEqual(data['unread_count'], 0)
 
-    def test_home_page_shows_the_global_notification_banner(self):
+    def test_dashboard_shows_the_notification_center(self):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'harvest notification')
+        self.assertContains(response, 'Notification Center')
+        self.assertContains(response, 'Mark all as read')
         self.assertContains(response, self.crop.name)
+        self.assertNotContains(response, 'Harvest Notifications')
 
 
 class HarvestHistoryTests(TestCase):

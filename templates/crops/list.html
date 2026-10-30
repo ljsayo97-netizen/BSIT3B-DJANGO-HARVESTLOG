@@ -546,9 +546,13 @@
   });
 
   /* Reload with the farm detail panel when a farm is selected. */
-  document.getElementById('farm_detail_id').addEventListener('change', function () {
-    document.getElementById('farmDetailForm').submit();
-  });
+  const farmDetailSelect = document.getElementById('farm_detail_id');
+  const farmDetailForm = document.getElementById('farmDetailForm');
+  if (farmDetailSelect && farmDetailForm) {
+    farmDetailSelect.addEventListener('change', function () {
+      farmDetailForm.submit();
+    });
+  }
 
   function resetForm() {
     form.querySelectorAll('input, select, textarea').forEach(function (el) {
@@ -649,7 +653,7 @@
       return data;
     })
     .then(() => {
-      bootstrap.Modal.getInstance(modalEl).hide();
+      bootstrap.Modal.getOrCreateInstance(modalEl).hide();
       location.reload();
     })
     .catch((err) => {
@@ -676,7 +680,7 @@
       return data;
     })
     .then(() => {
-      bootstrap.Modal.getInstance(deleteModal).hide();
+      bootstrap.Modal.getOrCreateInstance(deleteModal).hide();
       const row = document.querySelector(`tr[data-row-id="${currentId}"]`);
       if (row) row.remove();
       location.reload();

@@ -383,7 +383,7 @@
             return data;
         })
         .then(() => {
-            bootstrap.Modal.getInstance(editModal).hide();
+            bootstrap.Modal.getOrCreateInstance(editModal).hide();
             window.location.reload();
         })
         .catch((err) => {
@@ -423,7 +423,7 @@
             return data;
         })
         .then((data) => {
-            bootstrap.Modal.getInstance(deleteModal).hide();
+            bootstrap.Modal.getOrCreateInstance(deleteModal).hide();
 
             if (deleteTargetRow) {
                 deleteTargetRow.remove();

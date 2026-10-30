@@ -1,0 +1,172 @@
+{% load static %}
+<header class="dh-topbar" role="banner">
+  <div class="dh-topbar-left">
+    <a href="{% url 'dashboard' %}" class="dh-brand-link" aria-label="HarvestPH">
+      <span class="dh-brand-icon"><i class="fas fa-tractor" aria-hidden="true"></i></span>
+      <span class="dh-brand-text">HarvestPH</span>
+    </a>
+    <button type="button"
+            class="dh-icon-btn dh-sidebar-toggle"
+            id="sidebarToggle"
+            aria-label="Toggle sidebar"
+            aria-controls="appSidebar"
+            aria-expanded="true">
+      <i class="fas fa-bars" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <form class="dh-topbar-search" role="search" onsubmit="return false;">
+    <i class="fas fa-magnifying-glass dh-search-icon" aria-hidden="true"></i>
+    <input id="globalSearch"
+           class="dh-search-input"
+           type="search"
+           placeholder="Search farms, crops, or activities..."
+           aria-label="Search farms, crops, or activities"
+           autocomplete="off">
+    <kbd class="dh-search-kbd">Ctrl K</kbd>
+  </form>
+
+  <div class="dh-topbar-right">
+    <!-- Notification Bell Dropdown -->
+    <div class="dropdown dh-notifications-dropdown">
+      <button type="button"
+              class="dh-icon-btn dh-bell dropdown-toggle"
+              id="topbarNotificationBtn"
+              data-bs-toggle="dropdown"
+              data-bs-auto-close="outside"
+              aria-expanded="false"
+              aria-label="Notifications"
+              title="{% if harvest_unread_count %}{{ harvest_unread_count }} unread notification{{ harvest_unread_count|pluralize }}{% else %}No unread notifications{% endif %}">
+        <i class="far fa-bell" aria-hidden="true"></i>
+        <span class="dh-bell-dot{% if not harvest_unread_count %} is-hidden{% endif %}"
+              id="topbarBellDot"
+              aria-hidden="true"></span>
+      </button>
+
+      <div class="dropdown-menu dropdown-menu-end dh-notification-menu"
+           id="topbarNotificationMenu"
+           aria-labelledby="topbarNotificationBtn">
+
+        <!-- Dropdown Header -->
+        <div class="dh-dropdown-header">
+          <div class="dh-dropdown-header-left">
+            <span class="dh-dropdown-title">Notifications</span>
+            <span class="dh-pill-yellow dh-dropdown-pill" id="topbarUnreadPill">
+              {% if harvest_unread_count %}{{ harvest_unread_count }} new{% else %}0 new{% endif %}
+            </span>
+          </div>
+          <div class="dh-dropdown-header-right">
+            <button type="button"
+                    class="dh-mark-all-btn dh-dropdown-mark-all"
+                    id="topbarMarkAllReadBtn"
+                    title="Mark all notifications as read">
+              <i class="fas fa-check" aria-hidden="true"></i>
+              Mark all as read
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter tabs: All / Unread -->
+        <div class="dh-dropdown-tabs">
+          <button type="button" class="dh-dropdown-tab is-active" data-tab="all" id="tabAllNotifications">
+            All (<span id="countAllNotifications">{{ topbar_notifications|length }}</span>)
+          </button>
+          <button type="button" class="dh-dropdown-tab" data-tab="unread" id="tabUnreadNotifications">
+            Unread (<span id="countUnreadNotifications">{{ harvest_unread_count }}</span>)
+          </button>
+        </div>
+
+        <!-- Notification List -->
+        <div class="dh-dropdown-list" id="topbarNotificationList">
+          {% for item in topbar_notifications %}
+          <div class="dh-dropdown-row{% if item.is_unread %} is-unread{% endif %}"
+               data-notification-id="{{ item.id|default:'' }}"
+               data-is-unread="{% if item.is_unread %}true{% else %}false{% endif %}">
+            <a href="{{ item.url|default:'#' }}" class="dh-dropdown-row-link">
+              <span class="dh-notification-icon dh-tone-{{ item.tone }}">
+                <i class="{{ item.icon }}" aria-hidden="true"></i>
+              </span>
+              <span class="dh-notification-copy">
+                <span class="dh-notification-title">
+                  {{ item.title }}
+                  {% if item.badge %}
+                  <span class="dh-notification-tag dh-tone-{{ item.tone }}">{{ item.badge }}</span>
+                  {% endif %}
+                </span>
+                <span class="dh-notification-text">{{ item.description }}</span>
+                <span class="dh-notification-meta">
+                  {% if item.meta %}{{ item.meta }} &middot; {% endif %}{{ item.timestamp|timesince }} ago
+                </span>
+              </span>
+            </a>
+            <div class="dh-dropdown-row-actions">
+              {% if item.is_unread and item.id %}
+              <button type="button"
+                      class="dh-item-check-btn"
+                      data-mark-read-id="{{ item.id }}"
+                      title="Mark as read"
+                      aria-label="Mark as read">
+                <i class="fas fa-check" aria-hidden="true"></i>
+              </button>
+              {% endif %}
+              {% if item.is_unread %}
+              <span class="dh-unread-dot" aria-hidden="true"></span>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="dh-dropdown-empty" id="topbarEmptyState">
+            <span class="dh-dropdown-empty-icon"><i class="far fa-bell-slash" aria-hidden="true"></i></span>
+            <p class="dh-dropdown-empty-title">No notifications yet</p>
+            <p class="dh-dropdown-empty-sub">You are all caught up!</p>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Dropdown Footer -->
+        <div class="dh-dropdown-footer">
+          <a href="{% url 'notification_center' %}" class="dh-dropdown-footer-link">
+            <span>Open Notification Center</span>
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Profile Dropdown -->
+    <div class="dropdown">
+      <button class="dh-user-button"
+              type="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+              aria-label="Open user menu">
+        <span class="dh-avatar"><i class="fas fa-user" aria-hidden="true"></i></span>
+        <span class="dh-user-name">{{ user.first_name|default:user.username }}</span>
+        <i class="fas fa-chevron-down dh-user-chevron" aria-hidden="true"></i>
+      </button>
+      <div class="dropdown-menu dropdown-menu-end dh-user-dropdown">
+        <div class="dh-user-dropdown-head">
+          <span class="dh-avatar dh-avatar-lg"><i class="fas fa-user" aria-hidden="true"></i></span>
+          <span class="dh-user-dropdown-copy">
+            <strong>{{ user.get_full_name|default:user.username }}</strong>
+            <small>{{ user.email|default:"Farm owner" }}</small>
+          </span>
+        </div>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="{% url 'dashboard' %}">
+          <i class="fas fa-gauge-high" aria-hidden="true"></i>Dashboard
+        </a>
+        <a class="dropdown-item" href="{% url 'users:user_list' %}">
+          <i class="fas fa-users" aria-hidden="true"></i>Users &amp; account
+        </a>
+        <a class="dropdown-item" href="{% url 'reports:farm_progress' %}">
+          <i class="fas fa-chart-line" aria-hidden="true"></i>Farm reports
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item dh-dropdown-danger" href="{% url 'logout' %}">
+          <i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i>Log out
+        </a>
+      </div>
+    </div>
+  </div>
+</header>

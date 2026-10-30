@@ -716,7 +716,7 @@
       return data;
     })
     .then(() => {
-      bootstrap.Modal.getInstance(modalEl).hide();
+      bootstrap.Modal.getOrCreateInstance(modalEl).hide();
       location.reload();
     })
     .catch((err) => {
@@ -769,7 +769,7 @@
       return data;
     })
     .then(() => {
-      bootstrap.Modal.getInstance(deleteModal).hide();
+      bootstrap.Modal.getOrCreateInstance(deleteModal).hide();
       location.reload();
     })
     .catch((err) => { alert(err.message); })

@@ -1,0 +1,1629 @@
+/* ==========================================================================
+   HarvestPH Dashboard Clean & Glow-Free Theme
+   Reference-accurate layout matching dashboard mockup
+   ========================================================================== */
+
+/* 1. Global Glow Removal & Clean Background ------------------------------- */
+body.dh-app {
+  --dh-bg: #070d18 !important;
+  --dh-sidebar-bg: #070d18 !important;
+  --dh-surface: #0b1322 !important;
+  --dh-surface-soft: #0e172a !important;
+  --dh-border: rgba(255, 255, 255, 0.08) !important;
+  --dh-border-soft: rgba(255, 255, 255, 0.05) !important;
+  --dh-text: #e2e8f0 !important;
+  --dh-muted: #64748b !important;
+  --dh-muted-strong: #94a3b8 !important;
+  --dh-blue: #0284c7 !important;
+  background-color: #070d18 !important;
+  background-image: none !important;
+  color: #e2e8f0 !important;
+  font-family: var(--tblr-font-sans-serif, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+}
+
+/* Eliminate all radial gradient glow lights */
+.dh-kpi::before,
+.dh-kpi::after,
+.dh-weather-panel::after,
+.dh-hero::after,
+.dh-stat-card::before,
+.stat-card::before {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+}
+
+/* Eliminate drop shadows and glowing box-shadows */
+.dh-title-sun {
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+.dh-legend-dot,
+.dh-avatar,
+.dh-kpi,
+.dh-card,
+.dh-donut,
+.dh-progress-donut,
+.dh-btn-primary,
+.dh-nav-link.is-active {
+  box-shadow: none !important;
+}
+
+/* 2. Full-Width Topbar ---------------------------------------------------- */
+.dh-topbar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 60px !important;
+  z-index: 1040 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 0 24px !important;
+  background-color: #070d18 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dh-topbar-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+.dh-brand-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  text-decoration: none !important;
+}
+
+.dh-brand-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 8px !important;
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  font-size: 0.95rem !important;
+}
+
+.dh-brand-text {
+  color: #ffffff !important;
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.dh-sidebar-toggle {
+  background: none !important;
+  border: 0 !important;
+  color: #94a3b8 !important;
+  font-size: 1.15rem !important;
+  padding: 4px 6px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  transition: color 0.15s ease !important;
+}
+
+.dh-sidebar-toggle:hover {
+  color: #ffffff !important;
+}
+
+.dh-topbar-search {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  max-width: 460px !important;
+  width: 100% !important;
+  height: 38px !important;
+  padding: 0 14px !important;
+  background-color: #0e172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.dh-search-icon {
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+  flex-shrink: 0 !important;
+}
+
+.dh-search-input {
+  flex: 1 !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  color: #e2e8f0 !important;
+  font-size: 0.8rem !important;
+}
+
+.dh-search-input::placeholder {
+  color: #64748b !important;
+}
+
+.dh-search-kbd {
+  padding: 2px 7px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px !important;
+  color: #64748b !important;
+  font-size: 0.62rem !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+}
+
+.dh-topbar-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+.dh-bell {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  color: #94a3b8 !important;
+  font-size: 1.05rem !important;
+  background: transparent !important;
+  border: 0 !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  text-decoration: none !important;
+  transition: color 0.15s ease !important;
+}
+
+.dh-bell::after {
+  display: none !important;
+}
+
+.dh-bell:hover,
+.dh-bell:focus {
+  color: #ffffff !important;
+}
+
+.dh-bell-dot {
+  position: absolute !important;
+  top: 7px !important;
+  right: 7px !important;
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+  background-color: #f59e0b !important;
+  box-shadow: none !important;
+}
+
+.dh-bell-dot.is-hidden {
+  display: none !important;
+}
+
+.dh-notifications-dropdown {
+  position: relative !important;
+}
+
+.dh-notification-menu {
+  width: 380px !important;
+  max-width: calc(100vw - 24px) !important;
+  background-color: #0c1527 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  margin-top: 10px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+  overflow: hidden !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dh-dropdown-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: #09101e !important;
+}
+
+.dh-dropdown-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.dh-dropdown-title {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  color: #f8fafc !important;
+}
+
+.dh-dropdown-pill {
+  font-size: 0.7rem !important;
+  padding: 2px 8px !important;
+}
+
+.dh-dropdown-mark-all {
+  font-size: 0.72rem !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #cbd5e1 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  transition: all 0.15s ease !important;
+}
+
+.dh-dropdown-mark-all:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+.dh-dropdown-tabs {
+  display: flex !important;
+  gap: 6px !important;
+  padding: 8px 16px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: #070d18 !important;
+}
+
+.dh-dropdown-tab {
+  background: transparent !important;
+  border: none !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-size: 0.76rem !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.dh-dropdown-tab:hover {
+  color: #e2e8f0 !important;
+}
+
+.dh-dropdown-tab.is-active {
+  background: rgba(2, 132, 199, 0.15) !important;
+  color: #38bdf8 !important;
+  font-weight: 600 !important;
+}
+
+.dh-dropdown-list {
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  padding: 4px 0 !important;
+}
+
+.dh-dropdown-list::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+.dh-dropdown-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 4px !important;
+}
+
+.dh-dropdown-row {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 16px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.dh-dropdown-row:last-child {
+  border-bottom: none !important;
+}
+
+.dh-dropdown-row:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.dh-dropdown-row.is-unread {
+  background-color: rgba(2, 132, 199, 0.06) !important;
+}
+
+.dh-dropdown-row.is-unread:hover {
+  background-color: rgba(2, 132, 199, 0.1) !important;
+}
+
+.dh-dropdown-row-link {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  flex: 1 !important;
+  text-decoration: none !important;
+  color: inherit !important;
+  min-width: 0 !important;
+}
+
+.dh-dropdown-row-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+  margin-left: 8px !important;
+}
+
+.dh-item-check-btn {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
+  font-size: 0.65rem !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+  padding: 0 !important;
+}
+
+.dh-item-check-btn:hover {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+  color: #ffffff !important;
+}
+
+.dh-unread-dot {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+  background-color: #0284c7 !important;
+  flex-shrink: 0 !important;
+}
+
+.dh-dropdown-empty {
+  padding: 28px 16px !important;
+  text-align: center !important;
+  color: #64748b !important;
+}
+
+.dh-dropdown-empty-icon {
+  font-size: 1.8rem !important;
+  color: #475569 !important;
+  display: block !important;
+  margin-bottom: 8px !important;
+}
+
+.dh-dropdown-empty-title {
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  color: #94a3b8 !important;
+  margin: 0 0 4px !important;
+}
+
+.dh-dropdown-empty-sub {
+  font-size: 0.74rem !important;
+  color: #64748b !important;
+  margin: 0 !important;
+}
+
+.dh-dropdown-footer {
+  padding: 10px 16px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: #09101e !important;
+  text-align: center !important;
+}
+
+.dh-dropdown-footer-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  color: #38bdf8 !important;
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: color 0.15s ease !important;
+}
+
+.dh-dropdown-footer-link:hover {
+  color: #7dd3fc !important;
+  text-decoration: underline !important;
+}
+
+.dh-user-button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  background: transparent !important;
+  border: 0 !important;
+  color: #e2e8f0 !important;
+  cursor: pointer !important;
+  padding: 4px 6px !important;
+  border-radius: 8px !important;
+}
+
+.dh-avatar {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 50% !important;
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  font-size: 0.8rem !important;
+}
+
+.dh-user-name {
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  color: #e2e8f0 !important;
+}
+
+.dh-user-chevron {
+  color: #64748b !important;
+  font-size: 0.65rem !important;
+}
+
+.dh-user-dropdown {
+  min-width: 220px !important;
+  background-color: #0d1527 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 10px !important;
+  padding: 6px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dh-user-dropdown-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 10px !important;
+}
+
+.dh-user-dropdown-copy strong {
+  display: block !important;
+  font-size: 0.82rem !important;
+  color: #ffffff !important;
+}
+
+.dh-user-dropdown-copy small {
+  font-size: 0.68rem !important;
+  color: #64748b !important;
+}
+
+.dh-user-dropdown .dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 10px !important;
+  border-radius: 6px !important;
+  color: #94a3b8 !important;
+  font-size: 0.78rem !important;
+}
+
+.dh-user-dropdown .dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff !important;
+}
+
+/* 3. Sidebar Under Topbar ------------------------------------------------ */
+.dh-sidebar {
+  position: fixed !important;
+  top: 60px !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 220px !important;
+  z-index: 1030 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background-color: #070d18 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+.dh-sidebar-scroll {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  padding: 16px 12px 10px !important;
+}
+
+.dh-nav-group {
+  margin-bottom: 22px !important;
+}
+
+.dh-nav-section {
+  font-size: 0.66rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  color: #64748b !important;
+  padding: 0 10px 8px !important;
+  text-transform: uppercase !important;
+}
+
+.dh-nav-list {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.dh-nav-link {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 9px 12px !important;
+  border-radius: 8px !important;
+  color: #94a3b8 !important;
+  text-decoration: none !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  border: 0 !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.dh-nav-link i {
+  width: 18px !important;
+  text-align: center !important;
+  font-size: 0.9rem !important;
+  color: inherit !important;
+}
+
+.dh-nav-link:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dh-nav-link.is-active {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.dh-sidebar-foot {
+  margin-top: auto !important;
+  padding: 16px 12px 8px !important;
+  text-align: center !important;
+}
+
+.dh-sidebar-art {
+  display: block !important;
+  max-width: 140px !important;
+  width: 100% !important;
+  margin: 0 auto 10px !important;
+  opacity: 0.35 !important;
+}
+
+.dh-sidebar-tagline {
+  margin: 0 !important;
+  font-size: 0.68rem !important;
+  line-height: 1.4 !important;
+  color: #475569 !important;
+}
+
+.dh-sidebar-tagline em {
+  font-style: italic !important;
+}
+
+/* 4. Main Layout Shell ---------------------------------------------------- */
+.dh-main-shell {
+  margin-left: 220px !important;
+  padding-top: 60px !important;
+  min-height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background-color: #070d18 !important;
+}
+
+.dh-main {
+  flex: 1 1 auto !important;
+  padding: 24px 28px 36px !important;
+  width: 100% !important;
+  max-width: 1650px !important;
+}
+
+.dh-page {
+  width: 100% !important;
+}
+
+/* 5. Page Header --------------------------------------------------------- */
+.dh-page-head {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin-bottom: 22px !important;
+}
+
+.dh-page-title {
+  margin: 0 !important;
+  font-size: 1.6rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: #f8fafc !important;
+}
+
+.dh-page-sub {
+  margin: 4px 0 0 !important;
+  font-size: 0.82rem !important;
+  color: #64748b !important;
+}
+
+.dh-page-head-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.dh-date-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 38px !important;
+  padding: 0 14px !important;
+  background-color: #0c1424 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  color: #cbd5e1 !important;
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+}
+
+.dh-chevron-xs {
+  font-size: 0.6rem !important;
+  color: #64748b !important;
+  margin-left: 2px !important;
+}
+
+.dh-btn-primary {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 38px !important;
+  padding: 0 18px !important;
+  background-color: #0284c7 !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  color: #ffffff !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.dh-btn-primary:hover {
+  background-color: #0369a1 !important;
+  color: #ffffff !important;
+}
+
+/* 6. General Cards ------------------------------------------------------- */
+.dh-card {
+  background-color: #0b1322 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.dh-card-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 14px 18px 12px !important;
+  border-bottom: 0 !important;
+}
+
+.dh-card-head-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.dh-card-title {
+  margin: 0 !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  color: #f1f5f9 !important;
+}
+
+/* 7. Row 1: KPI Cards Grid ----------------------------------------------- */
+.dh-kpi-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  margin-bottom: 18px !important;
+}
+
+.dh-kpi {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 16px 18px 14px !important;
+  border-radius: 12px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: none !important;
+}
+
+/* Card 1: Green Total Harvests */
+.dh-kpi-green {
+  background-color: #081717 !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+.dh-kpi-green .dh-kpi-icon {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.dh-kpi-green .dh-kpi-link {
+  color: #10b981 !important;
+}
+
+/* Card 2: Blue Ready for Harvest */
+.dh-kpi-blue {
+  background-color: #081726 !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+}
+
+.dh-kpi-blue .dh-kpi-icon {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.dh-kpi-blue .dh-kpi-link {
+  color: #0ea5e9 !important;
+}
+
+/* Card 3: Purple Active Schedule */
+.dh-kpi-purple {
+  background-color: #111029 !important;
+  border: 1px solid rgba(139, 92, 246, 0.35) !important;
+}
+
+.dh-kpi-purple .dh-kpi-icon {
+  background-color: #8b5cf6 !important;
+  color: #ffffff !important;
+}
+
+.dh-kpi-purple .dh-kpi-link {
+  color: #a78bfa !important;
+}
+
+/* Card 4: Orange Total Area */
+.dh-kpi-orange {
+  background-color: #1c140d !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+.dh-kpi-orange .dh-kpi-icon {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+.dh-kpi-orange .dh-kpi-link {
+  color: #fbbf24 !important;
+}
+
+.dh-kpi-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 12px !important;
+}
+
+.dh-kpi-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  font-size: 0.88rem !important;
+}
+
+.dh-kpi-trend {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  font-size: 0.65rem !important;
+  font-weight: 600 !important;
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+}
+
+.dh-trend-sub {
+  color: #94a3b8 !important;
+  font-weight: 400 !important;
+  margin-left: 2px !important;
+}
+
+.dh-kpi-label {
+  margin: 0 !important;
+  font-size: 0.74rem !important;
+  font-weight: 600 !important;
+  color: #94a3b8 !important;
+}
+
+.dh-kpi-value {
+  margin: 4px 0 2px !important;
+  font-size: 1.85rem !important;
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+  color: #ffffff !important;
+  letter-spacing: -0.03em !important;
+}
+
+.dh-kpi-unit {
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+  margin-left: 2px !important;
+}
+
+.dh-kpi-meta {
+  margin: 0 0 12px !important;
+  font-size: 0.68rem !important;
+  color: #64748b !important;
+}
+
+.dh-kpi-link {
+  margin-top: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: opacity 0.15s ease !important;
+}
+
+.dh-kpi-link:hover {
+  opacity: 0.85 !important;
+}
+
+/* 8. Row 2: Split Grid (Notifications & Weather) -------------------------- */
+.dh-split-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) !important;
+  gap: 16px !important;
+  margin-bottom: 18px !important;
+}
+
+/* Notification Center */
+.dh-bell-title-icon {
+  color: #f59e0b !important;
+  font-size: 0.95rem !important;
+}
+
+.dh-pill-yellow {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 20px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  background-color: #f59e0b !important;
+  color: #000000 !important;
+  font-size: 0.62rem !important;
+  font-weight: 700 !important;
+}
+
+.dh-mark-all-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background-color: #111a2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  color: #cbd5e1 !important;
+  font-size: 0.68rem !important;
+  font-weight: 500 !important;
+  padding: 4px 10px !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.dh-mark-all-btn:hover {
+  background-color: #162238 !important;
+}
+
+.dh-notification-list {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 4px 12px 12px !important;
+  gap: 4px !important;
+}
+
+.dh-notification-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 9px 10px !important;
+  border-radius: 8px !important;
+  text-decoration: none !important;
+  color: inherit !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.dh-notification-row:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dh-notification-icon {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  font-size: 0.8rem !important;
+}
+
+.dh-tone-ready {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  color: #10b981 !important;
+}
+
+.dh-tone-info {
+  background-color: rgba(14, 165, 233, 0.2) !important;
+  color: #0ea5e9 !important;
+}
+
+.dh-tone-schedule {
+  background-color: rgba(139, 92, 246, 0.2) !important;
+  color: #a78bfa !important;
+}
+
+.dh-tone-warning {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+}
+
+.dh-notification-copy {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.dh-notification-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  color: #f1f5f9 !important;
+}
+
+.dh-notification-tag {
+  display: inline-block !important;
+  padding: 1px 6px !important;
+  border-radius: 999px !important;
+  font-size: 0.58rem !important;
+  font-weight: 600 !important;
+}
+
+.dh-notification-text {
+  font-size: 0.68rem !important;
+  color: #94a3b8 !important;
+  margin-top: 1px !important;
+}
+
+.dh-notification-meta {
+  font-size: 0.62rem !important;
+  color: #64748b !important;
+  margin-top: 2px !important;
+}
+
+.dh-notification-arrow {
+  color: #64748b !important;
+  font-size: 0.65rem !important;
+}
+
+/* Weather Panel */
+.dh-weather-panel {
+  background-color: #0b1322 !important;
+}
+
+.dh-weather-head-icon {
+  color: #38bdf8 !important;
+  font-size: 0.95rem !important;
+}
+
+.dh-auto-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  background-color: rgba(6, 182, 212, 0.1) !important;
+  border: 1px solid rgba(6, 182, 212, 0.25) !important;
+  color: #22d3ee !important;
+  font-size: 0.62rem !important;
+  font-weight: 600 !important;
+}
+
+.dh-auto-pill i {
+  font-size: 0.6rem !important;
+  color: #22d3ee !important;
+}
+
+.dh-weather-body {
+  padding: 0 18px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+}
+
+.dh-weather-location {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 0.62rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+  margin-bottom: 12px !important;
+}
+
+.dh-weather-location i {
+  color: #0284c7 !important;
+}
+
+.dh-weather-middle {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  margin-bottom: 16px !important;
+}
+
+.dh-weather-current {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.dh-weather-icon-large {
+  font-size: 2.2rem !important;
+  color: #38bdf8 !important;
+  display: inline-flex !important;
+}
+
+.dh-weather-temp-row {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 10px !important;
+}
+
+.dh-weather-temp {
+  font-size: 2.2rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  color: #ffffff !important;
+  letter-spacing: -0.04em !important;
+}
+
+.dh-weather-condition {
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  color: #cbd5e1 !important;
+}
+
+.dh-weather-feels {
+  font-size: 0.68rem !important;
+  color: #64748b !important;
+  margin-top: 4px !important;
+}
+
+.dh-weather-stats {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.dh-weather-metric {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 12px !important;
+  background-color: #0c1527 !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 8px !important;
+  min-width: 90px !important;
+}
+
+.dh-weather-metric-icon {
+  font-size: 0.88rem !important;
+  color: #38bdf8 !important;
+}
+
+.dh-weather-metric-copy strong {
+  display: block !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  color: #f1f5f9 !important;
+  line-height: 1.1 !important;
+}
+
+.dh-weather-metric-copy small {
+  display: block !important;
+  font-size: 0.54rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  color: #64748b !important;
+  text-transform: uppercase !important;
+}
+
+.dh-weather-forecast {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-top: auto !important;
+}
+
+.dh-weather-day {
+  background-color: #0c1527 !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 8px !important;
+  padding: 8px 6px !important;
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 3px !important;
+}
+
+.dh-weather-day-name {
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  color: #e2e8f0 !important;
+}
+
+.dh-weather-day-date {
+  font-size: 0.58rem !important;
+  color: #64748b !important;
+}
+
+.dh-weather-day-icon {
+  font-size: 1.1rem !important;
+  margin: 3px 0 !important;
+  color: #38bdf8 !important;
+}
+
+.dh-weather-day-temp {
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  color: #f1f5f9 !important;
+}
+
+.dh-weather-day-min {
+  color: #64748b !important;
+  font-weight: 400 !important;
+}
+
+.dh-weather-day-rain {
+  font-size: 0.6rem !important;
+  color: #38bdf8 !important;
+}
+
+/* 9. Row 3: Bottom Grid (3 Columns) -------------------------------------- */
+.dh-bottom-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.7fr) minmax(0, 1.15fr) !important;
+  gap: 16px !important;
+}
+
+/* Quick Actions */
+.dh-quick-head-icon {
+  color: #94a3b8 !important;
+  font-size: 0.85rem !important;
+}
+
+.dh-quick-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  padding: 0 16px 16px !important;
+}
+
+.dh-quick-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 10px !important;
+  background-color: #0e172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 8px !important;
+  text-decoration: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease !important;
+}
+
+.dh-quick-btn:hover {
+  background-color: #131e36 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.dh-quick-btn-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  font-size: 0.72rem !important;
+  flex-shrink: 0 !important;
+}
+
+.dh-tone-green {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.dh-tone-blue {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.dh-tone-purple {
+  background-color: #8b5cf6 !important;
+  color: #ffffff !important;
+}
+
+.dh-tone-orange {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+.dh-tone-cyan {
+  background-color: #06b6d4 !important;
+  color: #ffffff !important;
+}
+
+.dh-tone-indigo {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.dh-quick-btn-label {
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  color: #e2e8f0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Recent Harvests */
+.dh-recent-head-icon {
+  color: #94a3b8 !important;
+  font-size: 0.85rem !important;
+}
+
+.dh-view-all-link {
+  font-size: 0.7rem !important;
+  color: #0ea5e9 !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+}
+
+.dh-view-all-link:hover {
+  text-decoration: underline !important;
+}
+
+.dh-table-wrap {
+  overflow-x: auto !important;
+  padding: 0 16px 14px !important;
+}
+
+.dh-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.dh-table th {
+  font-size: 0.58rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  color: #64748b !important;
+  text-transform: uppercase !important;
+  padding: 8px 10px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  text-align: left !important;
+}
+
+.dh-table td {
+  padding: 9px 10px !important;
+  font-size: 0.7rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  vertical-align: middle !important;
+}
+
+.dh-table tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+.dh-table-id {
+  color: #0ea5e9 !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.dh-table-id:hover {
+  text-decoration: underline !important;
+}
+
+.dh-table-farm {
+  color: #e2e8f0 !important;
+  font-weight: 500 !important;
+}
+
+.dh-table-crop {
+  color: #94a3b8 !important;
+  display: block !important;
+}
+
+.dh-table-date {
+  color: #64748b !important;
+}
+
+.dh-table-qty {
+  color: #cbd5e1 !important;
+  font-weight: 500 !important;
+}
+
+.dh-grade-badge {
+  display: inline-block !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  font-size: 0.6rem !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+}
+
+.dh-grade-b,
+.dh-grade-grade_b {
+  background-color: rgba(6, 182, 212, 0.15) !important;
+  border: 1px solid rgba(6, 182, 212, 0.3) !important;
+  color: #22d3ee !important;
+}
+
+.dh-grade-a,
+.dh-grade-grade_a,
+.dh-grade-premium {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #10b981 !important;
+}
+
+.dh-grade-standard {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: #60a5fa !important;
+}
+
+/* Harvest Progress */
+.dh-progress-head-icon {
+  color: #94a3b8 !important;
+  font-size: 0.85rem !important;
+}
+
+.dh-view-reports-link {
+  font-size: 0.7rem !important;
+  color: #0ea5e9 !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.dh-view-reports-link:hover {
+  text-decoration: underline !important;
+}
+
+.dh-progress-body {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-around !important;
+  padding: 8px 16px 18px !important;
+  gap: 16px !important;
+  flex: 1 !important;
+}
+
+.dh-progress-donut {
+  position: relative !important;
+  width: 104px !important;
+  height: 104px !important;
+  border-radius: 50% !important;
+  background: conic-gradient(
+    #10b981 0 calc(var(--dh-donut-completed, 33) * 1%),
+    #0c1a2e 0 100%
+  ) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+}
+
+.dh-donut-inner {
+  width: 78px !important;
+  height: 78px !important;
+  border-radius: 50% !important;
+  background-color: #0b1322 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.dh-donut-fraction {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  line-height: 1 !important;
+}
+
+.dh-donut-sub {
+  font-size: 0.6rem !important;
+  color: #64748b !important;
+  margin-top: 2px !important;
+}
+
+.dh-progress-legend {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  min-width: 110px !important;
+}
+
+.dh-progress-legend li {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.72rem !important;
+}
+
+.dh-legend-dot {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+}
+
+.dh-dot-completed {
+  background-color: #10b981 !important;
+}
+
+.dh-dot-progress {
+  background-color: #0284c7 !important;
+}
+
+.dh-dot-pending {
+  background-color: #64748b !important;
+}
+
+.dh-legend-name {
+  color: #cbd5e1 !important;
+}
+
+.dh-legend-val {
+  margin-left: auto !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* 10. Responsive Breakpoints --------------------------------------------- */
+@media (max-width: 1200px) {
+  .dh-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .dh-split-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .dh-bottom-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .dh-sidebar {
+    transform: translateX(-100%) !important;
+    transition: transform 0.2s ease !important;
+  }
+  body.sidebar-open .dh-sidebar {
+    transform: translateX(0) !important;
+  }
+  .dh-main-shell {
+    margin-left: 0 !important;
+  }
+}
+
+@media (min-width: 992px) {
+  body.sidebar-collapsed .dh-sidebar {
+    width: 68px !important;
+  }
+  body.sidebar-collapsed .dh-main-shell {
+    margin-left: 68px !important;
+  }
+  body.sidebar-collapsed .dh-nav-label,
+  body.sidebar-collapsed .dh-nav-section,
+  body.sidebar-collapsed .dh-sidebar-tagline {
+    display: none !important;
+  }
+  body.sidebar-collapsed .dh-nav-link {
+    justify-content: center !important;
+    padding: 10px 0 !important;
+  }
+}
+
+/* 11. Notification Center Page ------------------------------------------- */
+.dh-notification-row-link {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+.dh-notification-row-link:hover {
+  color: inherit !important;
+}
+
+.dh-notification-row-form {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-left: auto !important;
+}
+
+a.dh-mark-all-btn {
+  text-decoration: none !important;
+}
+
+@media (min-width: 992px) {
+  body.sidebar-collapsed .dh-nav-badge {
+    display: inline-flex !important;
+    position: absolute !important;
+    top: 4px !important;
+    right: 6px !important;
+    min-width: 8px !important;
+    width: 8px !important;
+    height: 8px !important;
+    padding: 0 !important;
+    margin-left: 0 !important;
+    font-size: 0 !important;
+  }
+}
