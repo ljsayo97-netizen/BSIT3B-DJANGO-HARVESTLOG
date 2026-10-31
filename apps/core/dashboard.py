@@ -41,6 +41,12 @@ CROP_STATUS_COLORS = {
     Crop.Status.FAILED: '#ef4444',
 }
 
+TOP_CROPS_COLORS = [
+    '#22c55e', '#0ea5e9', '#f59e0b', '#f97316',
+    '#6366f1', '#ec4899', '#14b8a6', '#a855f7',
+]
+TOP_CROPS_LIMIT = 8
+
 QUALITY_COLORS = {
     Harvest.QualityGrade.PREMIUM: '#22c55e',
     Harvest.QualityGrade.GRADE_A: '#0ea5e9',
@@ -49,6 +55,28 @@ QUALITY_COLORS = {
     Harvest.QualityGrade.STANDARD: '#94a3b8',
     Harvest.QualityGrade.FAIR: '#ef4444',
 }
+
+
+def _top_crops_data(harvests, limit=TOP_CROPS_LIMIT):
+    """Return the top crop types by total quantity harvested."""
+    rows = (
+        harvests.values('crop_type')
+        .annotate(total_qty=Sum('quantity_harvested'))
+        .order_by('-total_qty')[:limit]
+    )
+    rows = list(rows)  # evaluate queryset once
+    grand_total = float(sum(r['total_qty'] or 0 for r in rows))
+    result = []
+    for idx, row in enumerate(rows):
+        qty = float(row['total_qty'] or 0)
+        result.append({
+            'name': row['crop_type'] or 'Unknown',
+            'quantity': qty,
+            'unit': 'kg',
+            'percentage': round(qty * 100 / grand_total) if grand_total else 0,
+            'color': TOP_CROPS_COLORS[idx % len(TOP_CROPS_COLORS)],
+        })
+    return result, grand_total
 
 
 def _month_starts(count):
@@ -295,6 +323,49 @@ def build_dashboard_context(user):
         })
     quality_rows.sort(key=lambda row: row['count'], reverse=True)
 
+    top_crops_data, total_harvested_qty = _top_crops_data(harvests)
+
+    # Build month labels + record counts for the production bar chart
+    months_list = [month.strftime('%b %Y') for month in month_starts]
+    monthly_records = [
+        monthly_map.get(month.strftime('%Y-%m'), {}).get('records', 0)
+        for month in month_starts
+    ]
+    max_records = max(monthly_records) if any(monthly_records) else 1
+
+    # Top crop (by harvest count) per month
+    top_crop_per_month_rows = (
+        harvests.filter(harvest_date__gte=month_starts[0])
+        .annotate(month=TruncMonth('harvest_date'))
+        .values('month', 'crop_type')
+        .annotate(cnt=Count('id'))
+        .order_by('month', '-cnt')
+    )
+    # Keep only the top crop per month (first row per month after ordering)
+    _seen_months = set()
+    _top_crop_map = {}
+    for row in top_crop_per_month_rows:
+        if row['month'] is None:
+            continue
+        key = row['month'].strftime('%Y-%m')
+        if key not in _seen_months:
+            _seen_months.add(key)
+            _top_crop_map[key] = {
+                'crop': row['crop_type'] or 'Unknown',
+                'count': row['cnt'],
+            }
+
+    production_bars = [
+        {
+            'label': months_list[i],
+            'records': monthly_records[i],
+            'height_pct': round(monthly_records[i] * 100 / max_records) if max_records else 0,
+            'top_crop': _top_crop_map.get(month_starts[i].strftime('%Y-%m'), {}).get('crop', ''),
+            'top_crop_count': _top_crop_map.get(month_starts[i].strftime('%Y-%m'), {}).get('count', 0),
+        }
+        for i in range(len(months_list))
+    ]
+
     upcoming_harvests = (
         harvest_board['ready_crops']
         + harvest_board['approaching_crops']
@@ -390,4 +461,8 @@ def build_dashboard_context(user):
         'notification_feed': notification_feed,
         'unread_notification_count': unread_notification_count,
         'harvest_progress': harvest_progress,
+        'top_crops_data': top_crops_data,
+        'total_harvested_qty': total_harvested_qty,
+        'months_list': months_list,
+        'production_bars': production_bars,
     }

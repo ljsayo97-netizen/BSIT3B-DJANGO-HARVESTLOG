@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'apps.farms',
     'apps.crops',
     'apps.harvests',
+    'apps.harvest_calendar',
+    'apps.revenue',
     'apps.activities',
     'apps.reports',
 ]

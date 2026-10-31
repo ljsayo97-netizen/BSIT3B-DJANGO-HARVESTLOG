@@ -45,6 +45,36 @@
           </a>
         </li>
         <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'harvest_calendar' %}is-active{% endif %}"
+             href="{% url 'harvest_calendar:calendar' %}"
+             data-tooltip="Harvest Calendar"
+             title="Harvest Calendar"
+             {% if request.resolver_match.app_name == 'harvest_calendar' %}aria-current="page"{% endif %}>
+            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+            <span class="dh-nav-label">Harvest Calendar</span>
+          </a>
+        </li>
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'revenue' and request.resolver_match.url_name != 'revenue_analytics' %}is-active{% endif %}"
+             href="{% url 'revenue:revenue_list' %}"
+             data-tooltip="Revenue per Hectare"
+             title="Revenue per Hectare"
+             {% if request.resolver_match.app_name == 'revenue' and request.resolver_match.url_name != 'revenue_analytics' %}aria-current="page"{% endif %}>
+            <i class="fas fa-coins" aria-hidden="true"></i>
+            <span class="dh-nav-label">Revenue</span>
+          </a>
+        </li>
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.url_name == 'revenue_analytics' %}is-active{% endif %}"
+             href="{% url 'revenue:revenue_analytics' %}"
+             data-tooltip="Revenue Analytics"
+             title="Revenue Analytics"
+             {% if request.resolver_match.url_name == 'revenue_analytics' %}aria-current="page"{% endif %}>
+            <i class="fas fa-chart-pie" aria-hidden="true"></i>
+            <span class="dh-nav-label">Revenue Analytics</span>
+          </a>
+        </li>
+        <li>
           <a class="dh-nav-link {% if request.resolver_match.app_name == 'activities' %}is-active{% endif %}"
              href="{% url 'activities:activity_list' %}"
              data-tooltip="Activity Schedule"

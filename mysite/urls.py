@@ -27,6 +27,8 @@ urlpatterns = [
     path('farms/', include('apps.farms.urls')),
     path('crops/', include('apps.crops.urls')),
     path('harvests/', include('apps.harvests.urls')),
+    path('calendar/', include('apps.harvest_calendar.urls')),
+    path('revenue/', include('apps.revenue.urls')),
     path('activities/', include('apps.activities.urls')),
     path('reports/', include('apps.reports.urls')),
 ]

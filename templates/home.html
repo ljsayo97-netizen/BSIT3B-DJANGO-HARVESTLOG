@@ -1,6 +1,3 @@
-Here is the updated code with the **Harvest Progress** card placed on the left side and the **Weather & Field Guidance** panel placed on the right side within the split grid:
-
-```html
 {% extends "theme/base.html" %}
 {% block content %}
 <div class="dh-page">
@@ -146,48 +143,146 @@ Here is the updated code with the **Harvest Progress** card placed on the left s
   {% endif %}
 
   <div class="dh-split-grid">
-    <!-- Harvest Progress (Now on the Left Side) -->
-    <section class="dh-card dh-progress-card" aria-labelledby="harvest-progress-title">
+    <!-- 1. Harvest Production Overview (Left Side - Bar Chart) -->
+    <section class="dh-card dh-production-card" aria-labelledby="production-overview-title">
       <div class="dh-card-head">
         <div class="dh-card-head-title">
-          <i class="fas fa-chart-simple dh-progress-head-icon" aria-hidden="true"></i>
-          <h2 class="dh-card-title" id="harvest-progress-title">Harvest Progress</h2>
+          <i class="fas fa-chart-column dh-progress-head-icon" aria-hidden="true"></i>
+          <h2 class="dh-card-title" id="production-overview-title">Harvest Production Overview</h2>
         </div>
-        <a href="{% url 'reports:farm_progress' %}" class="dh-view-reports-link">
-          View reports <i class="fas fa-arrow-right" aria-hidden="true"></i>
-        </a>
-      </div>
-      <div class="dh-progress-body">
-        <div class="dh-donut-wrap">
-          <div class="dh-progress-donut"
-               style="--dh-donut-completed: {{ harvest_progress.completed_percent|default:33 }};">
-            <div class="dh-donut-inner">
-              <span class="dh-donut-fraction">{{ harvest_progress.completed|default:1 }}/{{ harvest_progress.total|default:3 }}</span>
-              <span class="dh-donut-sub">harvests</span>
-            </div>
+        <div class="dh-card-head-actions">
+          <!-- Period selector dropdown -->
+          <div class="dh-period-dropdown" style="position:relative; display:inline-block;">
+            <button class="dh-date-chip dh-period-toggle" type="button"
+                    style="cursor:pointer; border:none; background:rgba(255,255,255,0.06); padding:5px 10px; border-radius:20px; color:#e2e8f0; font-size:12px; display:flex; align-items:center; gap:5px;"
+                    aria-haspopup="true" aria-expanded="false" id="periodToggle">
+              <span class="dh-period-label">Last 6 Months</span>
+              <i class="fas fa-chevron-down dh-chevron-xs" aria-hidden="true"></i>
+            </button>
+            <ul class="dh-period-menu" role="menu"
+                style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#1e2633; border:1px solid rgba(255,255,255,0.1); border-radius:10px; list-style:none; padding:6px; margin:0; min-width:160px; z-index:99; box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+              <li role="none"><button role="menuitem" class="dh-period-opt" data-period="1m" style="width:100%;text-align:left;background:none;border:none;color:#cbd5e1;padding:7px 12px;border-radius:7px;font-size:13px;cursor:pointer;">This Month</button></li>
+              <li role="none"><button role="menuitem" class="dh-period-opt" data-period="3m" style="width:100%;text-align:left;background:none;border:none;color:#cbd5e1;padding:7px 12px;border-radius:7px;font-size:13px;cursor:pointer;">Last 3 Months</button></li>
+              <li role="none"><button role="menuitem" class="dh-period-opt dh-period-active" data-period="6m" style="width:100%;text-align:left;background:rgba(99,102,241,0.18);border:none;color:#a5b4fc;padding:7px 12px;border-radius:7px;font-size:13px;cursor:pointer;font-weight:600;">Last 6 Months</button></li>
+              <li role="none"><button role="menuitem" class="dh-period-opt" data-period="12m" style="width:100%;text-align:left;background:none;border:none;color:#cbd5e1;padding:7px 12px;border-radius:7px;font-size:13px;cursor:pointer;">Last 12 Months</button></li>
+              <li role="none"><button role="menuitem" class="dh-period-opt" data-period="ytd" style="width:100%;text-align:left;background:none;border:none;color:#cbd5e1;padding:7px 12px;border-radius:7px;font-size:13px;cursor:pointer;">Year to Date</button></li>
+              <li role="none"><button role="menuitem" class="dh-period-opt" data-period="all" style="width:100%;text-align:left;background:none;border:none;color:#cbd5e1;padding:7px 12px;border-radius:7px;font-size:13px;cursor:pointer;">All Time</button></li>
+            </ul>
           </div>
         </div>
-        <ul class="dh-progress-legend">
-          <li>
-            <span class="dh-legend-dot dh-dot-completed"></span>
-            <span class="dh-legend-name">Completed</span>
-            <strong class="dh-legend-val">{{ harvest_progress.completed|default:1 }}</strong>
-          </li>
-          <li>
-            <span class="dh-legend-dot dh-dot-progress"></span>
-            <span class="dh-legend-name">In Progress</span>
-            <strong class="dh-legend-val">{{ harvest_progress.in_progress|default:0 }}</strong>
-          </li>
-          <li>
-            <span class="dh-legend-dot dh-dot-pending"></span>
-            <span class="dh-legend-name">Pending</span>
-            <strong class="dh-legend-val">{{ harvest_progress.pending|default:2 }}</strong>
-          </li>
-        </ul>
+      </div>
+      <div class="dh-production-body" style="padding: 16px;">
+        {% if production_bars %}
+        <!-- Hover tooltip (shared, moved by JS) -->
+        <div id="barTooltip" style="display:none; position:fixed; z-index:200; background:#1e2633; border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 14px; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,0.5); min-width:150px;">
+          <div id="barTooltipMonth" style="font-size:11px; color:#94a3b8; margin-bottom:4px;"></div>
+          <div id="barTooltipCount" style="font-size:14px; color:#fff; font-weight:700; margin-bottom:6px;"></div>
+          <div id="barTooltipCrop" style="font-size:11px; color:#a5b4fc; display:flex; align-items:center; gap:5px;">
+            <i class="fas fa-seedling" style="font-size:10px;"></i>
+            <span id="barTooltipCropName"></span>
+          </div>
+        </div>
+
+        <!-- Bar chart -->
+        <div class="dh-chart-container" style="height:200px; display:flex; align-items:flex-end; justify-content:space-around; gap:6px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; position:relative;">
+          {% for bar in production_bars %}
+          <div class="dh-bar-col" style="display:flex; flex-direction:column; align-items:center; flex:1; height:100%; justify-content:flex-end; gap:3px; position:relative;">
+            <!-- Record count above bar -->
+            <span style="font-size:10px; color:{% if bar.records %}#a5b4fc{% else %}#475569{% endif %}; font-weight:700; line-height:1;">
+              {% if bar.records %}{{ bar.records }}{% else %}–{% endif %}
+            </span>
+
+            <!-- The bar itself -->
+            <div class="dh-bar-rect"
+                 data-month="{{ bar.label }}"
+                 data-records="{{ bar.records }}"
+                 data-top-crop="{{ bar.top_crop }}"
+                 data-top-crop-count="{{ bar.top_crop_count }}"
+                 style="width:100%;
+                        {% if bar.records %}background:linear-gradient(180deg,#6366f1,#818cf8);{% else %}background:#1e293b;{% endif %}
+                        border-radius:5px 5px 0 0;
+                        height:{{ bar.height_pct }}%;
+                        min-height:{% if bar.records %}6{% else %}2{% endif %}px;
+                        transition:height 0.4s ease, opacity 0.2s;
+                        cursor:pointer;
+                        {% if not bar.records %}opacity:0.3;{% endif %}">
+            </div>
+
+            <!-- Month label -->
+            <div style="font-size:10px; color:#475569; white-space:nowrap; text-align:center; line-height:1.2;">
+              {{ bar.label|slice:":3" }}
+            </div>
+
+            {% if bar.top_crop %}
+            <!-- Top crop badge below month -->
+            <div style="font-size:9px; color:#818cf8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; text-align:center; line-height:1.2; font-style:italic;">
+              {{ bar.top_crop|truncatechars:10 }}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Legend -->
+        <div class="dh-chart-legend" style="display:flex; flex-wrap:wrap; gap:14px; justify-content:center; font-size:12px; margin-top:10px; align-items:center;">
+          <span style="display:flex; align-items:center; gap:5px; color:#94a3b8;">
+            <span style="width:10px; height:10px; background:linear-gradient(135deg,#6366f1,#818cf8); border-radius:2px;"></span>
+            Harvests per month
+          </span>
+          <span style="display:flex; align-items:center; gap:5px; color:#818cf8; font-style:italic;">
+            <i class="fas fa-seedling" style="font-size:10px;"></i>
+            Top crop label shown below each bar
+          </span>
+        </div>
+        {% else %}
+        <p style="color:#94a3b8; font-size:13px; margin:auto; text-align:center; padding:40px 0;">No monthly harvest history found.</p>
+        {% endif %}
       </div>
     </section>
 
-    <!-- Weather & Field Guidance (Now on the Right Side) -->
+    <!-- 2. Top Crops by Quantity (Right Side - Donut Chart & Breakdown) -->
+    <section class="dh-card dh-top-crops-card" aria-labelledby="top-crops-title">
+      <div class="dh-card-head">
+        <div class="dh-card-head-title">
+          <i class="fas fa-chart-pie dh-weather-head-icon" aria-hidden="true"></i>
+          <h2 class="dh-card-title" id="top-crops-title">Top Crops by Quantity</h2>
+        </div>
+        <a href="{% url 'harvests:harvest_history' %}" class="dh-view-all-link">View all</a>
+      </div>
+      <div class="dh-top-crops-body" style="display:flex; align-items:center; gap:16px; padding:16px;">
+        <!-- Total summary box -->
+        <div class="dh-donut-wrap" style="text-align:center; min-width:110px; background:rgba(255,255,255,0.03); padding:15px; border-radius:12px; flex-shrink:0;">
+          <strong style="display:block; font-size:22px; color:#fff; font-weight:700; line-height:1.2;">
+            {{ total_harvested_qty|default:0|floatformat:"0" }}
+          </strong>
+          <span style="font-size:11px; color:#94a3b8; display:block; margin-top:2px;">kg total</span>
+          <span style="font-size:10px; color:#64748b; margin-top:4px; display:block;">Harvested</span>
+        </div>
+        <!-- Crop breakdown progress bars -->
+        {% if top_crops_data %}
+        <ul class="dh-crop-quantities-list" style="list-style:none; padding:0; margin:0; width:100%; display:flex; flex-direction:column; gap:8px;">
+          {% for crop in top_crops_data %}
+          <li style="font-size:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:#e2e8f0; align-items:center;">
+              <span style="display:flex; align-items:center; gap:6px;">
+                <span style="display:inline-block; width:8px; height:8px; background-color:{{ crop.color }}; border-radius:50%;"></span>
+                <span style="font-weight:500;">{{ crop.name }}</span>
+              </span>
+              <strong style="color:#f1f5f9;">{{ crop.quantity|floatformat:"0" }} kg &nbsp;<span style="color:#64748b; font-weight:400;">({{ crop.percentage }}%)</span></strong>
+            </div>
+            <div style="background:rgba(255,255,255,0.08); height:6px; border-radius:4px; overflow:hidden;">
+              <div style="background-color:{{ crop.color }}; width:{{ crop.percentage }}%; height:100%; border-radius:4px; transition:width 0.5s ease;"></div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:#94a3b8; font-size:13px; text-align:center; margin:auto;">No crop quantities recorded yet.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+      <!-- Weather & Field Guidance (Now on the Right Side) -->
     <section class="dh-card dh-weather-panel" aria-labelledby="weather-panel-title">
       <div class="dh-card-head">
         <div class="dh-card-head-title">
@@ -207,7 +302,7 @@ Here is the updated code with the **Harvest Progress** card placed on the left s
     </section>
   </div>
 
-  <div class="dh-bottom-grid">
+  {% comment %} <div class="dh-bottom-grid">
     <!-- Quick Actions -->
     <section class="dh-card dh-quick-card" aria-labelledby="quick-actions-title">
       <div class="dh-card-head">
@@ -240,6 +335,18 @@ Here is the updated code with the **Harvest Progress** card placed on the left s
         <a href="{% url 'farms:farm_list' %}" class="dh-quick-btn">
           <span class="dh-quick-btn-icon dh-tone-indigo"><i class="fas fa-location-dot" aria-hidden="true"></i></span>
           <span class="dh-quick-btn-label">Manage Fields</span>
+        </a>
+        <a href="{% url 'harvests:harvest_history' %}" class="dh-quick-btn">
+          <span class="dh-quick-btn-icon dh-tone-green"><i class="fas fa-history" aria-hidden="true"></i></span>
+          <span class="dh-quick-btn-label">Harvest History</span>
+        </a>
+        <a href="{% url 'crops:crop_list' %}?status=READY_FOR_HARVEST" class="dh-quick-btn">
+          <span class="dh-quick-btn-icon dh-tone-orange"><i class="fas fa-check-circle" aria-hidden="true"></i></span>
+          <span class="dh-quick-btn-label">Ready to Harvest</span>
+        </a>
+        <a href="{% url 'users:user_list' %}" class="dh-quick-btn">
+          <span class="dh-quick-btn-icon dh-tone-blue"><i class="fas fa-users" aria-hidden="true"></i></span>
+          <span class="dh-quick-btn-label">Manage Users</span>
         </a>
       </div>
     </section>
@@ -308,15 +415,15 @@ Here is the updated code with the **Harvest Progress** card placed on the left s
         </table>
       </div>
     </section>
-  </div>
+  </div> {% endcomment %}
 
 </div>
 {% endblock %}
 
-{% block footer %}{% endblock %}
+{% block footer %}{% endblock %}  
 
 {% block extra_js %}
-<script>
+  <script>
   document.addEventListener("DOMContentLoaded", function () {
     const container = document.getElementById("dashboardWeather");
     if (!container) {
@@ -349,7 +456,6 @@ Here is the updated code with the **Harvest Progress** card placed on the left s
       }
     }
 
-    // The unavailable state renders a retry button; re-fetch on click.
     container.addEventListener("click", function (event) {
       const retry = event.target.closest("[data-weather-retry]");
       if (retry) {
@@ -360,6 +466,105 @@ Here is the updated code with the **Harvest Progress** card placed on the left s
     loadWeather();
     window.setInterval(loadWeather, refreshMs);
   });
+
+  // --- Production Bar Chart Tooltips ---
+  (function () {
+    const tooltip = document.getElementById('barTooltip');
+    if (!tooltip) return;
+
+    const monthEl   = document.getElementById('barTooltipMonth');
+    const countEl   = document.getElementById('barTooltipCount');
+    const cropNameEl = document.getElementById('barTooltipCropName');
+    const cropRow   = document.getElementById('barTooltipCrop');
+
+    document.querySelectorAll('.dh-bar-rect').forEach(function (bar) {
+      bar.addEventListener('mouseenter', function (e) {
+        const records   = bar.dataset.records;
+        const month     = bar.dataset.month;
+        const topCrop   = bar.dataset.topCrop;
+        const topCount  = bar.dataset.topCropCount;
+
+        monthEl.textContent  = month;
+        countEl.textContent  = records + ' harvest' + (records === '1' ? '' : 's') + ' recorded';
+        if (topCrop) {
+          cropNameEl.textContent = topCrop + ' (' + topCount + ')';
+          cropRow.style.display  = 'flex';
+        } else {
+          cropRow.style.display  = 'none';
+        }
+
+        tooltip.style.display = 'block';
+        positionTooltip(e);
+
+        // Highlight bar
+        bar.style.opacity = '0.85';
+        bar.style.transform = 'scaleX(0.92)';
+      });
+
+      bar.addEventListener('mousemove', positionTooltip);
+
+      bar.addEventListener('mouseleave', function () {
+        tooltip.style.display = 'none';
+        bar.style.opacity = '';
+        bar.style.transform = '';
+      });
+    });
+
+    function positionTooltip(e) {
+      const margin = 12;
+      let x = e.clientX + margin;
+      let y = e.clientY - tooltip.offsetHeight / 2;
+      // keep within viewport
+      if (x + tooltip.offsetWidth + margin > window.innerWidth) {
+        x = e.clientX - tooltip.offsetWidth - margin;
+      }
+      if (y < 0) y = 0;
+      tooltip.style.left = x + 'px';
+      tooltip.style.top  = y + 'px';
+    }
+  })();
+
+  // --- Period Selector Dropdown ---
+  (function () {
+    const toggle = document.getElementById('periodToggle');
+    if (!toggle) return;
+    const menu = toggle.nextElementSibling;
+
+    toggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const open = menu.style.display === 'block';
+      menu.style.display = open ? 'none' : 'block';
+      toggle.setAttribute('aria-expanded', !open);
+    });
+
+    document.addEventListener('click', function () {
+      menu.style.display = 'none';
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+
+    menu.querySelectorAll('.dh-period-opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        // Update active style
+        menu.querySelectorAll('.dh-period-opt').forEach(function (b) {
+          b.style.background = 'none';
+          b.style.color = '#cbd5e1';
+          b.style.fontWeight = '';
+          b.classList.remove('dh-period-active');
+        });
+        btn.style.background = 'rgba(99,102,241,0.18)';
+        btn.style.color = '#a5b4fc';
+        btn.style.fontWeight = '600';
+        btn.classList.add('dh-period-active');
+
+        // Update toggle label
+        toggle.querySelector('.dh-period-label').textContent = btn.textContent.trim();
+        menu.style.display = 'none';
+        toggle.setAttribute('aria-expanded', 'false');
+
+        // Note: full filter-by-period requires a backend endpoint.
+        // This currently updates the label UI only.
+      });
+    });
+  })();
 </script>
 {% endblock %}
-

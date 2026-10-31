@@ -15,15 +15,23 @@
     </button>
   </div>
 
-  <form class="dh-topbar-search" role="search" onsubmit="return false;" style="flex:0 1 420px; margin-left:8px; margin-right:auto;">
-    <i class="fas fa-magnifying-glass dh-search-icon" aria-hidden="true"></i>
+  <form class="dh-topbar-search"
+        role="search"
+        action="{% url 'global_search' %}"
+        method="get"
+        style="flex:0 1 420px; margin-left:8px; margin-right:auto;">
+    <button type="submit" class="dh-search-icon dh-search-submit" aria-label="Search" title="Search">
+      <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+    </button>
     <input id="globalSearch"
            class="dh-search-input"
            type="search"
-           placeholder="Search farms, crops, or activities..."
-           aria-label="Search farms, crops, or activities"
+           name="q"
+           value="{{ global_search_query|default:'' }}"
+           placeholder="Search farms, crops, activities, harvests, or revenue..."
+           aria-label="Search farms, crops, activities, harvests, or revenue"
+           enterkeyhint="search"
            autocomplete="off">
-    
   </form>
 
   <div class="dh-topbar-right" style="display:flex; align-items:center; gap:12px; margin-left:auto; flex-shrink:0;">

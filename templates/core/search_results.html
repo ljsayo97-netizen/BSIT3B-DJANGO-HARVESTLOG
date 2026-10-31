@@ -1,0 +1,118 @@
+{% extends "theme/base.html" %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none" aria-label="Page header">
+    <div class="container-xl">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Global search</div>
+          <h2 class="page-title mb-0">Search</h2>
+          <div class="text-muted mt-1">
+            {% if query %}
+              {{ total_results }} result{{ total_results|pluralize }} for &ldquo;{{ query }}&rdquo;
+            {% else %}
+              Search across your farms, crops, activities, harvests, and revenue records.
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2" aria-hidden="true"></i>Back to Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br>
+
+  {% if query %}
+    {% if total_results %}
+      <div class="row g-3">
+        {% for group in search_groups %}
+          {% if group.items %}
+          <div class="col-12">
+            <section class="dh-card" aria-label="{{ group.label }} results">
+              <div class="dh-card-head">
+                <div class="dh-card-head-title">
+                  <i class="{{ group.icon }} dh-search-group-icon" aria-hidden="true"></i>
+                  <h3 class="dh-card-title">{{ group.label }}</h3>
+                  <span class="badge bg-secondary-lt">{{ group.total }}</span>
+                </div>
+                <a class="btn btn-sm btn-ghost-secondary" href="{{ group.view_all_url }}">
+                  View all <i class="fas fa-arrow-right ms-1" aria-hidden="true"></i>
+                </a>
+              </div>
+              <div class="dh-search-results">
+                {% for item in group.items %}
+                <a class="dh-search-result" href="{{ item.url }}">
+                  <span class="dh-search-result-copy">
+                    <span class="dh-search-result-title">{{ item.title }}</span>
+                    {% if item.subtitle %}
+                    <span class="dh-search-result-sub">{{ item.subtitle }}</span>
+                    {% endif %}
+                    {% if item.meta %}
+                    <span class="dh-search-result-meta">{{ item.meta }}</span>
+                    {% endif %}
+                  </span>
+                  {% if item.badge %}
+                  <span class="dh-search-result-badge">{{ item.badge }}</span>
+                  {% endif %}
+                  <i class="fas fa-chevron-right dh-search-result-chevron" aria-hidden="true"></i>
+                </a>
+                {% endfor %}
+              </div>
+            </section>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="dh-card dh-search-empty">
+        <span class="dh-search-empty-icon">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+        </span>
+        <p class="dh-search-empty-title">No matches for &ldquo;{{ query }}&rdquo;</p>
+        <p class="dh-search-empty-sub">
+          Try a different keyword, farm name, crop variety, harvest ID, or revenue ID.
+        </p>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary mt-3">
+          <i class="fas fa-arrow-left me-2" aria-hidden="true"></i>Back to Dashboard
+        </a>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="dh-card dh-search-empty">
+      <span class="dh-search-empty-icon">
+        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+      </span>
+      <p class="dh-search-empty-title">Start typing to search</p>
+      <p class="dh-search-empty-sub">
+        Use the search box in the top bar, or jump straight to a module below.
+      </p>
+      <div class="dh-search-quick-links">
+        <a class="dh-search-quick-link" href="{% url 'farms:farm_list' %}">
+          <i class="fas fa-tractor" aria-hidden="true"></i>Farms
+        </a>
+        <a class="dh-search-quick-link" href="{% url 'crops:crop_list' %}">
+          <i class="fas fa-seedling" aria-hidden="true"></i>Crops
+        </a>
+        <a class="dh-search-quick-link" href="{% url 'harvests:harvest_list' %}">
+          <i class="fas fa-wheat-awn" aria-hidden="true"></i>Harvests
+        </a>
+        <a class="dh-search-quick-link" href="{% url 'activities:activity_list' %}">
+          <i class="fas fa-clipboard-list" aria-hidden="true"></i>Activities
+        </a>
+        <a class="dh-search-quick-link" href="{% url 'revenue:revenue_list' %}">
+          <i class="fas fa-coins" aria-hidden="true"></i>Revenue
+        </a>
+        <a class="dh-search-quick-link" href="{% url 'harvest_calendar:calendar' %}">
+          <i class="fas fa-calendar-alt" aria-hidden="true"></i>Harvest Calendar
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

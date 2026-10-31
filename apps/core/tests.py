@@ -10,6 +10,7 @@ from apps.activities.models import FarmActivity
 from apps.crops.models import Crop
 from apps.farms.models import Farm
 from apps.harvests.models import Harvest, HarvestNotification
+from apps.revenue.models import Revenue
 
 
 class HomeViewTests(TestCase):
@@ -266,3 +267,134 @@ class NotificationCenterPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Rice')
         self.assertNotContains(response, 'Secret Corn')
+
+
+class GlobalSearchTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='search-owner',
+            password='secret1234',
+        )
+        self.today = timezone.localdate()
+        self.client.force_login(self.user)
+
+        self.farm = Farm.objects.create(
+            user=self.user,
+            name='Green Valley Farm',
+            owner='Mia Santos',
+            location='North Field',
+            size_hectares=Decimal('12.50'),
+            date_registered=timezone.now(),
+        )
+        self.crop = Crop.objects.create(
+            user=self.user,
+            farm=self.farm,
+            name='Rice',
+            variety='IR64',
+            planting_date=self.today - timedelta(days=100),
+            days_to_maturity=90,
+            area_hectares=Decimal('2.00'),
+            status=Crop.Status.MATURING,
+        )
+        self.activity = FarmActivity.objects.create(
+            user=self.user,
+            farm=self.farm,
+            crop=self.crop,
+            activity_type=FarmActivity.ActivityType.IRRIGATION,
+            location='North Field',
+            scheduled_date=self.today,
+            assigned_worker='Mia Santos',
+            priority=FarmActivity.Priority.HIGH,
+            status=FarmActivity.Status.PENDING,
+        )
+        self.harvest = Harvest.objects.create(
+            user=self.user,
+            farm=self.farm,
+            crop=self.crop,
+            harvest_date=self.today,
+            location='North Field',
+            crop_type='Rice',
+            quantity_harvested=Decimal('250.00'),
+            unit='kg',
+            quality_grade=Harvest.QualityGrade.PREMIUM,
+            workers_count=4,
+            harvested_by='Mia Santos',
+        )
+        self.revenue = Revenue.objects.create(
+            user=self.user,
+            crop=self.crop,
+            farm=self.farm,
+            sale_date=self.today,
+            quantity_sold=Decimal('100.00'),
+            unit='kg',
+            price_per_unit=Decimal('50.00'),
+            buyer='Local Market',
+        )
+
+    def test_global_search_requires_login(self):
+        self.client.logout()
+
+        response = self.client.get(reverse('global_search'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response.url)
+
+    def test_blank_query_renders_the_search_prompt(self):
+        response = self.client.get(reverse('global_search'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'core/search_results.html')
+        self.assertContains(response, 'Start typing to search')
+        self.assertEqual(response.context['query'], '')
+        self.assertEqual(response.context['total_results'], 0)
+
+    def test_search_finds_records_across_all_modules(self):
+        response = self.client.get(reverse('global_search'), {'q': 'Green Valley'})
+
+        self.assertEqual(response.status_code, 200)
+        groups = {group['key']: group for group in response.context['search_groups']}
+        self.assertEqual(set(groups), {'farms', 'crops', 'activities', 'harvests', 'revenue'})
+        for key, group in groups.items():
+            self.assertGreaterEqual(group['total'], 1, f'{key} should have a match')
+        self.assertGreaterEqual(response.context['total_results'], 5)
+        self.assertContains(response, 'Green Valley Farm')
+        self.assertContains(response, 'IR64')
+
+    def test_search_matches_record_identifiers(self):
+        response = self.client.get(
+            reverse('global_search'),
+            {'q': self.harvest.harvest_code},
+        )
+
+        groups = {group['key']: group for group in response.context['search_groups']}
+        self.assertEqual(groups['harvests']['items'][0]['title'], self.harvest.harvest_code)
+
+    def test_search_is_scoped_to_the_signed_in_user(self):
+        other_user = get_user_model().objects.create_user(
+            username='other-search-owner',
+            password='secret1234',
+        )
+        Farm.objects.create(
+            user=other_user,
+            name='Hidden Orchard',
+            owner='Other Owner',
+            location='South Field',
+            size_hectares=Decimal('4.00'),
+            date_registered=timezone.now(),
+        )
+
+        response = self.client.get(reverse('global_search'), {'q': 'Hidden Orchard'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_results'], 0)
+        for group in response.context['search_groups']:
+            self.assertEqual(group['items'], [])
+            self.assertEqual(group['total'], 0)
+        self.assertContains(response, 'No matches for')
+
+    def test_topbar_search_form_targets_the_search_page(self):
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertContains(response, f'action="{reverse("global_search")}"')
+        self.assertContains(response, 'name="q"')
+        self.assertNotContains(response, 'onsubmit="return false;"')

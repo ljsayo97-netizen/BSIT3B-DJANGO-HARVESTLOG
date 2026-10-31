@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .dashboard import build_dashboard_context
+from .search import build_global_search_context
 from .weather import build_weather_widget
 from apps.harvests.services import get_topbar_notifications
 
@@ -148,6 +149,17 @@ def logout_view(request):
 def home(request):
     """Render the farm operations dashboard for the signed-in user."""
     return render(request, 'home.html', build_dashboard_context(request.user))
+
+
+@login_required(login_url='login')
+@require_GET
+def global_search(request):
+    """Render grouped results for the topbar search box."""
+    return render(
+        request,
+        'core/search_results.html',
+        build_global_search_context(request.user, request.GET.get('q')),
+    )
 
 
 @login_required(login_url='login')

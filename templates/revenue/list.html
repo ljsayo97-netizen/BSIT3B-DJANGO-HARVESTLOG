@@ -1,0 +1,912 @@
+{% extends "theme/base.html" %}
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none" aria-label="Page header">
+    <div class="container-xl">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Crop revenue &amp; productivity</div>
+          <h2 class="page-title mb-0">Revenue per Hectare</h2>
+          <div class="text-muted mt-1">
+            Track every crop's sales and see how much each planted hectare earns.
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{% url 'revenue:revenue_analytics' %}"
+               class="btn btn-outline-primary">
+              <i class="fas fa-chart-pie me-2"></i> Analytics
+            </a>
+            <a href="{% url 'revenue:revenue_export' %}{% if query_string %}?{{ query_string }}{% endif %}"
+               class="btn btn-outline-secondary">
+              <i class="fas fa-file-csv me-2"></i> Export CSV
+            </a>
+            <button type="button"
+                    class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#revenueModal"
+                    data-mode="create">
+              <i class="fas fa-plus-circle me-2"></i> Record Sale
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br>
+
+  <div class="toast-container position-fixed top-0 end-0 p-3" id="revenueToastContainer" aria-live="polite" aria-atomic="true">
+    {% for message in messages %}
+    <div class="toast bg-info-lt" role="status" aria-atomic="true" data-bs-delay="4500" style="--tblr-toast-color: #000;">
+      <div class="d-flex">
+        <div class="toast-body">{{ message }}</div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="revenueAlert" class="alert alert-danger d-none" role="alert"></div>
+
+  <!-- Filters -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="GET" action="{% url 'revenue:revenue_list' %}#crop-tracker" class="row g-3 align-items-end">
+        <div class="col-lg-3">
+          <label class="form-label">Search</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" value="{{ query }}" class="form-control"
+                   placeholder="Revenue ID, crop, farm, buyer, or remarks">
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Farm</label>
+          <select name="farm" class="form-select">
+            <option value="">All farms</option>
+            {% for farm in farms %}
+            <option value="{{ farm.id }}" {% if farm_id == farm.id %}selected{% endif %}>{{ farm.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Crop</label>
+          <select name="crop" class="form-select">
+            <option value="">All crops</option>
+            {% for crop in crops %}
+            <option value="{{ crop.id }}" {% if crop_id == crop.id %}selected{% endif %}>
+              {{ crop.name }} — {{ crop.farm.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">From</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">To</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label">Sort by</label>
+          <select name="sort" class="form-select">
+            {% for value, label in sort_choices %}
+            <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-filter me-1"></i> Apply
+          </button>
+          <a href="{% url 'revenue:revenue_list' %}#crop-tracker" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="row row-cards mb-3">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-success-lt text-success rounded-pill">Total revenue</span>
+              <h2 class="card-title mb-1 mt-2">
+                {{ currency_symbol }}{{ summary.total_revenue|floatformat:2 }}
+              </h2>
+              <p class="text-muted small mb-0">
+                {{ summary.revenue_count }} sale record{{ summary.revenue_count|pluralize }}
+                {% if summary.unit_totals %}
+                  &middot;
+                  {% for unit in summary.unit_totals %}
+                    {{ unit.quantity|floatformat:2 }} {{ unit.unit }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% endif %}
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-coins fa-2x text-success"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-primary-lt text-primary rounded-pill">Revenue per hectare</span>
+              <h2 class="card-title mb-1 mt-2">
+                {{ currency_symbol }}{{ summary.revenue_per_hectare|floatformat:2 }}
+              </h2>
+              <p class="text-muted small mb-0">Across all crop hectares in this view</p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-chart-line fa-2x text-primary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-info-lt text-info rounded-pill">Tracked cropland</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.tracked_area|floatformat:2 }} <span class="text-muted small">ha</span></h2>
+              <p class="text-muted small mb-0">
+                {{ summary.area_with_sales|floatformat:2 }} ha produced sales
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-mountain-sun fa-2x text-info"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-warning-lt text-warning rounded-pill">Crops with sales</span>
+              <h2 class="card-title mb-1 mt-2">{{ summary.sales_crop_count }} <span class="text-muted small">/ {{ summary.crop_count }}</span></h2>
+              <p class="text-muted small mb-0">
+                {{ summary.unsold_crop_count }} crop{{ summary.unsold_crop_count|pluralize }} still without a sale
+              </p>
+            </div>
+            <div class="flex-shrink-0">
+              <i class="fas fa-seedling fa-2x text-warning"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if summary.top_crop %}
+  <div class="alert alert-success mb-3" role="status">
+    <div class="d-flex gap-2 align-items-center">
+      <i class="fas fa-trophy"></i>
+      <div>
+        <strong>Top earning crop:</strong>
+        {{ summary.top_crop.crop_name }} ({{ summary.top_crop.farm_name }})
+        earned {{ currency_symbol }}{{ summary.top_crop.revenue_total|floatformat:2 }}
+        &mdash; {{ currency_symbol }}{{ summary.top_crop.revenue_per_hectare|floatformat:2 }} per hectare
+        on {{ summary.top_crop.area_hectares|floatformat:2 }} ha.
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Charts -->
+  <div class="row row-cards mb-3">
+    <div class="col-lg-8">
+      <div class="card h-100">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Monthly Revenue</h3>
+            <div class="text-muted small">Sales value over the last 12 months for this view.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="revenue-chart"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h3 class="card-title">Top Crops by Revenue</h3>
+        </div>
+        <div class="card-body">
+          {% for row in top_crops %}
+          <div class="d-flex align-items-center justify-content-between mb-1 gap-2">
+            <span class="text-truncate" title="{{ row.crop_name }} — {{ row.farm_name }}">
+              {{ row.crop_name }}
+              <span class="text-muted small">({{ row.farm_name }})</span>
+            </span>
+            <span class="fw-semibold text-nowrap">{{ currency_symbol }}{{ row.revenue_total|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="progress progress-sm flex-grow-1">
+              <div class="progress-bar bg-success" style="width: {{ row.revenue_share }}%"></div>
+            </div>
+            <span class="text-muted small text-nowrap">{{ row.revenue_share }}%</span>
+          </div>
+          {% empty %}
+          <div class="empty py-4">
+            <div class="empty-icon"><i class="fas fa-coins fa-2x text-muted"></i></div>
+            <p class="empty-title">No revenue yet</p>
+            <p class="empty-subtitle text-muted">Record a sale to start tracking crop income and revenue per hectare.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crop per-hectare tracker -->
+  <div class="card mb-3" id="crop-tracker" style="scroll-margin-top: 5rem;">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title mb-1">Crop Revenue Tracker</h3>
+        <div class="text-muted small">
+          Every crop is shown with its planted area, harvest yield, sales, and revenue per hectare.
+        </div>
+      </div>
+      <div class="card-actions">
+        <span class="badge bg-secondary-lt text-secondary">{{ crop_rows|length }} crop{{ crop_rows|length|pluralize }}</span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter table-hover card-table text-nowrap">
+        <thead>
+          <tr>
+            <th>Crop / Farm</th>
+            <th class="text-end">Area</th>
+            <th class="text-end">Harvested</th>
+            <th class="text-end">Yield / ha</th>
+            <th class="text-end">Sold</th>
+            <th class="text-end">Revenue</th>
+            <th class="text-end">Revenue / ha</th>
+            <th class="text-end">Sales</th>
+            <th>Last sale</th>
+            <th class="w-1">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in crop_rows %}
+          <tr>
+            <td>
+              <div class="fw-semibold">{{ row.crop_name }}</div>
+              <div class="text-muted small">
+                {{ row.variety|default:"No variety" }} &middot; {{ row.farm_name }}
+              </div>
+            </td>
+            <td class="text-end text-muted">{{ row.area_hectares|floatformat:2 }} ha</td>
+            <td class="text-end text-muted">
+              {% if row.harvested_quantity %}
+                {{ row.harvested_quantity|floatformat:2 }} {{ row.harvest_unit }}
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+            <td class="text-end text-muted">
+              {% if row.harvested_quantity and row.area_hectares %}
+                {{ row.yield_per_hectare|floatformat:2 }} {{ row.harvest_unit }}/ha
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+            <td class="text-end text-muted">
+              {% if row.has_sales %}
+                {{ row.sold_quantity|floatformat:2 }} {{ row.sold_unit }}
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+            <td class="text-end fw-semibold">
+              {% if row.has_sales %}
+                {{ currency_symbol }}{{ row.revenue_total|floatformat:2 }}
+              {% else %}
+                <span class="text-muted">&mdash;</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if row.has_sales %}
+                <span class="badge bg-success-lt text-success">
+                  {{ currency_symbol }}{{ row.revenue_per_hectare|floatformat:2 }}/ha
+                </span>
+              {% else %}
+                <span class="badge bg-secondary-lt text-secondary">No sales</span>
+              {% endif %}
+            </td>
+            <td class="text-end text-muted">{{ row.sale_count }}</td>
+            <td class="text-muted">
+              {% if row.last_sale_date %}{{ row.last_sale_date|date:"M j, Y" }}{% else %}&mdash;{% endif %}
+            </td>
+            <td>
+              <button type="button"
+                      class="btn btn-sm btn-outline-success"
+                      data-bs-toggle="modal"
+                      data-bs-target="#revenueModal"
+                      data-mode="create"
+                      data-crop-id="{{ row.crop_id }}"
+                      title="Record a sale for {{ row.crop_name }}">
+                <i class="fas fa-plus me-1"></i> Sell
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10">
+              <div class="empty py-5">
+                <div class="empty-icon"><i class="fas fa-seedling fa-2x text-muted"></i></div>
+                <p class="empty-title">No crops match this view</p>
+                <p class="empty-subtitle">Add a crop with its planted area, then record a sale to track revenue per hectare.</p>
+                <div class="empty-action">
+                  <a href="{% url 'crops:crop_list' %}" class="btn btn-outline-primary me-2">Manage Crops</a>
+                  <a href="{% url 'revenue:revenue_list' %}" class="btn btn-primary">Reset Filters</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Sales records -->
+  <div class="card" id="sales-records" style="scroll-margin-top: 5rem;">
+    <div class="card-header">
+      <div class="card-title">
+        Sales Records
+        <span class="text-muted fw-normal">— {{ revenue_records.paginator.count }} record{{ revenue_records.paginator.count|pluralize }}</span>
+      </div>
+      <div class="card-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#revenueModal" data-mode="create">
+          <i class="fas fa-plus-circle me-1"></i> Record Sale
+        </button>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter table-hover card-table text-nowrap">
+        <thead>
+          <tr>
+            <th>Revenue ID</th>
+            <th>Sale date</th>
+            <th>Farm</th>
+            <th>Crop</th>
+            <th class="text-end">Quantity</th>
+            <th class="text-end">Price / unit</th>
+            <th class="text-end">Total</th>
+            <th class="text-end">Per hectare</th>
+            <th>Buyer / market</th>
+            <th class="w-1">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for revenue in revenue_records %}
+          <tr>
+            <td class="fw-semibold text-primary">{{ revenue.revenue_code|default:"—" }}</td>
+            <td class="text-muted">{{ revenue.sale_date|date:"M j, Y" }}</td>
+            <td class="fw-semibold">{{ revenue.farm.name }}</td>
+            <td>
+              <div>{{ revenue.crop.name }}</div>
+              <div class="text-muted small">
+                {{ revenue.crop.variety|default:"No variety" }} &middot;
+                {{ revenue.crop.area_hectares|floatformat:2 }} ha
+              </div>
+            </td>
+            <td class="text-end text-muted">{{ revenue.quantity_sold|floatformat:2 }} {{ revenue.unit }}</td>
+            <td class="text-end text-muted">{{ currency_symbol }}{{ revenue.price_per_unit|floatformat:2 }}</td>
+            <td class="text-end fw-semibold">{{ currency_symbol }}{{ revenue.total_revenue|floatformat:2 }}</td>
+            <td class="text-end">
+              <span class="badge bg-success-lt text-success">
+                {{ currency_symbol }}{{ revenue.revenue_per_hectare|floatformat:2 }}/ha
+              </span>
+            </td>
+            <td class="text-muted" style="max-width: 220px; white-space: normal;">
+              {{ revenue.buyer|default:"—"|truncatechars:60 }}
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <button type="button"
+                        class="btn btn-ghost-secondary btn-icon btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#revenueModal"
+                        data-mode="edit"
+                        data-id="{{ revenue.id }}"
+                        data-crop-id="{{ revenue.crop_id }}"
+                        data-sale-date="{{ revenue.sale_date|date:'Y-m-d' }}"
+                        data-quantity="{{ revenue.quantity_sold }}"
+                        data-unit="{{ revenue.unit }}"
+                        data-price="{{ revenue.price_per_unit }}"
+                        data-buyer="{{ revenue.buyer|default:''|escape }}"
+                        data-notes="{{ revenue.notes|default:''|escape }}"
+                        title="Edit revenue record">
+                  <i class="fas fa-edit text-primary"></i>
+                </button>
+                <button type="button"
+                        class="btn btn-ghost-secondary btn-icon btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteRevenueModal"
+                        data-id="{{ revenue.id }}"
+                        data-name="{{ revenue.revenue_code|default:revenue.crop.name }}"
+                        title="Delete revenue record">
+                  <i class="fas fa-trash-alt text-danger"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10">
+              <div class="empty py-5">
+                <div class="empty-icon"><i class="fas fa-receipt fa-2x text-muted"></i></div>
+                <p class="empty-title">No sales recorded for this view</p>
+                <p class="empty-subtitle">Record the first sale to calculate crop revenue and revenue per hectare.</p>
+                <div class="empty-action">
+                  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#revenueModal" data-mode="create">
+                    <i class="fas fa-plus-circle me-2"></i> Record Sale
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if revenue_records.paginator.num_pages > 1 %}
+    <div class="card-footer d-flex align-items-center">
+      <p class="m-0 text-muted">
+        Showing <span class="fw-medium">{{ revenue_records.start_index }}</span>
+        to <span class="fw-medium">{{ revenue_records.end_index }}</span>
+        of <span class="fw-medium">{{ revenue_records.paginator.count }}</span>
+        sale{{ revenue_records.paginator.count|pluralize }}
+      </p>
+      <ul class="pagination m-0 ms-auto">
+        {% if revenue_records.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ revenue_records.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}#sales-records">
+            <i class="ti ti-chevron-left"></i> prev
+          </a>
+        </li>
+        {% endif %}
+        {% for num in revenue_records.paginator.page_range %}
+        <li class="page-item {% if revenue_records.number == num %}active{% endif %}">
+          <a class="page-link" href="?page={{ num }}{% if query_string %}&{{ query_string }}{% endif %}#sales-records">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if revenue_records.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ revenue_records.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}#sales-records">
+            next <i class="ti ti-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Record / Edit Revenue Modal -->
+<div class="modal modal-blur fade" id="revenueModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="revenueModalTitle">Record Sale</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="revenueForm">
+        {% csrf_token %}
+        <input type="hidden" name="id" id="revenue_id">
+        <div class="modal-body">
+          <div id="revenueFormError" class="alert alert-danger d-none"></div>
+
+          <div class="alert alert-info" role="status">
+            <div class="d-flex gap-2">
+              <i class="fas fa-calculator mt-1"></i>
+              <div>
+                <strong>Revenue per hectare is automatic.</strong>
+                Select the crop, enter what was sold and its price, and HarvestLog calculates
+                the total revenue and divides it by the crop's planted hectares.
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-7">
+              <label class="form-label">Crop <span class="text-danger">*</span></label>
+              <select name="crop_id" id="revenue_crop_id" class="form-select" required>
+                <option value="">Select the crop that was sold</option>
+                {% for crop in crops %}
+                <option value="{{ crop.id }}"
+                        data-farm-name="{{ crop.farm.name }}"
+                        data-crop-name="{{ crop.name }}"
+                        data-area="{{ crop.area_hectares }}">
+                  {{ crop.name }} ({{ crop.variety|default:"n/a" }}) — {{ crop.farm.name }}
+                  &middot; {{ crop.area_hectares|floatformat:2 }} ha
+                </option>
+                {% endfor %}
+              </select>
+              <div class="form-hint" id="revenue_crop_hint">The crop's farm and planted area appear here.</div>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Sale date</label>
+              <input type="date" name="sale_date" id="revenue_sale_date" class="form-control"
+                     value="{{ today|date:'Y-m-d' }}">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Quantity sold <span class="text-danger">*</span></label>
+              <input type="number" name="quantity_sold" id="revenue_quantity_sold"
+                     class="form-control" min="0.01" step="0.01" required placeholder="0.00">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Unit</label>
+              <input type="text" name="unit" id="revenue_unit" class="form-control"
+                     list="revenue-unit-options" value="kg" placeholder="kg">
+              <datalist id="revenue-unit-options">
+                <option value="kg"></option>
+                <option value="tons"></option>
+                <option value="baskets"></option>
+                <option value="sacks"></option>
+              </datalist>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Price per unit <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">{{ currency_symbol }}</span>
+                <input type="number" name="price_per_unit" id="revenue_price_per_unit"
+                       class="form-control" min="0" step="0.01" required placeholder="0.00">
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="card bg-success-lt border-0">
+                <div class="card-body py-3">
+                  <div class="row g-2 align-items-center">
+                    <div class="col-md-7">
+                      <div class="text-muted small text-uppercase">Calculated total revenue</div>
+                      <div class="h1 mb-0" id="revenue_total_preview">{{ currency_symbol }}0.00</div>
+                    </div>
+                    <div class="col-md-5">
+                      <div class="text-muted small text-uppercase">Revenue per hectare</div>
+                      <div class="h3 mb-0" id="revenue_per_hectare_preview">{{ currency_symbol }}0.00 / ha</div>
+                      <div class="text-muted small" id="revenue_area_preview">Select a crop to see its area.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Buyer / market</label>
+              <input type="text" name="buyer" id="revenue_buyer" class="form-control"
+                     placeholder="Trader, market, cooperative, or buyer name (optional)">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Remarks</label>
+              <textarea name="notes" id="revenue_notes" class="form-control" rows="3"
+                        placeholder="Delivery details, payment terms, or other notes..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost-secondary me-auto" id="revenueClearBtn">
+            <i class="ti ti-x me-1"></i>Clear
+          </button>
+          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="revenueSubmitBtn">Save Sale</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Revenue Modal -->
+<div class="modal modal-blur fade" id="deleteRevenueModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">Delete Revenue Record</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">
+          Are you sure you want to delete <strong id="deleteRevenueName"></strong>?
+          This sale will be removed from the crop's revenue and per-hectare totals.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteRevenueBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ revenue_chart.labels|json_script:"revenue-chart-labels" }}
+{{ revenue_chart.series|json_script:"revenue-chart-series" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const REVENUE_SAVE_URL = '{% url "revenue:revenue_save_ajax" %}';
+  const REVENUE_DELETE_BASE = '{% url "revenue:revenue_delete_ajax" 0 %}'.replace('/0/', '/');
+  const CURRENCY = '{{ currency_symbol|escapejs }}';
+  const TODAY = '{{ today|date:"Y-m-d" }}';
+
+  const modalEl = document.getElementById('revenueModal');
+  const form = document.getElementById('revenueForm');
+  const errorBox = document.getElementById('revenueFormError');
+  const titleEl = document.getElementById('revenueModalTitle');
+  const submitBtn = document.getElementById('revenueSubmitBtn');
+  const clearBtn = document.getElementById('revenueClearBtn');
+  const cropSelect = document.getElementById('revenue_crop_id');
+  const saleDateInput = document.getElementById('revenue_sale_date');
+  const quantityInput = document.getElementById('revenue_quantity_sold');
+  const unitInput = document.getElementById('revenue_unit');
+  const priceInput = document.getElementById('revenue_price_per_unit');
+  const buyerInput = document.getElementById('revenue_buyer');
+  const notesInput = document.getElementById('revenue_notes');
+  const cropHint = document.getElementById('revenue_crop_hint');
+  const totalPreview = document.getElementById('revenue_total_preview');
+  const perHectarePreview = document.getElementById('revenue_per_hectare_preview');
+  const areaPreview = document.getElementById('revenue_area_preview');
+
+  const deleteModalEl = document.getElementById('deleteRevenueModal');
+  const deleteNameEl = document.getElementById('deleteRevenueName');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteRevenueBtn');
+
+  let currentMode = 'create';
+
+  document.querySelectorAll('#revenueToastContainer .toast').forEach(function (el) {
+    bootstrap.Toast.getOrCreateInstance(el).show();
+  });
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+  }
+
+  function formatMoney(value) {
+    return CURRENCY + Number(value || 0).toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.classList.remove('d-none');
+  }
+
+  function clearError() {
+    errorBox.textContent = '';
+    errorBox.classList.add('d-none');
+  }
+
+  function selectedOption() {
+    return cropSelect.options[cropSelect.selectedIndex] || null;
+  }
+
+  function selectedArea() {
+    const option = selectedOption();
+    return option && option.value ? parseFloat(option.dataset.area || 0) : 0;
+  }
+
+  function updatePreview() {
+    const option = selectedOption();
+    const hasCrop = option && option.value;
+    const area = selectedArea();
+    const quantity = parseFloat(quantityInput.value || 0);
+    const price = parseFloat(priceInput.value || 0);
+    const total = quantity * price;
+    const perHectare = area > 0 ? total / area : 0;
+
+    totalPreview.textContent = formatMoney(total);
+    perHectarePreview.textContent = formatMoney(perHectare) + ' / ha';
+    cropHint.textContent = hasCrop
+      ? (option.dataset.farmName || 'Farm') + ' · ' + (option.dataset.cropName || 'Crop')
+      : "The crop's farm and planted area appear here.";
+    areaPreview.textContent = hasCrop
+      ? Number(area).toLocaleString('en-PH', { maximumFractionDigits: 2 }) + ' hectare' + (area === 1 ? '' : 's') + ' planted'
+      : 'Select a crop to see its area.';
+  }
+
+  function resetForm() {
+    form.reset();
+    document.getElementById('revenue_id').value = '';
+    saleDateInput.value = TODAY;
+    unitInput.value = 'kg';
+    clearError();
+    updatePreview();
+  }
+
+  modalEl.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (!button) return;
+
+    currentMode = button.dataset.mode || 'create';
+    clearError();
+
+    if (currentMode === 'edit') {
+      titleEl.textContent = 'Edit Sale';
+      submitBtn.textContent = 'Update Sale';
+      document.getElementById('revenue_id').value = button.dataset.id || '';
+      cropSelect.value = button.dataset.cropId || '';
+      saleDateInput.value = button.dataset.saleDate || TODAY;
+      quantityInput.value = button.dataset.quantity || '';
+      unitInput.value = button.dataset.unit || 'kg';
+      priceInput.value = button.dataset.price || '';
+      buyerInput.value = button.dataset.buyer || '';
+      notesInput.value = button.dataset.notes || '';
+    } else {
+      titleEl.textContent = 'Record Sale';
+      submitBtn.textContent = 'Save Sale';
+      resetForm();
+      if (button.dataset.cropId) {
+        cropSelect.value = button.dataset.cropId;
+      }
+    }
+
+    updatePreview();
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', clearError);
+
+  cropSelect.addEventListener('change', updatePreview);
+  quantityInput.addEventListener('input', updatePreview);
+  priceInput.addEventListener('input', updatePreview);
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', resetForm);
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    clearError();
+    submitBtn.disabled = true;
+
+    fetch(REVENUE_SAVE_URL, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Accept': 'application/json',
+      },
+      body: new FormData(form),
+    })
+      .then(async function (response) {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Could not save the revenue record.');
+        }
+        return data;
+      })
+      .then(function () {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        location.reload();
+      })
+      .catch(function (error) {
+        showError(error.message);
+      })
+      .finally(function () {
+        submitBtn.disabled = false;
+      });
+  });
+
+  deleteModalEl.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (!button) return;
+    deleteModalEl.dataset.revenueId = button.dataset.id || '';
+    deleteNameEl.textContent = button.dataset.name || 'this revenue record';
+    confirmDeleteBtn.disabled = false;
+  });
+
+  confirmDeleteBtn.addEventListener('click', function () {
+    const revenueId = deleteModalEl.dataset.revenueId;
+    if (!revenueId) return;
+
+    confirmDeleteBtn.disabled = true;
+
+    fetch(REVENUE_DELETE_BASE + revenueId + '/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Accept': 'application/json',
+      },
+    })
+      .then(async function (response) {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Could not delete the revenue record.');
+        }
+        return data;
+      })
+      .then(function () {
+        bootstrap.Modal.getOrCreateInstance(deleteModalEl).hide();
+        location.reload();
+      })
+      .catch(function (error) {
+        showError(error.message);
+        confirmDeleteBtn.disabled = false;
+      });
+  });
+
+  /* Monthly revenue chart */
+  (function () {
+    const chartEl = document.getElementById('revenue-chart');
+    const labelsEl = document.getElementById('revenue-chart-labels');
+    const seriesEl = document.getElementById('revenue-chart-series');
+
+    if (!chartEl || !labelsEl || !seriesEl || !window.ApexCharts) return;
+
+    const labels = JSON.parse(labelsEl.textContent);
+    const series = JSON.parse(seriesEl.textContent);
+
+    new ApexCharts(chartEl, {
+      chart: {
+        type: 'bar',
+        height: 300,
+        fontFamily: 'inherit',
+        toolbar: { show: false },
+        animations: { enabled: false },
+      },
+      theme: { mode: 'dark' },
+      series: [{ name: 'Revenue', data: series }],
+      colors: ['#22c55e'],
+      plotOptions: {
+        bar: {
+          columnWidth: '48%',
+          borderRadius: 5,
+        },
+      },
+      dataLabels: { enabled: false },
+      grid: { strokeDashArray: 4 },
+      xaxis: {
+        categories: labels,
+        labels: {
+          rotate: -45,
+          rotateAlways: true,
+          style: { fontSize: '11px' },
+        },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+      },
+      yaxis: {
+        min: 0,
+        forceNiceScale: true,
+        labels: {
+          formatter: function (value) {
+            if (value >= 1000000) return CURRENCY + (value / 1000000).toFixed(1) + 'M';
+            if (value >= 1000) return CURRENCY + (value / 1000).toFixed(1) + 'K';
+            return CURRENCY + Math.round(value);
+          },
+        },
+      },
+      tooltip: {
+        y: {
+          formatter: function (value) {
+            return formatMoney(value);
+          },
+        },
+      },
+    }).render();
+  })();
+})();
+</script>
+{% endblock %}

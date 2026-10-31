@@ -1,0 +1,454 @@
+{% extends "theme/base.html" %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/harvest-calendar.css' %}">
+{% endblock %}
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none" aria-label="Page header">
+    <div class="container-xl">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Farm timeline</div>
+          <h2 class="page-title mb-0">Harvest Calendar</h2>
+          <div class="text-muted mt-1">
+            Every crop's system-assigned harvest date and every scheduled farm activity in one place.
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{% url 'crops:crop_list' %}" class="btn btn-outline-primary">
+              <i class="fas fa-seedling me-2"></i> Add Crop
+            </a>
+            <a href="{% url 'activities:activity_list' %}" class="btn btn-primary">
+              <i class="fas fa-calendar-plus me-2"></i> Schedule Activity
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br>
+
+  <!-- Snapshot cards -->
+  <div class="row row-cards mb-3">
+    {% if source != 'activities' %}
+    <div class="{% if source == 'all' %}col-sm-6 col-xl-3{% else %}col-sm-6 col-xl-4{% endif %}">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-info-lt text-info rounded-pill">Next 30 days</span>
+              <h2 class="card-title mb-1 mt-2">{{ calendar_summary.upcoming_harvests }}</h2>
+              <p class="text-muted small mb-0">Upcoming harvest date{{ calendar_summary.upcoming_harvests|pluralize }}</p>
+            </div>
+            <div class="flex-shrink-0"><i class="fas fa-seedling fa-2x text-info"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="{% if source == 'all' %}col-sm-6 col-xl-3{% else %}col-sm-6 col-xl-4{% endif %}">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-danger-lt text-danger rounded-pill">Ready now</span>
+              <h2 class="card-title mb-1 mt-2">{{ calendar_summary.ready_harvests }}</h2>
+              <p class="text-muted small mb-0">Crop{{ calendar_summary.ready_harvests|pluralize }} ready for harvest</p>
+            </div>
+            <div class="flex-shrink-0"><i class="fas fa-triangle-exclamation fa-2x text-danger"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="{% if source == 'all' %}col-sm-6 col-xl-3{% else %}col-sm-6 col-xl-4{% endif %}">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-success-lt text-success rounded-pill">Recorded</span>
+              <h2 class="card-title mb-1 mt-2">{{ calendar_summary.recorded_harvests }}</h2>
+              <p class="text-muted small mb-0">Harvest record{{ calendar_summary.recorded_harvests|pluralize }} plotted</p>
+            </div>
+            <div class="flex-shrink-0"><i class="fas fa-clipboard-check fa-2x text-success"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if source != 'harvests' %}
+    <div class="{% if source == 'all' %}col-sm-6 col-xl-3{% else %}col-sm-6 col-xl-4{% endif %}">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <span class="badge bg-primary-lt text-primary rounded-pill">Activities</span>
+              <h2 class="card-title mb-1 mt-2">{{ calendar_summary.active_activities }}</h2>
+              <p class="text-muted small mb-0">
+                Open activity{{ calendar_summary.active_activities|pluralize }} &middot;
+                {{ calendar_summary.completed_activities }} completed
+              </p>
+            </div>
+            <div class="flex-shrink-0"><i class="fas fa-list-check fa-2x text-primary"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-3">
+    <div class="card-body py-3">
+      <form method="GET" action="{% url 'harvest_calendar:calendar' %}" class="row g-2 align-items-end" data-calendar-filters>
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label small text-muted mb-1" for="calendarFarm">Farm</label>
+          <select name="farm" id="calendarFarm" class="form-select" data-auto-submit>
+            <option value="">All farms</option>
+            {% for farm in farms %}
+            <option value="{{ farm.id }}" {% if farm_id == farm.id %}selected{% endif %}>{{ farm.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label small text-muted mb-1" for="calendarCrop">Crop</label>
+          <select name="crop" id="calendarCrop" class="form-select" data-auto-submit>
+            <option value="">All crops</option>
+            {% for crop in crops %}
+            <option value="{{ crop.id }}" {% if crop_id == crop.id %}selected{% endif %}>
+              {{ crop.name }} — {{ crop.farm.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label small text-muted mb-1" for="calendarSource">Show</label>
+          <select name="show" id="calendarSource" class="form-select" data-auto-submit>
+            {% for value, label in source_choices %}
+            <option value="{{ value }}" {% if source == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-fill">
+            <i class="fas fa-filter me-1"></i> Apply
+          </button>
+          <a href="{% url 'harvest_calendar:calendar' %}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="row row-cards">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Calendar</h3>
+            <div class="text-muted small">
+              Click a date item to see the crop, farm, worker, and full details.
+            </div>
+          </div>
+          <div class="card-actions d-flex align-items-center gap-2">
+            <span class="badge bg-primary-lt text-primary">{{ source_label }}</span>
+            <span class="badge bg-secondary-lt text-secondary">
+              {{ calendar_summary.total_events }} item{{ calendar_summary.total_events|pluralize }}
+            </span>
+          </div>
+        </div>
+        <div class="card-body pt-2">
+          <div id="harvest-calendar" aria-label="Harvest and activity calendar"></div>
+        </div>
+        <div class="card-footer">
+          <div class="hc-legend">
+            {% for item in calendar_legend %}
+            <span class="hc-legend-item">
+              <span class="hc-legend-dot" style="background-color: {{ item.color }};"></span>
+              {{ item.label }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      {% if source != 'activities' %}
+      <div class="card mb-3">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Upcoming harvests</h3>
+            <div class="text-muted small">Automatically generated from your crops.</div>
+          </div>
+        </div>
+        <div class="list-group list-group-flush">
+          {% for crop in upcoming_harvests %}
+          <a href="{% url 'crops:crop_list' %}" class="list-group-item list-group-item-action">
+            <div class="d-flex align-items-start gap-2">
+              <div class="hc-date-chip">{{ crop.expected_harvest_date|date:"M j" }}</div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate">{{ crop.name }}</div>
+                <div class="text-muted small text-truncate">{{ crop.farm.name }} &middot; {{ crop.area_hectares|floatformat:2 }} ha</div>
+                <div class="text-muted small">{{ crop.days_to_harvest_label }}</div>
+              </div>
+              <span class="badge {% if crop.maturity_status == 'ready' %}bg-danger-lt text-danger{% elif crop.maturity_status == 'approaching' %}bg-warning-lt text-warning{% else %}bg-info-lt text-info{% endif %}">
+                {{ crop.maturity_label }}
+              </span>
+            </div>
+          </a>
+          {% empty %}
+          <div class="list-group-item">
+            <div class="empty py-4">
+              <div class="empty-icon"><i class="fas fa-seedling fa-2x text-muted"></i></div>
+              <p class="empty-title">No upcoming harvests</p>
+              <p class="empty-subtitle text-muted">Add a crop and its harvest date will appear here automatically.</p>
+              <div class="empty-action">
+                <a href="{% url 'crops:crop_list' %}" class="btn btn-outline-primary btn-sm">Add Crop</a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if source != 'harvests' %}
+      <div class="card mb-3">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Next activities</h3>
+            <div class="text-muted small">Open work from the activity schedule.</div>
+          </div>
+        </div>
+        <div class="list-group list-group-flush">
+          {% for activity in upcoming_activities %}
+          <a href="{% url 'activities:activity_list' %}" class="list-group-item list-group-item-action">
+            <div class="d-flex align-items-start gap-2">
+              <div class="hc-date-chip">{{ activity.scheduled_date|date:"M j" }}</div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate">
+                  <i class="{{ activity.icon }} me-1"></i>{{ activity.get_activity_type_display }}
+                </div>
+                <div class="text-muted small text-truncate">{{ activity.farm.name }} &middot; {{ activity.location }}</div>
+                <div class="text-muted small text-truncate">{{ activity.assigned_worker }}</div>
+              </div>
+              <span class="badge {{ activity.status_badge }}">{{ activity.get_status_display }}</span>
+            </div>
+          </a>
+          {% empty %}
+          <div class="list-group-item">
+            <div class="empty py-4">
+              <div class="empty-icon"><i class="fas fa-list-check fa-2x text-muted"></i></div>
+              <p class="empty-title">No open activities</p>
+              <p class="empty-subtitle text-muted">Scheduled work will appear here and on the calendar.</p>
+              <div class="empty-action">
+                <a href="{% url 'activities:activity_list' %}" class="btn btn-outline-primary btn-sm">Schedule Activity</a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex gap-2">
+            <i class="fas fa-circle-info text-info mt-1"></i>
+            <div class="text-muted small">
+              {% if source == 'activities' %}
+              Activities appear on their scheduled date and keep their current status.
+              Changing an activity's schedule or status updates this calendar automatically.
+              {% elif source == 'harvests' %}
+              Harvest dates are calculated from each crop's planting date and days to maturity.
+              When a harvest is recorded, its actual date replaces the expected date on this calendar.
+              {% else %}
+              Harvest dates are calculated from each crop's planting date and days to maturity.
+              When a harvest is recorded, its actual date replaces the expected date on this calendar.
+              Activities appear on their scheduled date and keep their current status.
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar event details -->
+<div class="modal modal-blur fade" id="calendarEventModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-2 min-w-0">
+          <i id="calendarEventIcon" class="fas fa-calendar-day text-primary"></i>
+          <h5 class="modal-title text-truncate" id="calendarEventModalTitle">Calendar item</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <span id="calendarEventBadge" class="badge bg-secondary-lt text-secondary">Event</span>
+        </div>
+        <div id="calendarEventDetails" class="hc-detail-list"></div>
+      </div>
+      <div class="modal-footer">
+        <a href="#" id="calendarEventLink" class="btn btn-primary d-none">
+          <i class="fas fa-arrow-up-right-from-square me-2"></i> Open record
+        </a>
+        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ calendar_events|json_script:"harvest-calendar-events" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const form = document.querySelector('[data-calendar-filters]');
+  if (!form) {
+    return;
+  }
+  form.querySelectorAll('[data-auto-submit]').forEach(function (field) {
+    field.addEventListener('change', function () {
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    });
+  });
+})();
+</script>
+<script src="{% static 'libs/fullcalendar/index.global.min.js' %}"></script>
+<script>
+(function () {
+  const calendarEl = document.getElementById('harvest-calendar');
+  const eventsEl = document.getElementById('harvest-calendar-events');
+  const modalEl = document.getElementById('calendarEventModal');
+
+  if (!calendarEl || !eventsEl || !modalEl || !window.FullCalendar) {
+    return;
+  }
+
+  const events = JSON.parse(eventsEl.textContent);
+  const modal = window.bootstrap ? new bootstrap.Modal(modalEl) : null;
+  const modalTitle = document.getElementById('calendarEventModalTitle');
+  const modalIcon = document.getElementById('calendarEventIcon');
+  const modalBadge = document.getElementById('calendarEventBadge');
+  const modalDetails = document.getElementById('calendarEventDetails');
+  const modalLink = document.getElementById('calendarEventLink');
+
+  function addDetail(label, value) {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+    const row = document.createElement('div');
+    row.className = 'hc-detail-row';
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'hc-detail-label';
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement('span');
+    valueEl.className = 'hc-detail-value';
+    valueEl.textContent = value;
+
+    row.appendChild(labelEl);
+    row.appendChild(valueEl);
+    modalDetails.appendChild(row);
+  }
+
+  function showEvent(event) {
+    const props = event.extendedProps || {};
+
+    modalTitle.textContent = props.kind_label || event.title;
+    modalIcon.className = props.icon || 'fas fa-calendar-day';
+    modalBadge.textContent = props.status_label || props.kind_label || 'Calendar item';
+    modalBadge.className = 'badge ' + (props.badge_class || 'bg-secondary-lt text-secondary');
+
+    modalDetails.replaceChildren();
+    addDetail('Date', props.date_label || event.startStr);
+    addDetail('Farm', props.farm_name);
+    addDetail('Crop', [props.crop_name, props.variety].filter(Boolean).join(' — '));
+    addDetail('Planted area', props.area_label);
+    addDetail('Location', props.location);
+    addDetail('Assigned worker', props.worker);
+    addDetail('Priority', props.priority_label);
+    addDetail('Quantity harvested', props.quantity_label);
+    addDetail('Quality', props.quality_label);
+    addDetail('Harvest ID', props.harvest_code);
+    addDetail('Status', props.status_label);
+    addDetail('Harvest window', props.days_label);
+    addDetail('Completed', props.completed_label);
+    addDetail('Remarks', props.notes);
+
+    if (props.url) {
+      modalLink.href = props.url;
+      modalLink.classList.remove('d-none');
+    } else {
+      modalLink.classList.add('d-none');
+      modalLink.href = '#';
+    }
+
+    if (modal) {
+      modal.show();
+    }
+  }
+
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,listMonth',
+    },
+    buttonText: {
+      today: 'Today',
+      month: 'Month',
+      list: 'Agenda',
+    },
+    height: 'auto',
+    fixedWeekCount: false,
+    dayMaxEvents: 3,
+    navLinks: true,
+    events: events,
+    eventDisplay: 'block',
+    eventContent: function (arg) {
+      const props = arg.event.extendedProps || {};
+      const wrapper = document.createElement('div');
+      wrapper.className = 'hc-event-content';
+
+      const icon = document.createElement('i');
+      icon.className = props.icon || 'fas fa-circle';
+      icon.setAttribute('aria-hidden', 'true');
+
+      const label = document.createElement('span');
+      label.className = 'hc-event-label';
+      label.textContent = arg.event.title;
+
+      wrapper.appendChild(icon);
+      wrapper.appendChild(label);
+      return { domNodes: [wrapper] };
+    },
+    eventDidMount: function (info) {
+      const props = info.event.extendedProps || {};
+      info.el.title = [
+        info.event.title,
+        props.date_label,
+        props.status_label,
+      ].filter(Boolean).join(' • ');
+    },
+    eventClick: function (info) {
+      info.jsEvent.preventDefault();
+      showEvent(info.event);
+    },
+  });
+
+  calendar.render();
+})();
+</script>
+{% endblock %}

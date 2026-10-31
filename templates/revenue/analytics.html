@@ -1,0 +1,782 @@
+{% extends "theme/base.html" %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/revenue-analytics.css' %}">
+{% endblock %}
+{% block content %}
+<div class="container-xl ra-page">
+
+  <header class="ra-header">
+    <div class="ra-header-copy">
+      <div class="ra-pretitle">
+        <span class="ra-pretitle-dot"></span>
+        Revenue intelligence
+      </div>
+      <h1 class="ra-title">Hectare Crop Revenue Analytics</h1>
+      <p class="ra-subtitle">
+        See which fields, crops, and quarters earn the most from every planted hectare.
+      </p>
+      <div class="ra-scope">
+        <span class="ra-scope-chip"><i class="fas fa-calendar" aria-hidden="true"></i>{{ selected_season_label }}</span>
+        <span class="ra-scope-chip"><i class="fas fa-location-dot" aria-hidden="true"></i>{{ selected_region_label }}</span>
+        <span class="ra-scope-chip"><i class="fas fa-receipt" aria-hidden="true"></i>{{ revenue_count }} sale{{ revenue_count|pluralize }}</span>
+        <a href="{% url 'revenue:revenue_list' %}" class="ra-scope-link">
+          Sales records <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+        </a>
+      </div>
+    </div>
+
+    <form method="GET"
+          action="{% url 'revenue:revenue_analytics' %}"
+          class="ra-filter-bar"
+          data-analytics-filters>
+      <div class="ra-filter-field">
+        <label for="raSeason">Season</label>
+        <select name="season" id="raSeason" class="form-select" data-auto-submit>
+          {% for option in season_options %}
+          <option value="{{ option.value }}" {% if option.value == selected_season %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ra-filter-field">
+        <label for="raRegion">Region</label>
+        <select name="region" id="raRegion" class="form-select" data-auto-submit>
+          {% for option in region_options %}
+          <option value="{{ option.value }}" {% if option.value == selected_region %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn ra-btn-apply">
+        <i class="fas fa-filter" aria-hidden="true"></i> Apply
+      </button>
+      <a href="{% url 'revenue:revenue_analytics' %}" class="ra-btn-reset" title="Reset filters" aria-label="Reset filters">
+        <i class="fas fa-rotate-left" aria-hidden="true"></i>
+      </a>
+    </form>
+  </header>
+
+  <div class="row g-3">
+    <!-- Field revenue density map -->
+    <div class="col-xl-7">
+      <section class="ra-card ra-map-card" aria-labelledby="ra-map-title">
+        <div class="ra-card-head">
+          <div>
+            <h2 class="ra-card-title" id="ra-map-title">
+              <i class="fas fa-map-location-dot" aria-hidden="true"></i>
+              Field Revenue Density Map
+            </h2>
+            <p class="ra-card-sub">Revenue earned per planted hectare across your fields.</p>
+          </div>
+          <span class="ra-chip">{{ map_total_fields }} field{{ map_total_fields|pluralize }}</span>
+        </div>
+
+        <div class="ra-map-shell">
+          {% if map_fields %}
+          <div class="ra-map-legend" aria-label="Map legend">
+            <div class="ra-map-legend-title">Revenue density</div>
+            <div class="ra-map-legend-grid">
+              {% for band in density_bands %}
+              <span class="ra-legend-item">
+                <span class="ra-legend-dot" style="background-color: {{ band.color }};"></span>
+                <span>
+                  <strong>{{ band.label }}</strong>
+                  <small>{{ band.range }}</small>
+                </span>
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="ra-map-controls" role="group" aria-label="Map zoom and pan controls">
+            <button type="button" class="ra-map-btn" data-map-action="in" title="Zoom in" aria-label="Zoom in">
+              <i class="fas fa-plus" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="ra-map-btn" data-map-action="out" title="Zoom out" aria-label="Zoom out">
+              <i class="fas fa-minus" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="ra-map-btn" data-map-action="reset" title="Reset view" aria-label="Reset map view">
+              <i class="fas fa-expand" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <svg id="ra-field-map"
+               class="ra-field-map"
+               viewBox="0 0 1000 {{ map_view_height }}"
+               role="img"
+               aria-label="Field revenue density map">
+            <defs>
+              <pattern id="ra-field-rows" width="14" height="14" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
+                <line x1="0" y1="0" x2="0" y2="14" stroke="rgba(255,255,255,0.16)" stroke-width="1"></line>
+              </pattern>
+              <pattern id="ra-map-grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(148,163,184,0.10)" stroke-width="1"></path>
+              </pattern>
+            </defs>
+            <rect x="0" y="0" width="1000" height="{{ map_view_height }}" fill="url(#ra-map-grid)"></rect>
+            <g id="ra-map-viewport">
+              {% for field in map_fields %}
+              <g class="ra-field ra-field--{{ field.band_key }}"
+                 data-field-key="{{ field.key }}"
+                 tabindex="0"
+                 role="button"
+                 aria-label="{{ field.name }}, {{ field.revenue_per_hectare_display }}, {{ field.band_label }} density">
+                <title>{{ field.name }} · {{ field.crop }} · {{ field.revenue_per_hectare_display }}</title>
+                <polygon class="ra-field-shape" points="{{ field.points }}" fill="{{ field.color }}" stroke="{{ field.color }}"></polygon>
+                <polygon class="ra-field-texture" points="{{ field.points }}"></polygon>
+                <text class="ra-field-code" x="{{ field.label_x }}" y="{{ field.label_y }}" text-anchor="middle">{{ field.field_id }}</text>
+                <text class="ra-field-crop" x="{{ field.label_x }}" y="{{ field.sub_label_y }}" text-anchor="middle">{{ field.crop|truncatechars:18 }}</text>
+                <text class="ra-field-value" x="{{ field.label_x }}" y="{{ field.value_label_y }}" text-anchor="middle">{{ field.revenue_per_hectare_display }}</text>
+              </g>
+              {% endfor %}
+            </g>
+          </svg>
+          {% else %}
+          <div class="ra-map-empty">
+            <span class="ra-empty-icon"><i class="fas fa-map" aria-hidden="true"></i></span>
+            <p class="ra-empty-title">No fields to map yet</p>
+            <p class="ra-empty-text">Register a farm and record crop sales to see revenue density here.</p>
+            <a href="{% url 'farms:farm_list' %}?new=farm" class="btn btn-primary btn-sm">Register Farm</a>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="ra-map-foot">
+          <span>
+            Colors reflect revenue per planted hectare.
+            {% if map_total_fields > map_field_limit %}
+            Showing the first {{ map_field_limit }} fields.
+            {% endif %}
+          </span>
+          <a href="{% url 'farms:farm_list' %}">Manage fields <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+        </div>
+      </section>
+    </div>
+
+    <!-- Revenue per hectare by crop -->
+    <div class="col-xl-5">
+      <section class="ra-card ra-chart-card" aria-labelledby="ra-crop-bar-title">
+        <div class="ra-card-head">
+          <div>
+            <h2 class="ra-card-title" id="ra-crop-bar-title">
+              <i class="fas fa-chart-column" aria-hidden="true"></i>
+              Revenue per Hectare by Crop
+            </h2>
+            <p class="ra-card-sub">Comparative revenue density for each crop type.</p>
+          </div>
+          <span class="ra-chip">{{ selected_season_label }}</span>
+        </div>
+        <div class="ra-card-body">
+          {% if crop_bar_data.has_data %}
+          <div id="ra-crop-bar-chart" class="ra-chart ra-chart-bar"></div>
+          <p class="ra-chart-note">
+            <i class="fas fa-circle-info" aria-hidden="true"></i>
+            Labels above each bar show revenue earned per planted hectare.
+          </p>
+          {% else %}
+          <div class="ra-chart-empty">
+            <span class="ra-empty-icon"><i class="fas fa-chart-column" aria-hidden="true"></i></span>
+            <p class="ra-empty-title">No crop revenue yet</p>
+            <p class="ra-empty-text">Record a crop sale to compare revenue per hectare by crop.</p>
+            <a href="{% url 'revenue:revenue_list' %}" class="btn btn-primary btn-sm">Record Sale</a>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Top performing fields -->
+  <section class="ra-card ra-table-card mt-3" aria-labelledby="ra-top-fields-title">
+    <div class="ra-card-head">
+      <div>
+        <h2 class="ra-card-title" id="ra-top-fields-title">
+          <i class="fas fa-ranking-star" aria-hidden="true"></i>
+          Top Performing Fields
+        </h2>
+        <p class="ra-card-sub">Fields ranked by revenue earned per planted hectare.</p>
+      </div>
+      <span class="ra-chip">Top {{ top_fields|length }}</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table ra-table">
+        <thead>
+          <tr>
+            <th scope="col">Field ID</th>
+            <th scope="col">Crop</th>
+            <th scope="col">Area ID</th>
+            <th scope="col" class="text-end">Area Ha</th>
+            <th scope="col" class="text-end">Total Revenue</th>
+            <th scope="col" class="text-end">Rev/Ha</th>
+            <th scope="col">Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for field in top_fields %}
+          <tr>
+            <td>
+              <div class="ra-field-cell">
+                <span class="ra-rank">{{ forloop.counter }}</span>
+                <span>
+                  <span class="ra-field-name">{{ field.name }}</span>
+                  <span class="ra-field-meta">{{ field.field_id }} · {{ field.region }}</span>
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="ra-crop-pill">{{ field.crop }}</span>
+            </td>
+            <td><span class="ra-area-id">{{ field.area_id }}</span></td>
+            <td class="text-end">{{ field.area_display }}</td>
+            <td class="text-end ra-money">{{ field.revenue_display }}</td>
+            <td class="text-end">
+              <span class="ra-density-value" style="color: {{ field.color }};">{{ field.revenue_per_hectare_display }}</span>
+            </td>
+            <td>
+              <div class="ra-trend ra-trend--{{ field.trend_direction }}">
+                <svg class="ra-spark" viewBox="0 0 76 24" aria-hidden="true">
+                  <polyline points="{{ field.spark_points }}" fill="none" stroke="{{ field.color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                </svg>
+                {% if field.trend_direction == 'up' %}
+                <span class="ra-trend-value"><i class="fas fa-arrow-up" aria-hidden="true"></i>{{ field.trend_pct }}%</span>
+                {% elif field.trend_direction == 'down' %}
+                <span class="ra-trend-value"><i class="fas fa-arrow-down" aria-hidden="true"></i>{{ field.trend_pct }}%</span>
+                {% elif field.trend_direction == 'flat' %}
+                <span class="ra-trend-value"><i class="fas fa-minus" aria-hidden="true"></i>0%</span>
+                {% else %}
+                <span class="ra-trend-value is-muted">—</span>
+                {% endif %}
+                {% if field.trend_label %}
+                <span class="ra-trend-label">{{ field.trend_label }}</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7">
+              <div class="ra-table-empty">
+                <span class="ra-empty-icon"><i class="fas fa-ranking-star" aria-hidden="true"></i></span>
+                <p class="ra-empty-title">No field performance to rank yet</p>
+                <p class="ra-empty-text">Add farms, crops, and revenue records to populate this table.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Bottom analytics grid -->
+  <div class="row g-3 mt-1">
+    <div class="col-xl-4">
+      <section class="ra-card ra-chart-card h-100" aria-labelledby="ra-composition-title">
+        <div class="ra-card-head">
+          <div>
+            <h2 class="ra-card-title" id="ra-composition-title">
+              <i class="fas fa-chart-pie" aria-hidden="true"></i>
+              Revenue Composition by Crop Type
+            </h2>
+            <p class="ra-card-sub">Share of gross revenue in the selected view.</p>
+          </div>
+        </div>
+        <div class="ra-card-body">
+          {% if composition.has_data %}
+          <div class="ra-donut-wrap">
+            <div id="ra-composition-chart" class="ra-chart ra-chart-donut" aria-label="Revenue composition by crop type"></div>
+          </div>
+          <ul class="ra-composition-list">
+            {% for row in composition.rows %}
+            <li>
+              <span class="ra-composition-dot" style="background-color: {{ row.color }};"></span>
+              <span class="ra-composition-name">{{ row.name }}</span>
+              <span class="ra-composition-percent">{{ row.percentage }}%</span>
+              <span class="ra-composition-revenue">{{ row.revenue_display }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="ra-chart-empty">
+            <span class="ra-empty-icon"><i class="fas fa-chart-pie" aria-hidden="true"></i></span>
+            <p class="ra-empty-title">No revenue composition yet</p>
+            <p class="ra-empty-text">Record crop sales to see how revenue is distributed across crop types.</p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+
+    <div class="col-xl-5">
+      <section class="ra-card ra-chart-card h-100" aria-labelledby="ra-quarterly-title">
+        <div class="ra-card-head">
+          <div>
+            <h2 class="ra-card-title" id="ra-quarterly-title">
+              <i class="fas fa-chart-line" aria-hidden="true"></i>
+              Quarterly Revenue Trend (Hectare)
+            </h2>
+            <p class="ra-card-sub">Revenue per hectare across Q1 to Q4.</p>
+          </div>
+          <span class="ra-chip">{{ quarterly_label }}</span>
+        </div>
+        <div class="ra-card-body">
+          {% if quarterly.has_data %}
+          <div id="ra-quarterly-chart" class="ra-chart ra-chart-line"></div>
+          <div class="ra-quarter-strip">
+            {% for quarter in quarterly.rows %}
+            <span><small>{{ quarter.label }}</small><strong>{{ quarter.display }}/ha</strong></span>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="ra-chart-empty">
+            <span class="ra-empty-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span>
+            <p class="ra-empty-title">No quarterly trend yet</p>
+            <p class="ra-empty-text">Quarterly revenue density appears after you record sales.</p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+
+    <div class="col-xl-3">
+      <section class="ra-card ra-metrics-card h-100" aria-labelledby="ra-metrics-title">
+        <div class="ra-card-head">
+          <div>
+            <h2 class="ra-card-title" id="ra-metrics-title">
+              <i class="fas fa-gauge-high" aria-hidden="true"></i>
+              Key Metrics
+            </h2>
+            <p class="ra-card-sub">A quick read on the selected view.</p>
+          </div>
+        </div>
+        <div class="ra-card-body">
+          <div class="ra-metric-list">
+            {% for metric in key_metrics %}
+            <div class="ra-metric ra-metric--{{ metric.tone }}">
+              <span class="ra-metric-icon"><i class="{{ metric.icon }}" aria-hidden="true"></i></span>
+              <span class="ra-metric-copy">
+                <span class="ra-metric-label">{{ metric.label }}</span>
+                <strong class="ra-metric-value">{{ metric.value }}</strong>
+                <small class="ra-metric-detail">{{ metric.detail }}</small>
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Field detail modal -->
+<div class="modal modal-blur fade" id="raFieldModal" tabindex="-1" aria-labelledby="raFieldModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content ra-modal">
+      <div class="modal-header">
+        <div>
+          <div class="ra-modal-pretitle" id="raFieldModalCode">Field</div>
+          <h5 class="modal-title" id="raFieldModalTitle">Field details</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="ra-modal-stats">
+          <div>
+            <span>Revenue / ha</span>
+            <strong id="raFieldModalRevHa">—</strong>
+          </div>
+          <div>
+            <span>Total revenue</span>
+            <strong id="raFieldModalRevenue">—</strong>
+          </div>
+          <div>
+            <span>Planted area</span>
+            <strong id="raFieldModalArea">—</strong>
+          </div>
+          <div>
+            <span>Density</span>
+            <strong id="raFieldModalBand">—</strong>
+          </div>
+        </div>
+        <div class="ra-modal-detail"><span>Crop</span><strong id="raFieldModalCrop">—</strong></div>
+        <div class="ra-modal-detail"><span>Region</span><strong id="raFieldModalRegion">—</strong></div>
+        <div class="ra-modal-detail"><span>Comparison</span><strong id="raFieldModalTrend">—</strong></div>
+      </div>
+      <div class="modal-footer">
+        <a href="{% url 'farms:farm_list' %}" class="btn btn-primary">
+          <i class="fas fa-location-dot me-2" aria-hidden="true"></i>Open farm fields
+        </a>
+        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ map_fields|json_script:"ra-map-fields-data" }}
+{{ crop_bar_chart|json_script:"ra-crop-bar-data" }}
+{{ composition_chart|json_script:"ra-composition-data" }}
+{{ quarterly_chart|json_script:"ra-quarterly-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const CURRENCY = '₱';
+
+  function number(value) {
+    return Number(value || 0).toLocaleString('en-PH', {
+      maximumFractionDigits: 0
+    });
+  }
+
+  function money(value) {
+    return CURRENCY + number(value);
+  }
+
+  function compactMoney(value) {
+    const amount = Number(value || 0);
+    if (Math.abs(amount) >= 1000000) {
+      return CURRENCY + (amount / 1000000).toFixed(1) + 'M';
+    }
+    if (Math.abs(amount) >= 1000) {
+      return CURRENCY + (amount / 1000).toFixed(1) + 'K';
+    }
+    return CURRENCY + number(amount);
+  }
+
+  /* Auto-apply the global season / region filters. */
+  const filterForm = document.querySelector('[data-analytics-filters]');
+  if (filterForm) {
+    filterForm.querySelectorAll('[data-auto-submit]').forEach(function (field) {
+      field.addEventListener('change', function () {
+        if (typeof filterForm.requestSubmit === 'function') {
+          filterForm.requestSubmit();
+        } else {
+          filterForm.submit();
+        }
+      });
+    });
+  }
+
+  /* Field density map: selection modal, zoom, and pan. */
+  const mapSvg = document.getElementById('ra-field-map');
+  const mapDataEl = document.getElementById('ra-map-fields-data');
+  if (mapSvg && mapDataEl) {
+    const mapViewport = document.getElementById('ra-map-viewport');
+    const modalEl = document.getElementById('raFieldModal');
+    const modal = (modalEl && window.bootstrap)
+      ? bootstrap.Modal.getOrCreateInstance(modalEl)
+      : null;
+    const viewHeight = {{ map_view_height }};
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+
+    const fields = JSON.parse(mapDataEl.textContent);
+    const fieldsById = new Map(fields.map(function (field) {
+      return [field.key, field];
+    }));
+
+    function applyMapTransform() {
+      mapViewport.setAttribute(
+        'transform',
+        'translate(' + translateX + ' ' + translateY + ') scale(' + scale + ')'
+      );
+    }
+
+    function zoomMap(factor) {
+      const centerX = 500;
+      const centerY = viewHeight / 2;
+      const nextScale = Math.min(2.4, Math.max(0.8, scale * factor));
+      const ratio = nextScale / scale;
+      translateX = centerX - (centerX - translateX) * ratio;
+      translateY = centerY - (centerY - translateY) * ratio;
+      scale = nextScale;
+      applyMapTransform();
+    }
+
+    document.querySelectorAll('[data-map-action]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const action = button.dataset.mapAction;
+        if (action === 'in') {
+          zoomMap(1.2);
+        } else if (action === 'out') {
+          zoomMap(1 / 1.2);
+        } else {
+          scale = 1;
+          translateX = 0;
+          translateY = 0;
+          applyMapTransform();
+        }
+      });
+    });
+
+    let dragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let startTranslateX = 0;
+    let startTranslateY = 0;
+
+    mapSvg.addEventListener('pointerdown', function (event) {
+      if (event.target.closest('.ra-field')) {
+        return;
+      }
+      dragging = true;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      startTranslateX = translateX;
+      startTranslateY = translateY;
+      mapSvg.classList.add('is-panning');
+      if (mapSvg.setPointerCapture) {
+        try {
+          mapSvg.setPointerCapture(event.pointerId);
+        } catch (error) {
+          /* Ignore pointer-capture support issues. */
+        }
+      }
+    });
+
+    mapSvg.addEventListener('pointermove', function (event) {
+      if (!dragging) {
+        return;
+      }
+      const bounds = mapSvg.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) {
+        return;
+      }
+      const deltaX = (event.clientX - dragStartX) * (1000 / bounds.width);
+      const deltaY = (event.clientY - dragStartY) * (viewHeight / bounds.height);
+      translateX = startTranslateX + deltaX;
+      translateY = startTranslateY + deltaY;
+      applyMapTransform();
+    });
+
+    function endDrag(event) {
+      if (!dragging) {
+        return;
+      }
+      dragging = false;
+      mapSvg.classList.remove('is-panning');
+      if (mapSvg.releasePointerCapture) {
+        try {
+          mapSvg.releasePointerCapture(event.pointerId);
+        } catch (error) {
+          /* Ignore pointer-capture support issues. */
+        }
+      }
+    }
+    mapSvg.addEventListener('pointerup', endDrag);
+    mapSvg.addEventListener('pointercancel', endDrag);
+
+    function openField(key) {
+      const field = fieldsById.get(key);
+      if (!field || !modal) {
+        return;
+      }
+      document.getElementById('raFieldModalCode').textContent = field.field_id + ' · ' + field.area_id;
+      document.getElementById('raFieldModalTitle').textContent = field.name;
+      document.getElementById('raFieldModalRevHa').textContent = field.revenue_per_hectare_display;
+      document.getElementById('raFieldModalRevenue').textContent = field.revenue_display;
+      document.getElementById('raFieldModalArea').textContent = field.area_display + ' ha';
+      document.getElementById('raFieldModalBand').textContent = field.band_label;
+      document.getElementById('raFieldModalBand').style.color = field.color;
+      document.getElementById('raFieldModalCrop').textContent = field.crop;
+      document.getElementById('raFieldModalRegion').textContent = field.region;
+      document.getElementById('raFieldModalTrend').textContent = field.trend_pct === null
+        ? 'No prior comparison'
+        : field.trend_pct + '% ' + field.trend_label;
+      modal.show();
+    }
+
+    document.querySelectorAll('.ra-field').forEach(function (group) {
+      group.addEventListener('click', function () {
+        openField(group.dataset.fieldKey);
+      });
+      group.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openField(group.dataset.fieldKey);
+        }
+      });
+    });
+  }
+
+  /* ApexCharts: crop revenue density. */
+  const barEl = document.getElementById('ra-crop-bar-chart');
+  const barDataEl = document.getElementById('ra-crop-bar-data');
+  if (barEl && barDataEl && window.ApexCharts) {
+    const barData = JSON.parse(barDataEl.textContent);
+    new ApexCharts(barEl, {
+      chart: {
+        type: 'bar',
+        height: 330,
+        fontFamily: 'inherit',
+        toolbar: { show: false },
+        animations: { enabled: true }
+      },
+      theme: { mode: 'dark' },
+      series: [{ name: 'Revenue / hectare', data: barData.series }],
+      colors: barData.colors,
+      plotOptions: {
+        bar: {
+          distributed: true,
+          columnWidth: '48%',
+          borderRadius: 7,
+          dataLabels: { position: 'top' }
+        }
+      },
+      dataLabels: {
+        enabled: true,
+        offsetY: -24,
+        formatter: function (value) {
+          return money(value) + '/Ha';
+        },
+        style: {
+          fontSize: '10px',
+          fontWeight: 700,
+          colors: ['#e2e8f0']
+        }
+      },
+      grid: {
+        borderColor: 'rgba(148, 163, 184, 0.14)',
+        strokeDashArray: 4,
+        padding: { top: 36, right: 12, left: 12 }
+      },
+      xaxis: {
+        categories: barData.labels,
+        labels: { style: { colors: '#94a3b8', fontSize: '11px' } },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+      },
+      yaxis: {
+        labels: {
+          style: { colors: '#64748b', fontSize: '10px' },
+          formatter: function (value) { return compactMoney(value); }
+        }
+      },
+      tooltip: {
+        theme: 'dark',
+        y: {
+          formatter: function (value) { return money(value) + ' per hectare'; }
+        }
+      }
+    }).render();
+  }
+
+  /* ApexCharts: revenue composition donut. */
+  const compositionEl = document.getElementById('ra-composition-chart');
+  const compositionDataEl = document.getElementById('ra-composition-data');
+  if (compositionEl && compositionDataEl && window.ApexCharts) {
+    const compositionData = JSON.parse(compositionDataEl.textContent);
+    new ApexCharts(compositionEl, {
+      chart: {
+        type: 'donut',
+        height: 280,
+        fontFamily: 'inherit',
+        toolbar: { show: false }
+      },
+      theme: { mode: 'dark' },
+      series: compositionData.series,
+      labels: compositionData.labels,
+      colors: compositionData.colors,
+      stroke: {
+        colors: ['#0b1322'],
+        width: 3
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '68%',
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                color: '#94a3b8',
+                fontSize: '11px'
+              },
+              value: {
+                show: true,
+                color: '#f1f5f9',
+                fontSize: '19px',
+                fontWeight: 700,
+                formatter: function (value) { return compactMoney(value); }
+              },
+              total: {
+                show: true,
+                label: 'Total Revenue',
+                color: '#94a3b8',
+                fontSize: '11px',
+                formatter: function () { return compositionData.total_display; }
+              }
+            }
+          }
+        }
+      },
+      legend: { show: false },
+      dataLabels: { enabled: false },
+      tooltip: {
+        theme: 'dark',
+        y: {
+          formatter: function (value) { return money(value); }
+        }
+      }
+    }).render();
+  }
+
+  /* ApexCharts: quarterly revenue density line. */
+  const quarterlyEl = document.getElementById('ra-quarterly-chart');
+  const quarterlyDataEl = document.getElementById('ra-quarterly-data');
+  if (quarterlyEl && quarterlyDataEl && window.ApexCharts) {
+    const quarterlyData = JSON.parse(quarterlyDataEl.textContent);
+    new ApexCharts(quarterlyEl, {
+      chart: {
+        type: 'area',
+        height: 300,
+        fontFamily: 'inherit',
+        toolbar: { show: false }
+      },
+      theme: { mode: 'dark' },
+      series: [{ name: 'Revenue / hectare', data: quarterlyData.series }],
+      colors: ['#38bdf8'],
+      stroke: { curve: 'smooth', width: 3 },
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shadeIntensity: 1,
+          opacityFrom: 0.35,
+          opacityTo: 0.04,
+          stops: [0, 90, 100]
+        }
+      },
+      markers: {
+        size: 4,
+        strokeWidth: 2,
+        hover: { size: 6 }
+      },
+      grid: {
+        borderColor: 'rgba(148, 163, 184, 0.14)',
+        strokeDashArray: 4,
+        padding: { top: 10, right: 12, left: 12 }
+      },
+      xaxis: {
+        categories: quarterlyData.labels,
+        labels: { style: { colors: '#94a3b8' } },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+      },
+      yaxis: {
+        labels: {
+          style: { colors: '#64748b', fontSize: '10px' },
+          formatter: function (value) { return compactMoney(value); }
+        }
+      },
+      tooltip: {
+        theme: 'dark',
+        y: {
+          formatter: function (value) { return money(value) + ' per hectare'; }
+        }
+      }
+    }).render();
+  }
+});
+</script>
+{% endblock %}
