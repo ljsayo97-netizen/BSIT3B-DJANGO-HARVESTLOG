@@ -1,6 +1,6 @@
 {% load static %}
-<header class="dh-topbar" role="banner">
-  <div class="dh-topbar-left">
+<header class="dh-topbar" role="banner" style="display:flex; align-items:center; justify-content:flex-start; gap:16px; padding:0 16px;">
+  <div class="dh-topbar-left" style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
     <a href="{% url 'dashboard' %}" class="dh-brand-link" aria-label="HarvestPH">
       <span class="dh-brand-icon"><i class="fas fa-tractor" aria-hidden="true"></i></span>
       <span class="dh-brand-text">HarvestPH</span>
@@ -15,7 +15,7 @@
     </button>
   </div>
 
-  <form class="dh-topbar-search" role="search" onsubmit="return false;">
+  <form class="dh-topbar-search" role="search" onsubmit="return false;" style="flex:0 1 420px; margin-left:8px; margin-right:auto;">
     <i class="fas fa-magnifying-glass dh-search-icon" aria-hidden="true"></i>
     <input id="globalSearch"
            class="dh-search-input"
@@ -23,10 +23,10 @@
            placeholder="Search farms, crops, or activities..."
            aria-label="Search farms, crops, or activities"
            autocomplete="off">
-    <kbd class="dh-search-kbd">Ctrl K</kbd>
+    
   </form>
 
-  <div class="dh-topbar-right">
+  <div class="dh-topbar-right" style="display:flex; align-items:center; gap:12px; margin-left:auto; flex-shrink:0;">
     <!-- Notification Bell Dropdown -->
     <div class="dropdown dh-notifications-dropdown">
       <button type="button"

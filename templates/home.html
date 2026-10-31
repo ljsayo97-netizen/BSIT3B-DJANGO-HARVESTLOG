@@ -1,3 +1,6 @@
+Here is the updated code with the **Harvest Progress** card placed on the left side and the **Weather & Field Guidance** panel placed on the right side within the split grid:
+
+```html
 {% extends "theme/base.html" %}
 {% block content %}
 <div class="dh-page">
@@ -143,57 +146,48 @@
   {% endif %}
 
   <div class="dh-split-grid">
-    <!-- Notification Center -->
-    <section class="dh-card dh-notification-card" id="dashboard-notifications" aria-labelledby="notification-center-title">
+    <!-- Harvest Progress (Now on the Left Side) -->
+    <section class="dh-card dh-progress-card" aria-labelledby="harvest-progress-title">
       <div class="dh-card-head">
         <div class="dh-card-head-title">
-          <i class="fas fa-bell dh-bell-title-icon" aria-hidden="true"></i>
-          <h2 class="dh-card-title" id="notification-center-title">Notification Center</h2>
-          <span class="dh-pill-yellow">{% if unread_notification_count %}{{ unread_notification_count }} new{% else %}0 new{% endif %}</span>
+          <i class="fas fa-chart-simple dh-progress-head-icon" aria-hidden="true"></i>
+          <h2 class="dh-card-title" id="harvest-progress-title">Harvest Progress</h2>
         </div>
-        <div class="dh-card-actions">
-          <a href="{% url 'notification_center' %}" class="dh-mark-all-btn">
-            View all
-          </a>
-          <form method="post" action="{% url 'harvests:harvest_notification_read' %}">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.path }}">
-            <button type="submit" class="dh-mark-all-btn">
-              <i class="fas fa-check" aria-hidden="true"></i>
-              Mark all as read
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div class="dh-notification-list">
-        {% for item in notification_feed %}
-        <a href="{{ item.url|default:'#' }}" class="dh-notification-row{% if item.is_new %} is-unread{% endif %}">
-          <span class="dh-notification-icon dh-tone-{{ item.tone }}">
-            <i class="{{ item.icon }}" aria-hidden="true"></i>
-          </span>
-          <span class="dh-notification-copy">
-            <span class="dh-notification-title">
-              {{ item.title }}
-              {% if item.badge %}
-              <span class="dh-notification-tag dh-tone-{{ item.tone }}">{{ item.badge }}</span>
-              {% endif %}
-            </span>
-            <span class="dh-notification-text">{{ item.description }}</span>
-            <span class="dh-notification-meta">{{ item.timestamp|timesince }} ago</span>
-          </span>
-          <i class="fas fa-chevron-right dh-notification-arrow" aria-hidden="true"></i>
+        <a href="{% url 'reports:farm_progress' %}" class="dh-view-reports-link">
+          View reports <i class="fas fa-arrow-right" aria-hidden="true"></i>
         </a>
-        {% empty %}
-        <div class="dh-empty dh-empty-compact">
-          <span class="dh-empty-icon"><i class="far fa-bell-slash" aria-hidden="true"></i></span>
-          <p class="dh-empty-title">No notifications yet</p>
+      </div>
+      <div class="dh-progress-body">
+        <div class="dh-donut-wrap">
+          <div class="dh-progress-donut"
+               style="--dh-donut-completed: {{ harvest_progress.completed_percent|default:33 }};">
+            <div class="dh-donut-inner">
+              <span class="dh-donut-fraction">{{ harvest_progress.completed|default:1 }}/{{ harvest_progress.total|default:3 }}</span>
+              <span class="dh-donut-sub">harvests</span>
+            </div>
+          </div>
         </div>
-        {% endfor %}
+        <ul class="dh-progress-legend">
+          <li>
+            <span class="dh-legend-dot dh-dot-completed"></span>
+            <span class="dh-legend-name">Completed</span>
+            <strong class="dh-legend-val">{{ harvest_progress.completed|default:1 }}</strong>
+          </li>
+          <li>
+            <span class="dh-legend-dot dh-dot-progress"></span>
+            <span class="dh-legend-name">In Progress</span>
+            <strong class="dh-legend-val">{{ harvest_progress.in_progress|default:0 }}</strong>
+          </li>
+          <li>
+            <span class="dh-legend-dot dh-dot-pending"></span>
+            <span class="dh-legend-name">Pending</span>
+            <strong class="dh-legend-val">{{ harvest_progress.pending|default:2 }}</strong>
+          </li>
+        </ul>
       </div>
     </section>
 
-    <!-- Weather & Field Guidance -->
+    <!-- Weather & Field Guidance (Now on the Right Side) -->
     <section class="dh-card dh-weather-panel" aria-labelledby="weather-panel-title">
       <div class="dh-card-head">
         <div class="dh-card-head-title">
@@ -314,47 +308,6 @@
         </table>
       </div>
     </section>
-
-    <!-- Harvest Progress -->
-    <section class="dh-card dh-progress-card" aria-labelledby="harvest-progress-title">
-      <div class="dh-card-head">
-        <div class="dh-card-head-title">
-          <i class="fas fa-chart-simple dh-progress-head-icon" aria-hidden="true"></i>
-          <h2 class="dh-card-title" id="harvest-progress-title">Harvest Progress</h2>
-        </div>
-        <a href="{% url 'reports:farm_progress' %}" class="dh-view-reports-link">
-          View reports <i class="fas fa-arrow-right" aria-hidden="true"></i>
-        </a>
-      </div>
-      <div class="dh-progress-body">
-        <div class="dh-donut-wrap">
-          <div class="dh-progress-donut"
-               style="--dh-donut-completed: {{ harvest_progress.completed_percent|default:33 }};">
-            <div class="dh-donut-inner">
-              <span class="dh-donut-fraction">{{ harvest_progress.completed|default:1 }}/{{ harvest_progress.total|default:3 }}</span>
-              <span class="dh-donut-sub">harvests</span>
-            </div>
-          </div>
-        </div>
-        <ul class="dh-progress-legend">
-          <li>
-            <span class="dh-legend-dot dh-dot-completed"></span>
-            <span class="dh-legend-name">Completed</span>
-            <strong class="dh-legend-val">{{ harvest_progress.completed|default:1 }}</strong>
-          </li>
-          <li>
-            <span class="dh-legend-dot dh-dot-progress"></span>
-            <span class="dh-legend-name">In Progress</span>
-            <strong class="dh-legend-val">{{ harvest_progress.in_progress|default:0 }}</strong>
-          </li>
-          <li>
-            <span class="dh-legend-dot dh-dot-pending"></span>
-            <span class="dh-legend-name">Pending</span>
-            <strong class="dh-legend-val">{{ harvest_progress.pending|default:2 }}</strong>
-          </li>
-        </ul>
-      </div>
-    </section>
   </div>
 
 </div>
@@ -409,3 +362,4 @@
   });
 </script>
 {% endblock %}
+
