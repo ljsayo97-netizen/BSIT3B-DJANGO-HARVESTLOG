@@ -12,6 +12,7 @@ from apps.farms.models import Farm
 
 from .weather import (
     _build_advice,
+    build_kabankalan_weather,
     build_weather_widget,
     geocode_location,
 )
@@ -233,6 +234,21 @@ class WeatherWidgetBuilderTests(TestCase):
         self.assertFalse(weather['available'])
         self.assertEqual(weather['source'], 'Open-Meteo')
 
+    @patch('apps.core.weather._request_json')
+    def test_kabankalan_weather_uses_the_fixed_location(self, request_json):
+        request_json.return_value = FORECAST_PAYLOAD
+
+        weather = build_kabankalan_weather()
+
+        self.assertTrue(weather['available'])
+        self.assertEqual(
+            weather['location']['name'],
+            'Kabankalan City, Western Visayas',
+        )
+        self.assertEqual(weather['location']['latitude'], 9.9833)
+        self.assertEqual(weather['location']['longitude'], 122.8167)
+        self.assertEqual(weather['current']['temperature'], 31.6)
+
 
 class WeatherAdviceTests(TestCase):
     def _current(self, **overrides):
@@ -343,9 +359,24 @@ class WeatherWidgetViewTests(TestCase):
         self.assertContains(response, 'Local weather is unavailable')
         self.assertContains(response, 'data-weather-retry')
 
+    @patch('apps.core.weather._request_json')
+    def test_kabankalan_weather_widget_renders_the_forecast(self, request_json):
+        request_json.return_value = FORECAST_PAYLOAD
+
+        response = self.client.get(reverse('kabankalan_weather_widget'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '32')
+        self.assertContains(response, 'Overcast')
+        self.assertContains(response, '55%')
+        self.assertEqual(
+            response['Cache-Control'],
+            'private, no-store',
+        )
+
     def test_dashboard_contains_the_weather_container(self):
         response = self.client.get(reverse('dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="dashboardWeather"')
-        self.assertContains(response, reverse('weather_widget'))
+        self.assertContains(response, 'id="dashboardWeatherMini"')
+        self.assertContains(response, reverse('kabankalan_weather_widget'))

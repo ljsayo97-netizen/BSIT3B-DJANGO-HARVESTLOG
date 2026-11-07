@@ -45,7 +45,7 @@ TOP_CROPS_COLORS = [
     '#22c55e', '#0ea5e9', '#f59e0b', '#f97316',
     '#6366f1', '#ec4899', '#14b8a6', '#a855f7',
 ]
-TOP_CROPS_LIMIT = 8
+TOP_CROPS_LIMIT = 4
 
 QUALITY_COLORS = {
     Harvest.QualityGrade.PREMIUM: '#22c55e',
@@ -66,15 +66,36 @@ def _top_crops_data(harvests, limit=TOP_CROPS_LIMIT):
     )
     rows = list(rows)  # evaluate queryset once
     grand_total = float(sum(r['total_qty'] or 0 for r in rows))
+
+    # Break each crop type down by farm so the dashboard can show where the
+    # harvested quantity came from.
+    crop_types = [row['crop_type'] for row in rows if row['crop_type']]
+    farm_rows = (
+        harvests.filter(crop_type__in=crop_types)
+        .values('crop_type', 'farm__name')
+        .annotate(farm_qty=Sum('quantity_harvested'))
+        .order_by('crop_type', '-farm_qty', 'farm__name')
+    )
+    farms_by_crop = {}
+    for row in farm_rows:
+        farms_by_crop.setdefault(row['crop_type'], []).append({
+            'name': row['farm__name'] or 'Unknown farm',
+            'quantity': float(row['farm_qty'] or 0),
+        })
+
     result = []
     for idx, row in enumerate(rows):
         qty = float(row['total_qty'] or 0)
+        name = row['crop_type'] or 'Unknown'
+        farms = farms_by_crop.get(name, [])
         result.append({
-            'name': row['crop_type'] or 'Unknown',
+            'name': name,
             'quantity': qty,
             'unit': 'kg',
             'percentage': round(qty * 100 / grand_total) if grand_total else 0,
             'color': TOP_CROPS_COLORS[idx % len(TOP_CROPS_COLORS)],
+            'farms': farms,
+            'farm_names': ', '.join(farm['name'] for farm in farms),
         })
     return result, grand_total
 

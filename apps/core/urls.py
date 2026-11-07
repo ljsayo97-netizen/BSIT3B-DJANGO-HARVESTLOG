@@ -7,6 +7,11 @@ urlpatterns = [
     path('search/', views.global_search, name='global_search'),
     path('notifications/', views.notification_center, name='notification_center'),
     path('weather/', views.weather_widget, name='weather_widget'),
+    path(
+        'weather/kabankalan/',
+        views.kabankalan_weather_widget,
+        name='kabankalan_weather_widget',
+    ),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
 ]

@@ -1,18 +1,96 @@
 {% extends "theme/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'libs/leaflet/leaflet.css' %}">
+<style>
+  /* Dark-mode friendly Leaflet styling */
+  .leaflet-container {
+    background: #1a2234;
+    font-family: inherit;
+    border-radius: 8px;
+  }
+  .leaflet-popup-content-wrapper {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .leaflet-popup-tip {
+    background: #1e293b;
+  }
+  .leaflet-popup-content {
+    margin: 12px 14px;
+    line-height: 1.4;
+  }
+  /* Clean Barangay Location Pin */
+  .brgy-pin-marker {
+    position: relative;
+    width: 32px;
+    height: 42px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .brgy-pin-marker .pin-icon {
+    font-size: 34px;
+    color: #e03131;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+    transition: transform 0.18s ease;
+  }
+  .brgy-pin-marker:hover .pin-icon {
+    transform: scale(1.15) translateY(-2px);
+  }
+  .brgy-pin-marker .pin-shadow {
+    width: 14px;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 50%;
+    margin-top: -6px;
+  }
+  .farm-detail-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin-bottom: 2px;
+  }
+  .farm-detail-value {
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+  .farm-kpi-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .farm-kpi-card:hover {
+    transform: translateY(-2px);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-xl">
+  <!-- Page header -->
   <div class="page-header d-print-none" aria-label="Page header">
     <div class="container-xl">
       <div class="row align-items-center">
         <div class="col">
-          <div class="page-pretitle">Overview</div>
-          <div class="d-flex align-items-center gap-3 flex-wrap d-none d-md-flex">
-            <h2 class="page-title mb-0">Farm Management</h2>
+          <div class="page-pretitle">Farm Operations &middot; Farm Management</div>
+          <div class="d-flex align-items-center gap-2">
+            <h2 class="page-title mb-0">
+              <i class="fas fa-location-dot text-primary me-2"></i>Farm Field
+            </h2>
+            <span class="badge bg-primary-lt text-primary ms-2">{{ total_farms }} Registered</span>
           </div>
-          <h2 class="page-title mb-0 d-md-none">Farm Management</h2>
         </div>
         <div class="col-auto">
           <div class="btn-list">
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#deletedFarmsModal">
+              <i class="fas fa-trash-alt text-danger me-1"></i> Deleted Log
+              <span class="badge bg-danger-lt text-danger ms-1">{{ deleted_count }}</span>
+            </button>
             <button type="button"
                class="btn btn-primary"
                data-bs-toggle="modal"
@@ -39,219 +117,243 @@
     {% endfor %}
   </div>
 
-  <!-- Search + filter toolbar -->
-  <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-1">
-    <form method="GET" class="w-100" style="max-width: 520px;">
-      <div class="input-group">
-        <span class="input-group-text"><i class="fas fa-search"></i></span>
-        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by name, owner, location, or description...">
-        <select name="status" class="form-select" style="max-width: 160px;">
-          <option value="">All statuses</option>
-          {% for value, label in status_choices %}
-          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-        {% if query or status %}
-        <a href="{% url 'farms:farm_list' %}" class="btn btn-outline-secondary">Clear</a>
-        {% endif %}
-        <button type="submit" class="btn btn-primary">Search</button>
+  <!-- KPI summary cards -->
+  <div class="row row-cards mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card card-sm farm-kpi-card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="bg-primary text-white avatar">
+                <i class="fas fa-tractor"></i>
+              </span>
+            </div>
+            <div class="col">
+              <div class="font-weight-medium">{{ total_farms }} Total</div>
+              <div class="text-muted small">Registered Farms</div>
+            </div>
+          </div>
+        </div>
       </div>
-    </form>
-
-    <div class="btn-group mt-n4" role="group" aria-label="View mode">
-      <button type="button" class="btn btn-outline-primary view-mode-btn active" data-view="table" title="List view">
-        <i class="fas fa-list"></i>
-      </button>
-      <button type="button" class="btn btn-outline-primary view-mode-btn" data-view="grid" title="Grid view">
-        <i class="fas fa-th-large"></i>
-      </button>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card card-sm farm-kpi-card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="bg-success text-white avatar">
+                <i class="fas fa-seedling"></i>
+              </span>
+            </div>
+            <div class="col">
+              <div class="font-weight-medium">{{ active_farms|default:total_farms }} Active</div>
+              <div class="text-muted small">Operational Fields</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card card-sm farm-kpi-card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="bg-info text-white avatar">
+                <i class="fas fa-layer-group"></i>
+              </span>
+            </div>
+            <div class="col">
+              <div class="font-weight-medium">{{ total_hectares|default:"0.00" }} ha</div>
+              <div class="text-muted small">Total Farm Area</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card card-sm farm-kpi-card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="bg-danger text-white avatar">
+                <i class="fas fa-location-dot"></i>
+              </span>
+            </div>
+            <div class="col">
+              <div class="font-weight-medium">Barangay Pin</div>
+              <div class="text-muted small">Automated Mini Map</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Search + filter toolbar -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="GET" class="row g-2 align-items-center">
+        <div class="col-12 col-md-6">
+          <div class="input-icon">
+            <span class="input-icon-addon"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search farm field by name, owner, location, description...">
+          </div>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+          <select name="status" class="form-select">
+            <option value="">All statuses</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-fill">
+            <i class="fas fa-filter me-1"></i> Filter
+          </button>
+          {% if query or status %}
+          <a href="{% url 'farms:farm_list' %}" class="btn btn-outline-secondary">Clear</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Recreated Farm Field List Table (No ID column, No ZIP code in table) -->
   <div class="card">
-    <div class="card-header flex-wrap gap-2">
-      <div class="card-title">
-        Registered Farms
+    <div class="card-header flex-wrap gap-2 justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h3 class="card-title mb-0">Registered Farm Fields</h3>
         {% if query or status %}
-        <span class="text-muted fw-normal">— {{ farms.paginator.count }} result{{ farms.paginator.count|pluralize }}</span>
+        <span class="text-muted small">— {{ farms.paginator.count }} result{{ farms.paginator.count|pluralize }} found</span>
         {% endif %}
-      </div>
-      <div class="card-actions d-flex align-items-center gap-2">
-        <span class="badge bg-primary-lt text-primary text-nowrap">
+        <span class="badge bg-primary-lt text-primary text-nowrap ms-1">
           Total Registered Farms: {{ total_farms }}
         </span>
-        <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-bs-toggle="modal" data-bs-target="#deletedFarmsModal">
-          <i class="fas fa-trash-alt text-danger me-1"></i> Deleted Log
-          <span class="badge bg-danger-lt text-danger ms-1">{{ deleted_count }}</span>
-        </button>
+      </div>
+      <div class="text-muted small">
+        <i class="fas fa-info-circle text-primary me-1"></i> Click the <i class="fas fa-eye text-primary"></i> eye icon to view full details (including Farm ID & ZIP Code) and Barangay mini map pin.
       </div>
     </div>
 
-    <!-- TABLE VIEW -->
-    <div id="farmTableView" class="table-responsive">
+    <div class="table-responsive">
       <table class="table table-vcenter table-hover card-table farm-table" id="farmsTable">
         <thead>
           <tr>
-            <th class="farm-col-name">Farm</th>
-            <th class="farm-col-location">Location</th>
-            <th class="farm-col-size">Size (ha)</th>
-            <th class="farm-col-date d-none d-xl-table-cell">Registered</th>
-            <th class="farm-col-status">Status</th>
-            <th class="w-1">Actions</th>
+            <th>Farm Field</th>
+            <th>Owner / Manager</th>
+            <th>Location</th>
+            <th>Size (ha)</th>
+            <th class="d-none d-lg-table-cell">Date Registered</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
           </tr>
         </thead>
         <tbody id="farmsTableBody">
         {% for farm in farms %}
         <tr data-row-id="{{ farm.id }}">
-            <td>
-              <div class="farm-name fw-semibold" title="{{ farm.name }}">{{ farm.name }}</div>
-              <div class="farm-owner text-muted small" title="{{ farm.owner }}">{{ farm.owner }}</div>
-            </td>
-            <td class="text-muted">
-              <div class="farm-location" title="{{ farm.location }}">{{ farm.location }}</div>
-            </td>
-            <td class="farm-size text-muted">{{ farm.size_hectares }}</td>
-            <td class="farm-col-date text-muted d-none d-xl-table-cell">{{ farm.date_registered|date:"M j, Y" }}</td>
-            <td>
-              {% if farm.status == 'active' %}
-              <span class="badge bg-success-lt text-success">{{ farm.get_status_display }}</span>
-              {% elif farm.status == 'inactive' %}
-              <span class="badge bg-warning-lt text-warning">{{ farm.get_status_display }}</span>
-              {% else %}
-              <span class="badge bg-danger-lt text-danger">{{ farm.get_status_display }}</span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="d-flex gap-1">
-                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="view" data-id="{{ farm.id }}" title="View details">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="edit" data-id="{{ farm.id }}" title="Edit farm">
-                  <i class="fas fa-edit"></i>
-                </button>
-                {% if farm.status != 'archived' %}
-                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-action="archive" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Archive farm">
-                  <i class="fas fa-box-archive text-warning"></i>
-                </button>
-                {% endif %}
-                <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm" data-bs-toggle="modal" data-bs-target="#deleteFarmModal" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Delete farm">
-                  <i class="fas fa-trash-alt text-danger"></i>
-                </button>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="avatar avatar-xs bg-primary-lt text-primary rounded">
+                <i class="fas fa-wheat-awn"></i>
+              </span>
+              <div>
+                <a href="javascript:void(0)" class="fw-semibold text-reset view-farm-detail-btn" data-id="{{ farm.id }}" title="Click to view details and map">
+                  {{ farm.name }}
+                </a>
               </div>
-            </td>
+            </div>
+          </td>
+          <td class="text-muted">
+            <div class="d-flex align-items-center gap-1">
+              <i class="fas fa-user-circle text-muted small"></i>
+              <span>{{ farm.owner }}</span>
+            </div>
+          </td>
+          <td class="text-muted">
+            <div class="d-flex align-items-center gap-1" title="{{ farm.location }}">
+              <i class="fas fa-map-pin text-danger small"></i>
+              <span>{{ farm.location }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge bg-blue-lt fw-bold">{{ farm.size_hectares }} ha</span>
+          </td>
+          <td class="text-muted d-none d-lg-table-cell">
+            <small>{{ farm.date_registered|date:"M j, Y" }}</small>
+          </td>
+          <td>
+            {% if farm.status == 'active' %}
+            <span class="badge bg-success-lt text-success"><i class="fas fa-circle-dot me-1 small"></i>{{ farm.get_status_display }}</span>
+            {% elif farm.status == 'inactive' %}
+            <span class="badge bg-warning-lt text-warning"><i class="fas fa-pause me-1 small"></i>{{ farm.get_status_display }}</span>
+            {% else %}
+            <span class="badge bg-danger-lt text-danger"><i class="fas fa-box-archive me-1 small"></i>{{ farm.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <!-- Eye icon: Opens Details (Farm ID, ZIP code, crops) & Barangay Mini Map -->
+              <button type="button"
+                      class="btn btn-ghost-primary btn-icon btn-sm view-farm-detail-btn"
+                      data-id="{{ farm.id }}"
+                      title="View Details & Barangay Mini Map">
+                <i class="fas fa-eye"></i>
+              </button>
+              <!-- Edit button -->
+              <button type="button"
+                      class="btn btn-ghost-secondary btn-icon btn-sm"
+                      data-bs-toggle="modal"
+                      data-bs-target="#farmModal"
+                      data-mode="edit"
+                      data-id="{{ farm.id }}"
+                      title="Edit farm">
+                <i class="fas fa-edit"></i>
+              </button>
+              {% if farm.status != 'archived' %}
+              <!-- Archive button -->
+              <button type="button"
+                      class="btn btn-ghost-secondary btn-icon btn-sm"
+                      data-action="archive"
+                      data-id="{{ farm.id }}"
+                      data-name="{{ farm.name|escape }}"
+                      title="Archive farm">
+                <i class="fas fa-box-archive text-warning"></i>
+              </button>
+              {% endif %}
+              <!-- Delete button -->
+              <button type="button"
+                      class="btn btn-ghost-secondary btn-icon btn-sm"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deleteFarmModal"
+                      data-id="{{ farm.id }}"
+                      data-name="{{ farm.name|escape }}"
+                      title="Delete farm">
+                <i class="fas fa-trash-alt text-danger"></i>
+              </button>
+            </div>
+          </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="6">
-                <div class="empty py-5">
-                    <div class="empty-icon">
-                        <i class="fas fa-map-marker-alt fa-2x text-muted"></i>
-                    </div>
-                    <p class="empty-title">No farms found</p>
-                    <p class="empty-subtitle">Try adjusting your search or register a new farm.</p>
-                    <div class="empty-action">
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="create">
-                            <i class="fas fa-plus-circle me-2"></i> Register Farm
-                        </button>
-                    </div>
-                </div>
-            </td>
+          <td colspan="7">
+            <div class="empty py-5">
+              <div class="empty-icon">
+                <i class="fas fa-map-location-dot fa-3x text-muted"></i>
+              </div>
+              <p class="empty-title">No farm fields found</p>
+              <p class="empty-subtitle">Try adjusting your search query or register a new farm field.</p>
+              <div class="empty-action">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="create">
+                  <i class="fas fa-plus-circle me-2"></i> Register Farm
+                </button>
+              </div>
+            </div>
+          </td>
         </tr>
         {% endfor %}
         </tbody>
       </table>
-    </div>
-
-    <!-- GRID VIEW -->
-    <div id="farmGridView" class="row g-3 d-none">
-      {% for farm in farms %}
-      <div class="col-12 col-lg-6 col-xl-4">
-        <div class="card h-100 farm-grid-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-              <h5 class="card-title farm-grid-title" title="{{ farm.name }}">{{ farm.name }}</h5>
-              <span class="badge farm-grid-status
-                {% if farm.status == 'active' %}bg-success-lt text-success
-                {% elif farm.status == 'inactive' %}bg-warning-lt text-warning
-                {% else %}bg-danger-lt text-danger{% endif %}">
-                {{ farm.get_status_display }}
-              </span>
-            </div>
-            <div class="farm-grid-meta">
-              <div class="farm-grid-meta-row" title="Farm ID">
-                <i class="fas fa-hashtag"></i>
-                <span class="farm-grid-meta-text">{{ farm.farm_code|default:"—" }}</span>
-              </div>
-              <div class="farm-grid-meta-row" title="{{ farm.owner }}">
-                <i class="fas fa-user"></i>
-                <span class="farm-grid-meta-text">{{ farm.owner }}</span>
-              </div>
-              <div class="farm-grid-meta-row" title="{{ farm.location }}">
-                <i class="fas fa-map-marker-alt"></i>
-                <span class="farm-grid-meta-text">{{ farm.location }}</span>
-              </div>
-              {% if farm.email %}
-              <div class="farm-grid-meta-row" title="{{ farm.email }}">
-                <i class="fas fa-envelope"></i>
-                <span class="farm-grid-meta-text">{{ farm.email }}</span>
-              </div>
-              {% endif %}
-              {% if farm.contact_number %}
-              <div class="farm-grid-meta-row" title="{{ farm.contact_number }}">
-                <i class="fas fa-phone"></i>
-                <span class="farm-grid-meta-text">{{ farm.contact_number }}</span>
-              </div>
-              {% endif %}
-              {% if farm.zip_code %}
-              <div class="farm-grid-meta-row" title="ZIP Code {{ farm.zip_code }}">
-                <i class="fas fa-map-pin"></i>
-                <span class="farm-grid-meta-text">ZIP {{ farm.zip_code }}</span>
-              </div>
-              {% endif %}
-              <div class="farm-grid-meta-row">
-                <i class="fas fa-layer-group"></i>
-                <span>{{ farm.size_hectares }} hectares</span>
-              </div>
-              <div class="farm-grid-meta-row">
-                <i class="fas fa-calendar"></i>
-                <span>Registered {{ farm.date_registered|date:"M j, Y" }}</span>
-              </div>
-            </div>
-            <p class="farm-grid-description text-muted small">
-              {% if farm.description %}{{ farm.description }}{% else %}<span class="fst-italic opacity-50">No description provided</span>{% endif %}
-            </p>
-          </div>
-          <div class="card-footer d-flex gap-1">
-            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="view" data-id="{{ farm.id }}" title="View details">
-              <i class="fas fa-eye"></i>
-            </button>
-            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#farmModal" data-mode="edit" data-id="{{ farm.id }}" title="Edit farm">
-              <i class="fas fa-edit"></i>
-            </button>
-            {% if farm.status != 'archived' %}
-            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-action="archive" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Archive farm">
-              <i class="fas fa-box-archive text-warning"></i>
-            </button>
-            {% else %}
-            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1 disabled" title="Already archived">
-              <i class="fas fa-box-archive text-muted"></i>
-            </button>
-            {% endif %}
-            <button type="button" class="btn btn-ghost-secondary btn-icon btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#deleteFarmModal" data-id="{{ farm.id }}" data-name="{{ farm.name|escape }}" title="Delete farm">
-              <i class="fas fa-trash-alt text-danger"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-      {% empty %}
-      <div class="col-12">
-        <div class="empty py-5 text-center">
-          <div class="empty-icon"><i class="fas fa-map-marker-alt fa-2x text-muted"></i></div>
-          <p class="empty-title">No farms found</p>
-          <p class="empty-subtitle">Try adjusting your search or register a new farm.</p>
-        </div>
-      </div>
-      {% endfor %}
     </div>
 
     <!-- Pagination -->
@@ -288,7 +390,163 @@
   </div>
 </div>
 
-<!-- Farm Modal (View / Create / Edit) -->
+<!-- ============================================================== -->
+<!-- FARM DETAILS & BARANGAY MINI MAP MODAL (TRIGGERED BY EYE ICON)  -->
+<!-- ============================================================== -->
+<div class="modal modal-blur fade" id="farmDetailModal" tabindex="-1" aria-labelledby="farmDetailModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header border-bottom">
+        <div class="d-flex align-items-center gap-3">
+          <div class="avatar avatar-md bg-primary-lt text-primary rounded">
+            <i class="fas fa-wheat-awn fa-lg"></i>
+          </div>
+          <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <h4 class="modal-title mb-0 fw-bold" id="detailFarmName">Farm Details</h4>
+              <!-- Farm ID displayed only in eye button modal -->
+              <span class="badge bg-secondary-lt font-monospace" id="detailFarmCode">FARM-0000</span>
+              <span class="badge" id="detailFarmStatusBadge">Active</span>
+            </div>
+            <div class="text-muted small mt-1">
+              <i class="fas fa-location-dot text-danger me-1"></i>
+              <span id="detailFarmLocationHeader">Loading location...</span>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-outline-primary btn-sm" id="detailEditFarmBtn" title="Edit this farm">
+            <i class="fas fa-edit me-1"></i> Edit Farm
+          </button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+      </div>
+
+      <div class="modal-body p-3 p-md-4">
+        <div class="row g-4">
+          <!-- LEFT COLUMN: MORE DETAILS (Shows ID, ZIP Code, Owner, Contact, Crops) -->
+          <div class="col-12 col-lg-5">
+            <div class="card h-100 border">
+              <div class="card-header bg-light-lt py-2">
+                <h5 class="card-title mb-0 text-uppercase small text-muted fw-bold">
+                  <i class="fas fa-id-card me-2 text-primary"></i>Field Specifications
+                </h5>
+              </div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-6">
+                    <div class="farm-detail-label"><i class="fas fa-hashtag text-muted me-1"></i> Farm ID</div>
+                    <div class="farm-detail-value font-monospace text-primary fw-bold" id="detailFarmIdSpec">—</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="farm-detail-label"><i class="fas fa-map-pin text-muted me-1"></i> ZIP Code</div>
+                    <div class="farm-detail-value" id="detailZip">—</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="farm-detail-label"><i class="fas fa-user text-muted me-1"></i> Owner / Manager</div>
+                    <div class="farm-detail-value" id="detailOwner">—</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="farm-detail-label"><i class="fas fa-layer-group text-muted me-1"></i> Farm Size</div>
+                    <div class="farm-detail-value text-primary fw-bold" id="detailSize">—</div>
+                  </div>
+                  <div class="col-12">
+                    <div class="farm-detail-label"><i class="fas fa-map-marker-alt text-muted me-1"></i> Registered Address</div>
+                    <div class="farm-detail-value" id="detailLocation">—</div>
+                  </div>
+                  <div class="col-12">
+                    <div class="farm-detail-label"><i class="fas fa-calendar-alt text-muted me-1"></i> Date Registered</div>
+                    <div class="farm-detail-value" id="detailRegistered">—</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="farm-detail-label"><i class="fas fa-phone text-muted me-1"></i> Contact Number</div>
+                    <div class="farm-detail-value" id="detailContact">—</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="farm-detail-label"><i class="fas fa-envelope text-muted me-1"></i> Email</div>
+                    <div class="farm-detail-value" id="detailEmail">—</div>
+                  </div>
+                  <div class="col-12">
+                    <div class="farm-detail-label"><i class="fas fa-align-left text-muted me-1"></i> Description / Notes</div>
+                    <div class="farm-detail-value text-muted p-2 bg-light-lt rounded small" id="detailDescription" style="min-height: 48px;">
+                      —
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Active crops planted on this farm -->
+                <div class="mt-4 pt-3 border-top">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="farm-detail-label mb-0">
+                      <i class="fas fa-seedling text-success me-1"></i> Crops on this Farm
+                    </div>
+                    <span class="badge bg-success-lt" id="detailCropsCount">0 Crops</span>
+                  </div>
+                  <div id="detailCropsList" class="d-flex flex-column gap-2 small">
+                    <div class="text-muted font-italic">No crop records linked to this farm yet.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: BARANGAY PIN MINI MAP -->
+          <div class="col-12 col-lg-7">
+            <div class="card h-100 border">
+              <div class="card-header bg-light-lt py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                  <h5 class="card-title mb-0 text-uppercase small text-muted fw-bold">
+                    <i class="fas fa-map-pin me-2 text-danger"></i>Barangay Mini Map
+                  </h5>
+                  <span id="detailMapStatus" class="badge bg-primary-lt">
+                    <i class="fas fa-spinner fa-spin me-1"></i> Pinpointing Barangay...
+                  </span>
+                </div>
+                <!-- Satellite view badge -->
+                <span class="badge bg-secondary-lt text-muted small">
+                  <i class="fas fa-satellite me-1"></i> Satellite View
+                </span>
+              </div>
+
+              <!-- Map viewport -->
+              <div class="card-body p-0 position-relative">
+                <div id="farmMiniMap" style="height: 380px; width: 100%; border-radius: 0;"></div>
+              </div>
+
+              <!-- Map bottom toolbar -->
+              <div class="card-footer py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 text-muted small font-monospace">
+                  <i class="fas fa-location-dot text-danger"></i>
+                  <span id="detailMapCoords">Pinpointing Barangay...</span>
+                </div>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-sm btn-primary" id="recenterMapBtn" title="Re-center map on barangay pin">
+                    <i class="fas fa-location-crosshairs me-1"></i> Center on Barangay
+                  </button>
+                  <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary" id="openExternalMapBtn" title="Open in Google Maps">
+                    <i class="fas fa-external-link-alt me-1"></i> Google Maps
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="detailQuickEditBtn">
+          <i class="fas fa-edit me-1"></i> Edit Farm Field
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- FARM MODAL (Create / Edit Form)                                -->
+<!-- Farm ID and ZIP Code are hidden as requested                   -->
+<!-- ============================================================== -->
 <div class="modal modal-blur fade" id="farmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -303,22 +561,22 @@
           <div id="farmFormError" class="alert alert-danger d-none"></div>
           <div class="row g-3">
             <div class="col-12">
-              <label class="form-label">Farm Name <span class="text-danger"></span></label>
-              <input type="text" name="name" id="farm_name" class="form-control" required>
+              <label class="form-label required">Farm Name</label>
+              <input type="text" name="name" id="farm_name" class="form-control" required placeholder="e.g. Green Valley Agricultural Field">
             </div>
             <div class="col-12">
-              <label class="form-label">Owner  <span class="text-danger"></span></label>
-              <input type="text" name="owner" id="farm_owner" class="form-control" required>
+              <label class="form-label required">Owner / Manager</label>
+              <input type="text" name="owner" id="farm_owner" class="form-control" required placeholder="e.g. Juan Dela Cruz">
             </div>
             <div class="col-12">
-              <label class="form-label">Location <span class="text-danger"></span></label>
-              <input type="text" name="location" id="farm_location" class="form-control" required>
+              <label class="form-label required">Location / Barangay</label>
+              <input type="text" name="location" id="farm_location" class="form-control" required placeholder="e.g. Brgy. 5, Kabankalan City">
+              <div class="form-text text-muted">The mini map will automatically pin point this Barangay.</div>
             </div>
-            <div class="col-12">
+            <!-- Farm ID (hidden from modal form) -->
+            <div class="col-12 d-none">
               <label class="form-label">Farm ID</label>
-              <input type="text" id="farm_code" class="form-control" readonly
-                     placeholder="Auto-generated">
-
+              <input type="text" id="farm_code" class="form-control" readonly placeholder="Auto-generated">
             </div>
             <div class="col-md-6">
               <label class="form-label">Email</label>
@@ -328,24 +586,25 @@
               <label class="form-label">Contact Number</label>
               <input type="text" name="contact_number" id="farm_contact_number" class="form-control" placeholder="09XX-XXX-XXXX" maxlength="13" inputmode="numeric" pattern="[0-9]{4}-[0-9]{3}-[0-9]{4}" title="Please enter exactly 11 digits (e.g., 0912-345-6789)">
             </div>
-            <div class="col-12">
+            <!-- ZIP Code (hidden from modal form) -->
+            <div class="col-12 d-none">
               <label class="form-label">ZIP Code</label>
-              <input type="text" name="zip_code" id="farm_zip_code" class="form-control" placeholder="e.g. 3300">
+              <input type="text" name="zip_code" id="farm_zip_code" class="form-control" placeholder="e.g. 6111">
             </div>
             <div class="col-6">
-              <label class="form-label">Farm Size (hectares) <span class="text-danger"></span></label>
-              <input type="number" name="size_hectares" id="farm_size_hectares" class="form-control" step="00.00" min="0" required placeholder="0.00">
+              <label class="form-label required">Farm Size (hectares)</label>
+              <input type="number" name="size_hectares" id="farm_size_hectares" class="form-control" step="0.01" min="0" required placeholder="0.00">
             </div>
             <div class="col-6">
-              <label class="form-label">Date Registered <span class="text-danger"></span></label>
+              <label class="form-label required">Date Registered</label>
               <input type="datetime-local" name="date_registered" id="farm_date_registered" class="form-control" required>
             </div>
             <div class="col-12">
-              <label class="form-label">Description</label>
-              <textarea name="description" id="farm_description" class="form-control" rows="3" placeholder=""></textarea>
+              <label class="form-label">Description / Field Notes</label>
+              <textarea name="description" id="farm_description" class="form-control" rows="3" placeholder="Soil type, irrigation status, terrain, boundary notes..."></textarea>
             </div>
             <div class="col-12">
-              <label class="form-label">Farm Status <span class="text-danger"></span></label>
+              <label class="form-label required">Farm Status</label>
               <select name="status" id="farm_status" class="form-select" required>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -356,7 +615,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-ghost-secondary me-auto" id="farmClearBtn" title="Clear all fields">
-            <i class="ti ti-x me-1"></i>Clear
+            <i class="fas fa-eraser me-1"></i>Clear
           </button>
           <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary" id="farmSubmitBtn">Save Farm</button>
@@ -366,12 +625,14 @@
   </div>
 </div>
 
-<!-- Delete Farm Modal -->
+<!-- ============================================================== -->
+<!-- DELETE FARM MODAL                                              -->
+<!-- ============================================================== -->
 <div class="modal modal-blur fade" id="deleteFarmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title text-danger">Delete Farm</h5>
+        <h5 class="modal-title text-danger"><i class="fas fa-trash-alt me-2"></i>Delete Farm</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -385,13 +646,15 @@
   </div>
 </div>
 
-<!-- Deleted Farms Log Modal -->
+<!-- ============================================================== -->
+<!-- DELETED FARMS LOG MODAL                                        -->
+<!-- ============================================================== -->
 <div class="modal modal-blur fade" id="deletedFarmsModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <div>
-          <h5 class="modal-title"><i class="fas fa-trash-alt text-danger me-2"></i>Deleted Log</h5>
+          <h5 class="modal-title"><i class="fas fa-trash-alt text-danger me-2"></i>Deleted Farm Log</h5>
           <div class="text-muted small mt-1">Restore farms, or permanently delete them when you no longer need their records.</div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -503,29 +766,58 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'libs/leaflet/leaflet.js' %}"></script>
 <script>
 (function () {
   const LIST_PAGE_URL = '{% url "farms:farm_list" %}';
-  const LIST_URL    = '{% url "farms:farm_list_ajax" %}';
   const GET_URL     = '{% url "farms:farm_get_ajax" 0 %}'.replace('/0/', '/');
   const SAVE_URL    = '{% url "farms:farm_save_ajax" %}';
   const DELETE_BASE = '{% url "farms:farm_delete_ajax" 0 %}'.replace('/0/', '/');
   const ARCHIVE_BASE= '{% url "farms:farm_archive_ajax" 0 %}'.replace('/0/', '/');
 
-  const tableView   = document.getElementById('farmTableView');
-  const gridView    = document.getElementById('farmGridView');
-  const modalEl     = document.getElementById('farmModal');
-  const deleteModal = document.getElementById('deleteFarmModal');
-  const form        = document.getElementById('farmForm');
-  const alertBox    = document.getElementById('farmFormError');
-  const title       = document.getElementById('farmModalTitle');
-  const submitBtn   = document.getElementById('farmSubmitBtn');
-  const deleteBtn   = document.getElementById('confirmDeleteFarmBtn');
-  const deleteName  = document.getElementById('deleteFarmName');
-  const clearBtn    = document.getElementById('farmClearBtn');
-  const bodyRows    = document.getElementById('farmsTableBody');
-  let currentId     = null;
-  let currentMode   = 'create';
+  // Modal elements
+  const detailModalEl = document.getElementById('farmDetailModal');
+  const farmModalEl   = document.getElementById('farmModal');
+  const deleteModal   = document.getElementById('deleteFarmModal');
+  const form          = document.getElementById('farmForm');
+  const alertBox      = document.getElementById('farmFormError');
+  const title         = document.getElementById('farmModalTitle');
+  const submitBtn     = document.getElementById('farmSubmitBtn');
+  const deleteBtn     = document.getElementById('confirmDeleteFarmBtn');
+  const deleteName    = document.getElementById('deleteFarmName');
+  const clearBtn      = document.getElementById('farmClearBtn');
+
+  // Detail Modal Elements
+  const detailFarmName       = document.getElementById('detailFarmName');
+  const detailFarmCode       = document.getElementById('detailFarmCode');
+  const detailFarmIdSpec     = document.getElementById('detailFarmIdSpec');
+  const detailFarmStatusBadge= document.getElementById('detailFarmStatusBadge');
+  const detailFarmLocHeader  = document.getElementById('detailFarmLocationHeader');
+  const detailOwner          = document.getElementById('detailOwner');
+  const detailSize           = document.getElementById('detailSize');
+  const detailLocation       = document.getElementById('detailLocation');
+  const detailZip            = document.getElementById('detailZip');
+  const detailRegistered     = document.getElementById('detailRegistered');
+  const detailContact        = document.getElementById('detailContact');
+  const detailEmail          = document.getElementById('detailEmail');
+  const detailDescription    = document.getElementById('detailDescription');
+  const detailCropsCount     = document.getElementById('detailCropsCount');
+  const detailCropsList      = document.getElementById('detailCropsList');
+  const detailMapStatus      = document.getElementById('detailMapStatus');
+  const detailMapCoords      = document.getElementById('detailMapCoords');
+  const recenterMapBtn       = document.getElementById('recenterMapBtn');
+  const openExternalMapBtn   = document.getElementById('openExternalMapBtn');
+  const detailEditFarmBtn    = document.getElementById('detailEditFarmBtn');
+  const detailQuickEditBtn   = document.getElementById('detailQuickEditBtn');
+
+  let currentDetailFarm = null;
+  let currentId         = null;
+  let currentMode       = 'create';
+
+  // Leaflet Mini Map state (Satellite view)
+  let miniMap        = null;
+  let currentMarker  = null;
+  let activeCoords   = null;
 
   function getCookie(name) {
     const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -548,7 +840,7 @@
     alertBox.classList.add('d-none');
   }
 
-  // Contact number: enforce exactly 11 digits and auto-format as 09XX-XXX-XXXX
+  // Contact number auto-formatting: 09XX-XXX-XXXX
   const contactInput = document.getElementById('farm_contact_number');
   function formatContactNumber(value) {
     let digits = value.replace(/\D/g, '').slice(0, 11);
@@ -588,136 +880,366 @@
     bootstrap.Toast.getOrCreateInstance(el).show();
   });
 
-  // Deleted Log: select-all support and permanent-delete confirmation.
-  const deletedBulkForm = document.getElementById('deletedFarmsBulkForm');
-  const selectAllDeleted = document.getElementById('selectAllDeletedFarms');
-  const deletedCheckboxes = Array.from(document.querySelectorAll('.deleted-farm-checkbox'));
-  const bulkRestoreBtn = document.getElementById('bulkRestoreBtn');
-  const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-  const deletedSelectedCount = document.getElementById('deletedSelectedCount');
+  // ==============================================================
+  // LEAFLET MINI MAP & BARANGAY PIN LOCATION TRACKER
+  // ==============================================================
+  function initMiniMap() {
+    if (miniMap) return;
 
-  function selectedDeletedCount() {
-    return deletedCheckboxes.filter(function (checkbox) {
-      return checkbox.checked;
-    }).length;
-  }
+    // Default center on Philippines / Negros Occidental
+    const defaultLat = 9.9833;
+    const defaultLng = 122.8167;
 
-  function updateDeletedSelection() {
-    const count = selectedDeletedCount();
-    if (selectAllDeleted) {
-      selectAllDeleted.checked = deletedCheckboxes.length > 0 && count === deletedCheckboxes.length;
-      selectAllDeleted.indeterminate = count > 0 && count < deletedCheckboxes.length;
-    }
-    if (deletedSelectedCount) {
-      deletedSelectedCount.textContent = count + ' selected';
-    }
-    if (bulkRestoreBtn) bulkRestoreBtn.disabled = count === 0;
-    if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
-  }
-
-  if (selectAllDeleted) {
-    selectAllDeleted.addEventListener('change', function () {
-      deletedCheckboxes.forEach(function (checkbox) {
-        checkbox.checked = selectAllDeleted.checked;
-      });
-      updateDeletedSelection();
+    miniMap = L.map('farmMiniMap', {
+      center: [defaultLat, defaultLng],
+      zoom: 13,
+      zoomControl: true,
+      attributionControl: false
     });
+
+    // Satellite Imagery (Esri World Imagery)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19
+    }).addTo(miniMap);
+
+    // Subtle place & boundary reference labels overlay
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19
+    }).addTo(miniMap);
   }
 
-  deletedCheckboxes.forEach(function (checkbox) {
-    checkbox.addEventListener('change', updateDeletedSelection);
-  });
-  updateDeletedSelection();
+  // Create a clean red map pin on the Barangay
+  function createBarangayPin(lat, lng, farm, brgyLabel) {
+    if (currentMarker && miniMap) {
+      miniMap.removeLayer(currentMarker);
+    }
 
-  const deletedFarmsModalEl = document.getElementById('deletedFarmsModal');
-  if (deletedFarmsModalEl && deletedBulkForm) {
-    deletedFarmsModalEl.addEventListener('hidden.bs.modal', function () {
-      deletedBulkForm.reset();
-      updateDeletedSelection();
+    const pinIcon = L.divIcon({
+      className: 'brgy-pin-marker',
+      html: `
+        <div class="pin-icon">
+          <i class="fas fa-location-dot"></i>
+        </div>
+        <div class="pin-shadow"></div>
+      `,
+      iconSize: [32, 42],
+      iconAnchor: [16, 40],
+      popupAnchor: [0, -38]
     });
+
+    currentMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(miniMap);
+
+    const popupHtml = `
+      <div style="min-width: 175px; text-align: center; padding: 2px;">
+        <div class="text-danger fw-bold small text-uppercase mb-1">
+          <i class="fas fa-location-dot me-1"></i>${escapeHtml(brgyLabel)}
+        </div>
+        <div class="fw-semibold text-primary mb-1">${escapeHtml(farm.name)}</div>
+        <div class="small text-muted mb-2">${escapeHtml(farm.owner)} &middot; ${farm.size_hectares} ha</div>
+        <span class="badge bg-danger-lt text-danger">Barangay Pinpoint</span>
+      </div>
+    `;
+    currentMarker.bindPopup(popupHtml).openPopup();
   }
 
-  if (bulkDeleteBtn) {
-    bulkDeleteBtn.addEventListener('click', function (event) {
-      const count = selectedDeletedCount();
-      if (count === 0) {
-        event.preventDefault();
-        return;
+  function escapeHtml(text) {
+    if (!text) return '';
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+  }
+
+  // Extract Barangay name from address text (e.g. "Brgy. 5, Kabankalan" -> "Barangay 5")
+  function extractBarangay(location) {
+    if (!location) return null;
+    const match = location.match(/(?:brgy\.?|barangay|bgy\.?)\s*([a-zA-Z0-9\s-]+?)(?:,|$)/i);
+    if (match && match[1]) {
+      const trimmed = match[1].trim();
+      return /^(?:brgy|barangay|bgy)/i.test(trimmed) ? trimmed : `Barangay ${trimmed}`;
+    }
+    return null;
+  }
+
+  // Extract City or Municipality from address
+  function extractCity(location) {
+    if (!location) return '';
+    const parts = location.split(',').map(s => s.trim());
+    for (const p of parts) {
+      if (!/(?:brgy|barangay|bgy)/i.test(p) && p.length > 2) {
+        return p;
       }
-      const confirmed = window.confirm(
-        `Permanently delete ${count} selected farm${count === 1 ? '' : 's'}?\n\n` +
-        'This will also permanently delete their crops and harvest records. ' +
-        'This cannot be undone.'
-      );
-      if (!confirmed) {
-        event.preventDefault();
+    }
+    return '';
+  }
+
+  // Automated Barangay Pinpoint engine (locates the barangay area and drops a pin)
+  async function autoTrackFarmLocation(farm) {
+    const brgyName = extractBarangay(farm.location);
+    const cityName = extractCity(farm.location);
+    const displayLabel = brgyName || (cityName ? `Barangay in ${cityName}` : farm.location);
+
+    detailMapStatus.className = 'badge bg-primary-lt';
+    detailMapStatus.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Pinpointing Barangay...';
+    detailMapCoords.textContent = 'Locating Barangay center...';
+
+    initMiniMap();
+
+    // Give modal animation a brief moment then resize Leaflet canvas
+    setTimeout(() => {
+      if (miniMap) miniMap.invalidateSize();
+    }, 250);
+
+    let lat = null;
+    let lng = null;
+
+    // 1. Search Nominatim specifically for the Barangay center
+    if (brgyName) {
+      try {
+        const query = cityName ? `${brgyName}, ${cityName}, Philippines` : `${brgyName}, Philippines`;
+        const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+        const res = await fetch(searchUrl, {
+          headers: { 'Accept': 'application/json' }
+        });
+        const data = await res.json();
+        if (data && data.length > 0) {
+          lat = parseFloat(data[0].lat);
+          lng = parseFloat(data[0].lon);
+        }
+      } catch (err) {
+        console.warn('Barangay geocoding error:', err);
+      }
+    }
+
+    // 2. Search municipality/city center if barangay alone wasn't returned
+    if (!lat || !lng) {
+      if (cityName) {
+        try {
+          const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cityName + ', Philippines')}`;
+          const res = await fetch(searchUrl, {
+            headers: { 'Accept': 'application/json' }
+          });
+          const data = await res.json();
+          if (data && data.length > 0) {
+            lat = parseFloat(data[0].lat);
+            lng = parseFloat(data[0].lon);
+          }
+        } catch (err) {
+          console.warn('City geocoding error:', err);
+        }
+      }
+    }
+
+    // 3. Fallback to backend coordinates if available
+    if (!lat || !lng) {
+      if (farm.latitude && farm.longitude) {
+        lat = parseFloat(farm.latitude);
+        lng = parseFloat(farm.longitude);
+      }
+    }
+
+    // 4. Regional fallback if unresolved
+    if (!lat || !lng) {
+      const locLower = (farm.location || '').toLowerCase();
+      if (locLower.includes('kabankalan')) {
+        lat = 9.9833; lng = 122.8167;
+      } else if (locLower.includes('bacolod') || locLower.includes('negros')) {
+        lat = 10.6766; lng = 122.9509;
+      } else if (locLower.includes('iloilo')) {
+        lat = 10.7202; lng = 122.5621;
+      } else if (locLower.includes('cebu')) {
+        lat = 10.3157; lng = 123.8854;
+      } else if (locLower.includes('davao')) {
+        lat = 7.1907; lng = 125.4553;
+      } else if (locLower.includes('cauayan') || locLower.includes('isabela')) {
+        lat = 16.9298; lng = 121.7709;
+      } else {
+        lat = 9.9833; lng = 122.8167;
+      }
+    }
+
+    activeCoords = [lat, lng];
+
+    // Center on the barangay with a moderate zoom level (13.5)
+    miniMap.flyTo([lat, lng], 13.5, {
+      animate: true,
+      duration: 1.2
+    });
+
+    // Drop clean red location pin on the Barangay
+    createBarangayPin(lat, lng, farm, displayLabel);
+
+    // Update coordinates and status badge
+    detailMapCoords.innerHTML = `Barangay Pin: <b>${lat.toFixed(4)}</b>, <b>${lng.toFixed(4)}</b>`;
+    detailMapStatus.className = 'badge bg-success-lt text-success';
+    detailMapStatus.innerHTML = `<i class="fas fa-location-dot me-1"></i> ${escapeHtml(displayLabel)} Pinpointed`;
+
+    // Configure External Google Maps link
+    if (openExternalMapBtn) {
+      openExternalMapBtn.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    }
+  }
+
+  // Recenter button
+  if (recenterMapBtn) {
+    recenterMapBtn.addEventListener('click', function () {
+      if (miniMap && activeCoords) {
+        miniMap.flyTo(activeCoords, 14, { animate: true, duration: 1 });
+        if (currentMarker) currentMarker.openPopup();
       }
     });
   }
 
-  document.querySelectorAll('.permanent-delete-btn').forEach(function (btn) {
-    btn.addEventListener('click', function (event) {
-      const name = btn.dataset.name || 'this farm';
-      const confirmed = window.confirm(
-        `Permanently delete farm "${name}"?\n\n` +
-        'This will also permanently delete its crops and harvest records. ' +
-        'This cannot be undone.'
-      );
-      if (!confirmed) {
-        event.preventDefault();
+  // ==============================================================
+  // VIEW FARM DETAILS (EYE ICON CLICK HANDLER)
+  // Shows full details (Farm ID, ZIP code, crops) + Barangay Pin
+  // ==============================================================
+  function openFarmDetails(farmId) {
+    currentId = farmId;
+    currentDetailFarm = null;
+
+    // Show loading state
+    detailFarmName.textContent        = 'Loading...';
+    detailFarmCode.textContent        = '—';
+    detailFarmIdSpec.textContent      = '—';
+    detailFarmLocHeader.textContent   = 'Fetching farm records...';
+    detailOwner.textContent           = '...';
+    detailSize.textContent            = '...';
+    detailLocation.textContent        = '...';
+    detailZip.textContent             = '...';
+    detailRegistered.textContent      = '...';
+    detailContact.textContent         = '...';
+    detailEmail.textContent           = '...';
+    detailDescription.textContent     = 'Loading field information...';
+    detailCropsList.innerHTML         = '<div class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i> Loading crop data...</div>';
+
+    // Show the modal
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(detailModalEl);
+    modalInstance.show();
+
+    // Fetch full farm details
+    fetch(`${GET_URL}${farmId}/`, {
+      method: 'GET',
+      headers: { 'X-CSRFToken': csrftoken },
+    })
+    .then((r) => {
+      if (!r.ok) throw new Error('Could not load farm details.');
+      return r.json();
+    })
+    .then((data) => {
+      currentDetailFarm = data;
+
+      // Populate text info (Farm ID and ZIP code shown here)
+      detailFarmName.textContent        = data.name || 'Unnamed Farm';
+      detailFarmCode.textContent        = data.farm_code || 'FARM-0000';
+      detailFarmIdSpec.textContent      = data.farm_code || '—';
+      detailFarmLocHeader.textContent   = data.location || 'Location unspecified';
+      detailOwner.textContent           = data.owner || '—';
+      detailSize.textContent            = `${data.size_hectares} hectares`;
+      detailLocation.textContent        = data.location || '—';
+      detailZip.textContent             = data.zip_code || '—';
+      detailRegistered.textContent      = data.date_registered_display || (data.date_registered ? data.date_registered.slice(0, 10) : '—');
+      detailContact.innerHTML           = data.contact_number ? `<a href="tel:${data.contact_number}" class="text-reset"><i class="fas fa-phone-alt me-1 text-primary small"></i>${data.contact_number}</a>` : '—';
+      detailEmail.innerHTML             = data.email ? `<a href="mailto:${data.email}" class="text-reset"><i class="fas fa-envelope me-1 text-primary small"></i>${data.email}</a>` : '—';
+      detailDescription.textContent     = data.description || 'No description or soil notes recorded for this farm.';
+
+      // Status badge
+      const status = (data.status || 'active').toLowerCase();
+      if (status === 'active') {
+        detailFarmStatusBadge.className = 'badge bg-success-lt text-success';
+        detailFarmStatusBadge.textContent = 'Active';
+      } else if (status === 'inactive') {
+        detailFarmStatusBadge.className = 'badge bg-warning-lt text-warning';
+        detailFarmStatusBadge.textContent = 'Inactive';
+      } else {
+        detailFarmStatusBadge.className = 'badge bg-danger-lt text-danger';
+        detailFarmStatusBadge.textContent = 'Archived';
+      }
+
+      // Populate Crops
+      const cropsCount = data.crops_count || 0;
+      detailCropsCount.textContent = `${cropsCount} Crop${cropsCount === 1 ? '' : 's'}`;
+      if (data.crops && data.crops.length > 0) {
+        let cropsHtml = '';
+        data.crops.forEach(function (crop) {
+          cropsHtml += `
+            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light-lt">
+              <div>
+                <span class="fw-semibold text-primary">${escapeHtml(crop.name)}</span>
+                ${crop.variety ? `<span class="text-muted small">(${escapeHtml(crop.variety)})</span>` : ''}
+                ${crop.planting_date ? `<div class="text-muted extra-small" style="font-size:0.75rem;"><i class="fas fa-calendar-day me-1"></i>Planted ${crop.planting_date}</div>` : ''}
+              </div>
+              <span class="badge bg-secondary-lt small">${crop.status_display || crop.status}</span>
+            </div>
+          `;
+        });
+        detailCropsList.innerHTML = cropsHtml;
+      } else {
+        detailCropsList.innerHTML = '<div class="text-muted fst-italic">No active crops registered on this farm field yet.</div>';
+      }
+
+      // Pinpoint the Barangay on the mini map
+      autoTrackFarmLocation(data);
+    })
+    .catch((err) => {
+      detailFarmName.textContent = 'Error loading farm';
+      detailFarmLocHeader.textContent = err.message;
+      detailMapStatus.className = 'badge bg-danger-lt text-danger';
+      detailMapStatus.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Failed to pin';
+    });
+  }
+
+  // Bind view buttons
+  document.body.addEventListener('click', function (e) {
+    const btn = e.target.closest('.view-farm-detail-btn');
+    if (!btn) return;
+    e.preventDefault();
+    const id = btn.getAttribute('data-id');
+    if (id) openFarmDetails(id);
+  });
+
+  // Switch from Detail modal to Edit form modal
+  function switchToEdit() {
+    if (!currentId) return;
+    const detailInstance = bootstrap.Modal.getInstance(detailModalEl);
+    if (detailInstance) detailInstance.hide();
+
+    // Trigger edit modal
+    const editTrigger = document.querySelector(`button[data-mode="edit"][data-id="${currentId}"]`);
+    if (editTrigger) {
+      editTrigger.click();
+    } else {
+      currentMode = 'edit';
+      title.textContent = 'Edit Farm';
+      submitBtn.textContent = 'Update Farm';
+      populateFormWithId(currentId);
+      const farmModalInstance = bootstrap.Modal.getOrCreateInstance(farmModalEl);
+      farmModalInstance.show();
+    }
+  }
+
+  if (detailEditFarmBtn) detailEditFarmBtn.addEventListener('click', switchToEdit);
+  if (detailQuickEditBtn) detailQuickEditBtn.addEventListener('click', switchToEdit);
+
+  // When detail modal is shown, invalidate Leaflet map size so tiles render seamlessly
+  if (detailModalEl) {
+    detailModalEl.addEventListener('shown.bs.modal', function () {
+      if (miniMap) {
+        miniMap.invalidateSize();
+        if (activeCoords) {
+          miniMap.setView(activeCoords, 13.5);
+        }
       }
     });
-  });
-
-  // View mode toggle: remember the choice so editing in the grid view does
-  // not send the user back to the list view after a reload.
-  const VIEW_MODE_KEY = 'harvestlogFarmViewMode';
-
-  function getSavedViewMode() {
-    try {
-      return localStorage.getItem(VIEW_MODE_KEY) === 'grid' ? 'grid' : 'table';
-    } catch (err) {
-      return 'table';
-    }
   }
 
-  function saveViewMode(view) {
-    try {
-      localStorage.setItem(VIEW_MODE_KEY, view);
-    } catch (err) {
-      // Ignore storage errors (for example, private browsing).
-    }
-  }
-
-  function applyViewMode(view) {
-    const showGrid = view === 'grid';
-    tableView.classList.toggle('d-none', showGrid);
-    gridView.classList.toggle('d-none', !showGrid);
-    document.querySelectorAll('.view-mode-btn').forEach(function (btn) {
-      const active = btn.dataset.view === view;
-      btn.classList.toggle('active', active);
-      btn.classList.toggle('btn-primary', active);
-      btn.classList.toggle('btn-outline-primary', !active);
-    });
-  }
-
-  document.querySelectorAll('.view-mode-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      const view = btn.dataset.view === 'grid' ? 'grid' : 'table';
-      saveViewMode(view);
-      applyViewMode(view);
-    });
-  });
-
-  applyViewMode(getSavedViewMode());
-
+  // ==============================================================
+  // FARM CREATE / EDIT FORM LOGIC
+  // ==============================================================
   function resetForm() {
     form.querySelectorAll('input, select, textarea').forEach(function (el) {
       el.disabled = false;
     });
     form.reset();
     document.getElementById('farm_id').value = '';
-    // The Farm ID field has no name (it is never posted), so reset() skips it.
     document.getElementById('farm_code').value = '';
     currentId = null;
     currentMode = 'create';
@@ -725,100 +1247,58 @@
     submitBtn.textContent = 'Save Farm';
     submitBtn.disabled = false;
     clearFormError();
-    // Default status to Active, date to now (local time)
     document.getElementById('farm_status').value = 'active';
     document.getElementById('farm_date_registered').value = localDateTimeValue();
   }
 
-  if (modalEl) {
-  modalEl.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    if (!button) {
-      resetForm();
-      return;
-    }
-    const mode = button.getAttribute('data-mode');
-    currentMode = mode;
-
-    if (mode === 'edit' || mode === 'view') {
-      const id = button.getAttribute('data-id');
-      currentId = id;
-      document.getElementById('farm_id').value = id;
-
-      title.textContent = mode === 'edit' ? 'Edit Farm' : 'Farm Details';
-      submitBtn.textContent = mode === 'edit' ? 'Update Farm' : 'View Details';
-      submitBtn.disabled = mode === 'view';
-      form.querySelectorAll('input, select, textarea').forEach(function (el) {
-        el.disabled = mode === 'view';
-      });
-
-      fetch(`${GET_URL}${id}/`, {
-        method: 'GET',
-        headers: { 'X-CSRFToken': csrftoken },
-      })
-      .then((r) => r.json())
-      .then((data) => {
-        document.getElementById('farm_name').value        = data.name || '';
-        document.getElementById('farm_owner').value       = data.owner || '';
-        document.getElementById('farm_location').value    = data.location || '';
-        document.getElementById('farm_code').value        = data.farm_code || '';
-        document.getElementById('farm_email').value       = data.email || '';
-        document.getElementById('farm_contact_number').value = data.contact_number || '';
-        document.getElementById('farm_zip_code').value     = data.zip_code || '';
-        document.getElementById('farm_size_hectares').value = data.size_hectares || '';
-        document.getElementById('farm_date_registered').value = data.date_registered ? data.date_registered.slice(0, 16) : '';
-        document.getElementById('farm_description').value = data.description || '';
-        document.getElementById('farm_status').value      = data.status || 'active';
-      })
-      .catch(() => { showFormError('Could not load farm details.'); });
-    } else {
-      resetForm();
-    }
-  });
-
-  }
-  if (modalEl) {
-    modalEl.addEventListener('hidden.bs.modal', function () {
-      if (form) {
-        form.querySelectorAll('input, select, textarea').forEach(function (el) {
-          el.disabled = false;
-        });
-      }
-      resetForm();
-    });
-  }
-
-  if (deleteModal) {
-    deleteModal.addEventListener('show.bs.modal', function (event) {
-      const button = event.relatedTarget;
-      if (button) {
-        currentId = button.getAttribute('data-id');
-        if (deleteName) {
-          deleteName.textContent = button.getAttribute('data-name');
-        }
-      }
-    });
-  }
-
-  // Handle inline archive button (table + grid)
-  document.body.addEventListener('click', function (e) {
-    const btn = e.target.closest('[data-action="archive"]');
-    if (!btn) return;
-    e.preventDefault();
-    const id = btn.dataset.id;
-    const name = btn.dataset.name;
-    if (!confirm(`Archive farm "${name}"?`)) return;
-    fetch(`${ARCHIVE_BASE}${id}/`, {
-      method: 'POST',
+  function populateFormWithId(id) {
+    document.getElementById('farm_id').value = id;
+    fetch(`${GET_URL}${id}/`, {
+      method: 'GET',
       headers: { 'X-CSRFToken': csrftoken },
     })
     .then((r) => r.json())
     .then((data) => {
-      if (data.status === 'archived') {
-        location.reload();
+      document.getElementById('farm_name').value        = data.name || '';
+      document.getElementById('farm_owner').value       = data.owner || '';
+      document.getElementById('farm_location').value    = data.location || '';
+      document.getElementById('farm_code').value        = data.farm_code || '';
+      document.getElementById('farm_email').value       = data.email || '';
+      document.getElementById('farm_contact_number').value = data.contact_number || '';
+      document.getElementById('farm_zip_code').value     = data.zip_code || '';
+      document.getElementById('farm_size_hectares').value = data.size_hectares || '';
+      document.getElementById('farm_date_registered').value = data.date_registered ? data.date_registered.slice(0, 16) : '';
+      document.getElementById('farm_description').value = data.description || '';
+      document.getElementById('farm_status').value      = data.status || 'active';
+    })
+    .catch(() => { showFormError('Could not load farm details for editing.'); });
+  }
+
+  if (farmModalEl) {
+    farmModalEl.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (!button) {
+        return;
+      }
+      const mode = button.getAttribute('data-mode') || 'create';
+      currentMode = mode;
+
+      if (mode === 'edit') {
+        const id = button.getAttribute('data-id');
+        currentId = id;
+        title.textContent = 'Edit Farm';
+        submitBtn.textContent = 'Update Farm';
+        submitBtn.disabled = false;
+        populateFormWithId(id);
+      } else {
+        resetForm();
       }
     });
-  });
+
+    farmModalEl.addEventListener('hidden.bs.modal', function () {
+      resetForm();
+    });
+  }
 
   if (clearBtn) {
     clearBtn.addEventListener('click', resetForm);
@@ -828,9 +1308,7 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       clearFormError();
-      if (submitBtn) {
-        submitBtn.disabled = true;
-      }
+      if (submitBtn) submitBtn.disabled = true;
 
       const formData = new FormData(form);
       fetch(SAVE_URL, {
@@ -841,20 +1319,15 @@
       .then(async (resp) => {
         const data = await resp.json();
         if (!resp.ok) {
-          throw new Error(data.error || 'Something went wrong.');
+          throw new Error(data.error || 'Something went wrong while saving the farm.');
         }
         return data;
       })
       .then(() => {
         const wasCreate = currentMode === 'create';
-        if (modalEl) {
-          const modalInstance = bootstrap.Modal.getInstance(modalEl);
-          if (modalInstance) {
-            modalInstance.hide();
-          }
-        }
-        // Clear any active search/status filters after creating a farm so the
-        // new record is visible on the reloaded list.
+        const modalInstance = bootstrap.Modal.getInstance(farmModalEl);
+        if (modalInstance) modalInstance.hide();
+
         if (wasCreate) {
           window.location.href = LIST_PAGE_URL;
         } else {
@@ -865,10 +1338,23 @@
         showFormError(err.message);
       })
       .finally(() => {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-        }
+        if (submitBtn) submitBtn.disabled = false;
       });
+    });
+  }
+
+  // ==============================================================
+  // DELETE & ARCHIVE HANDLERS
+  // ==============================================================
+  if (deleteModal) {
+    deleteModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (button) {
+        currentId = button.getAttribute('data-id');
+        if (deleteName) {
+          deleteName.textContent = button.getAttribute('data-name');
+        }
+      }
     });
   }
 
@@ -889,14 +1375,8 @@
         return data;
       })
       .then(() => {
-        if (deleteModal) {
-          const modalInstance = bootstrap.Modal.getInstance(deleteModal);
-          if (modalInstance) {
-            modalInstance.hide();
-          }
-        }
-        const row = document.querySelector(`tr[data-row-id="${currentId}"]`);
-        if (row) row.remove();
+        const modalInstance = bootstrap.Modal.getInstance(deleteModal);
+        if (modalInstance) modalInstance.hide();
         location.reload();
       })
       .catch((err) => {
@@ -907,6 +1387,94 @@
       });
     });
   }
+
+  document.body.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-action="archive"]');
+    if (!btn) return;
+    e.preventDefault();
+    const id = btn.dataset.id;
+    const name = btn.dataset.name;
+    if (!confirm(`Archive farm "${name}"?`)) return;
+    fetch(`${ARCHIVE_BASE}${id}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+    })
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.status === 'archived') {
+        location.reload();
+      }
+    });
+  });
+
+  // ==============================================================
+  // DELETED LOG BULK RESTORE / PERMANENT DELETE
+  // ==============================================================
+  const deletedBulkForm = document.getElementById('deletedFarmsBulkForm');
+  const selectAllDeleted = document.getElementById('selectAllDeletedFarms');
+  const deletedCheckboxes = Array.from(document.querySelectorAll('.deleted-farm-checkbox'));
+  const bulkRestoreBtn = document.getElementById('bulkRestoreBtn');
+  const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+  const deletedSelectedCount = document.getElementById('deletedSelectedCount');
+
+  function selectedDeletedCount() {
+    return deletedCheckboxes.filter(c => c.checked).length;
+  }
+
+  function updateDeletedSelection() {
+    const count = selectedDeletedCount();
+    if (selectAllDeleted) {
+      selectAllDeleted.checked = deletedCheckboxes.length > 0 && count === deletedCheckboxes.length;
+      selectAllDeleted.indeterminate = count > 0 && count < deletedCheckboxes.length;
+    }
+    if (deletedSelectedCount) {
+      deletedSelectedCount.textContent = count + ' selected';
+    }
+    if (bulkRestoreBtn) bulkRestoreBtn.disabled = count === 0;
+    if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
+  }
+
+  if (selectAllDeleted) {
+    selectAllDeleted.addEventListener('change', function () {
+      deletedCheckboxes.forEach(c => c.checked = selectAllDeleted.checked);
+      updateDeletedSelection();
+    });
+  }
+
+  deletedCheckboxes.forEach(c => c.addEventListener('change', updateDeletedSelection));
+  updateDeletedSelection();
+
+  const deletedFarmsModalEl = document.getElementById('deletedFarmsModal');
+  if (deletedFarmsModalEl && deletedBulkForm) {
+    deletedFarmsModalEl.addEventListener('hidden.bs.modal', function () {
+      deletedBulkForm.reset();
+      updateDeletedSelection();
+    });
+  }
+
+  if (bulkDeleteBtn) {
+    bulkDeleteBtn.addEventListener('click', function (event) {
+      const count = selectedDeletedCount();
+      if (count === 0) { event.preventDefault(); return; }
+      const confirmed = window.confirm(
+        `Permanently delete ${count} selected farm${count === 1 ? '' : 's'}?\n\n` +
+        'This will also permanently delete their crops and harvest records. This cannot be undone.'
+      );
+      if (!confirmed) event.preventDefault();
+    });
+  }
+
+  document.querySelectorAll('.permanent-delete-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (event) {
+      const name = btn.dataset.name || 'this farm';
+      const confirmed = window.confirm(
+        `Permanently delete farm "${name}"?\n\n` +
+        'This will also permanently delete its crops and harvest records. This cannot be undone.'
+      );
+      if (!confirmed) event.preventDefault();
+    });
+  });
+
 })();
 </script>
-{% endblock %}  
+{% endblock %}

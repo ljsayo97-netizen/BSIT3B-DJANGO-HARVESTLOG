@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from .dashboard import build_dashboard_context
 from .search import build_global_search_context
-from .weather import build_weather_widget
+from .weather import build_kabankalan_weather, build_weather_widget
 from apps.harvests.services import get_topbar_notifications
 
 User = get_user_model()
@@ -185,6 +185,21 @@ def weather_widget(request):
     weather = build_weather_widget(request.user)
     html = render_to_string(
         'core/_weather_widget.html',
+        {'weather': weather},
+        request=request,
+    )
+    response = HttpResponse(html)
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required(login_url='login')
+@require_GET
+def kabankalan_weather_widget(request):
+    """Return the compact Kabankalan City weather card for the dashboard."""
+    weather = build_kabankalan_weather()
+    html = render_to_string(
+        'core/_weather_compact.html',
         {'weather': weather},
         request=request,
     )

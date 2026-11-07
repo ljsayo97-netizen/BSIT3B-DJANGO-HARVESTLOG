@@ -14,14 +14,78 @@
       <span class="dh-date-chip">
         <i class="far fa-calendar" aria-hidden="true"></i>
         {{ today|date:"M j, Y" }}
-        <i class="fas fa-chevron-down dh-chevron-xs" aria-hidden="true"></i>
+        <i class="" aria-hidden="true"></i>
       </span>
-      <a href="{% url 'harvests:harvest_list' %}?new=harvest" class="dh-btn dh-btn-primary">
-        <i class="fas fa-plus" aria-hidden="true"></i>
-        New Harvest
-      </a>
     </div>
   </header>
+
+  <section class="dh-summary-grid" aria-label="Farm overview">
+    <article class="dh-kpi dh-kpi-green">
+      <div class="dh-kpi-head">
+        <span class="dh-kpi-icon"><i class="fas fa-tractor" aria-hidden="true"></i></span>
+      </div>
+      <p class="dh-kpi-label">Total Farms</p>
+      <p class="dh-kpi-value">{{ farm_count }}</p>
+      <p class="dh-kpi-meta">registered farms</p>
+      <a href="{% url 'farms:farm_list' %}" class="dh-kpi-link">
+        View farms <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </article>
+
+    <article class="dh-kpi dh-kpi-blue">
+      <div class="dh-kpi-head">
+        <span class="dh-kpi-icon"><i class="fas fa-seedling" aria-hidden="true"></i></span>
+      </div>
+      <p class="dh-kpi-label">Registered Crops</p>
+      <p class="dh-kpi-value">{{ crop_count }}</p>
+      <p class="dh-kpi-meta">crops in your records</p>
+      <a href="{% url 'crops:crop_list' %}" class="dh-kpi-link">
+        View crops <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </article>
+
+    <article class="dh-kpi dh-kpi-purple">
+      <div class="dh-kpi-head">
+        <span class="dh-kpi-icon"><i class="fas fa-wheat-awn" aria-hidden="true"></i></span>
+      </div>
+      <p class="dh-kpi-label">Total Harvests</p>
+      <p class="dh-kpi-value">{{ harvest_count }}</p>
+      <p class="dh-kpi-meta">harvest records</p>
+      <a href="{% url 'harvests:harvest_history' %}" class="dh-kpi-link">
+        View harvests <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </article>
+
+    <article class="dh-kpi dh-kpi-orange">
+      <div class="dh-kpi-head">
+        <span class="dh-kpi-icon"><i class="fas fa-border-all" aria-hidden="true"></i></span>
+      </div>
+      <p class="dh-kpi-label">Total Farm Area</p>
+      <p class="dh-kpi-value">{{ total_hectares|floatformat:"-2" }} <span class="dh-kpi-unit">ha</span></p>
+      <p class="dh-kpi-meta">across your farms</p>
+      <a href="{% url 'farms:farm_list' %}" class="dh-kpi-link">
+        View farm fields <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </article>
+
+    <article class="dh-kpi dh-kpi-weather" aria-labelledby="dashboard-weather-title">
+      <div class="dh-weather-mini-head">
+        <span class="dh-kpi-icon dh-weather-mini-icon"><i class="fas fa-cloud-sun" aria-hidden="true"></i></span>
+        <span class="dh-weather-mini-place">
+          <strong id="dashboard-weather-title">Kabankalan City</strong>
+          <small>Western Visayas</small>
+        </span>
+      </div>
+      <div id="dashboardWeatherMini"
+           class="dh-weather-mini-body"
+           data-weather-url="{% url 'kabankalan_weather_widget' %}">
+        <div class="dh-weather-mini-loading">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span>Loading weather&hellip;</span>
+        </div>
+      </div>
+    </article>
+  </section>
 
   {% if messages %}
   <div class="dh-flash-list">
@@ -33,84 +97,6 @@
     {% endfor %}
   </div>
   {% endif %}
-
-  <section class="dh-kpi-grid" aria-label="Farm summary">
-    <!-- Card 1: Total Harvests (Green) -->
-    <article class="dh-kpi dh-kpi-green">
-      <div class="dh-kpi-head">
-        <span class="dh-kpi-icon"><i class="fas fa-seedling" aria-hidden="true"></i></span>
-        <span class="dh-kpi-trend is-up">
-          <i class="fas fa-arrow-up" aria-hidden="true"></i> 100%
-          <span class="dh-trend-sub">vs. last month</span>
-        </span>
-      </div>
-      <p class="dh-kpi-label">Total Harvests</p>
-      <p class="dh-kpi-value">{{ harvest_count }}</p>
-      <p class="dh-kpi-meta">
-        crops harvested this month
-      </p>
-      <a href="{% url 'harvests:harvest_history' %}" class="dh-kpi-link">
-        View all harvests <i class="fas fa-arrow-right" aria-hidden="true"></i>
-      </a>
-    </article>
-
-    <!-- Card 2: Ready for Harvest (Blue) -->
-    <article class="dh-kpi dh-kpi-blue">
-      <div class="dh-kpi-head">
-        <span class="dh-kpi-icon"><i class="fas fa-seedling" aria-hidden="true"></i></span>
-        <span class="dh-kpi-trend is-up">
-          <i class="fas fa-arrow-up" aria-hidden="true"></i> 100%
-          <span class="dh-trend-sub">vs. last month</span>
-        </span>
-      </div>
-      <p class="dh-kpi-label">Ready for Harvest</p>
-      <p class="dh-kpi-value">{{ ready_crop_count }}</p>
-      <p class="dh-kpi-meta">
-        harvests ready
-      </p>
-      <a href="{% url 'crops:crop_list' %}?status=READY_FOR_HARVEST" class="dh-kpi-link">
-        View ready crops <i class="fas fa-arrow-right" aria-hidden="true"></i>
-      </a>
-    </article>
-
-    <!-- Card 3: Active Schedule (Purple) -->
-    <article class="dh-kpi dh-kpi-purple">
-      <div class="dh-kpi-head">
-        <span class="dh-kpi-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>
-        <span class="dh-kpi-trend is-up">
-          <i class="fas fa-arrow-up" aria-hidden="true"></i> 100%
-          <span class="dh-trend-sub">vs. last month</span>
-        </span>
-      </div>
-      <p class="dh-kpi-label">Active Schedule</p>
-      <p class="dh-kpi-value">{{ active_activity_count }}</p>
-      <p class="dh-kpi-meta">
-        upcoming activity
-      </p>
-      <a href="{% url 'activities:activity_list' %}" class="dh-kpi-link">
-        View schedule <i class="fas fa-arrow-right" aria-hidden="true"></i>
-      </a>
-    </article>
-
-    <!-- Card 4: Total Area (Orange) -->
-    <article class="dh-kpi dh-kpi-orange">
-      <div class="dh-kpi-head">
-        <span class="dh-kpi-icon"><i class="fas fa-border-all" aria-hidden="true"></i></span>
-        <span class="dh-kpi-trend is-up">
-          <i class="fas fa-arrow-up" aria-hidden="true"></i> 100%
-          <span class="dh-trend-sub">vs. last month</span>
-        </span>
-      </div>
-      <p class="dh-kpi-label">Total Area</p>
-      <p class="dh-kpi-value">
-        {% if primary_unit %}{{ primary_unit_total|floatformat:"-2" }} <span class="dh-kpi-unit">{{ primary_unit }}</span>{% else %}{{ total_hectares|floatformat:"-2" }} <span class="dh-kpi-unit">ha</span>{% endif %}
-      </p>
-      <p class="dh-kpi-meta">across all recorded harvests</p>
-      <a href="{% url 'farms:farm_list' %}" class="dh-kpi-link">
-        View farm fields <i class="fas fa-arrow-right" aria-hidden="true"></i>
-      </a>
-    </article>
-  </section>
 
   {% if not farm_count or not crop_count %}
   <!-- Getting started empty states (new accounts) -->
@@ -263,12 +249,20 @@
         <ul class="dh-crop-quantities-list" style="list-style:none; padding:0; margin:0; width:100%; display:flex; flex-direction:column; gap:8px;">
           {% for crop in top_crops_data %}
           <li style="font-size:12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:#e2e8f0; align-items:center;">
-              <span style="display:flex; align-items:center; gap:6px;">
-                <span style="display:inline-block; width:8px; height:8px; background-color:{{ crop.color }}; border-radius:50%;"></span>
-                <span style="font-weight:500;">{{ crop.name }}</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:#e2e8f0; align-items:center; gap:8px;">
+              <span style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+                <span style="display:flex; align-items:center; gap:6px;">
+                  <span style="display:inline-block; width:8px; height:8px; background-color:{{ crop.color }}; border-radius:50%; flex-shrink:0;"></span>
+                  <span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ crop.name }}</span>
+                </span>
+                {% if crop.farms %}
+                <span style="display:flex; align-items:center; gap:4px; padding-left:14px; font-size:10.5px; color:#7c8ba1; min-width:0;" title="{{ crop.farm_names }}">
+                  <i class="fas fa-location-dot" aria-hidden="true" style="flex-shrink:0;"></i>
+                  <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ crop.farm_names }}</span>
+                </span>
+                {% endif %}
               </span>
-              <strong style="color:#f1f5f9;">{{ crop.quantity|floatformat:"0" }} kg &nbsp;<span style="color:#64748b; font-weight:400;">({{ crop.percentage }}%)</span></strong>
+              <strong style="color:#f1f5f9; flex-shrink:0;">{{ crop.quantity|floatformat:"0" }} kg &nbsp;<span style="color:#64748b; font-weight:400;">({{ crop.percentage }}%)</span></strong>
             </div>
             <div style="background:rgba(255,255,255,0.08); height:6px; border-radius:4px; overflow:hidden;">
               <div style="background-color:{{ crop.color }}; width:{{ crop.percentage }}%; height:100%; border-radius:4px; transition:width 0.5s ease;"></div>
@@ -279,25 +273,6 @@
         {% else %}
         <p style="color:#94a3b8; font-size:13px; text-align:center; margin:auto;">No crop quantities recorded yet.</p>
         {% endif %}
-      </div>
-    </section>
-  </div>
-      <!-- Weather & Field Guidance (Now on the Right Side) -->
-    <section class="dh-card dh-weather-panel" aria-labelledby="weather-panel-title">
-      <div class="dh-card-head">
-        <div class="dh-card-head-title">
-          <i class="fas fa-cloud dh-weather-head-icon" aria-hidden="true"></i>
-          <h2 class="dh-card-title" id="weather-panel-title">Weather &amp; Field Guidance</h2>
-        </div>
-        <span class="dh-auto-pill"><i class="fas fa-bolt" aria-hidden="true"></i> Auto</span>
-      </div>
-      <div id="dashboardWeather"
-           class="dh-weather-body"
-           data-weather-url="{% url 'weather_widget' %}">
-        <div class="dh-weather-loading">
-          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-          <span>Checking the weather for your farms&hellip;</span>
-        </div>
       </div>
     </section>
   </div>
@@ -425,7 +400,7 @@
 {% block extra_js %}
   <script>
   document.addEventListener("DOMContentLoaded", function () {
-    const container = document.getElementById("dashboardWeather");
+    const container = document.getElementById("dashboardWeatherMini");
     if (!container) {
       return;
     }
@@ -450,15 +425,22 @@
         }
         container.innerHTML = await response.text();
       } catch (error) {
-        // Fallback rendered
+        if (!container.querySelector(".dh-weather-mini-reading")) {
+          container.innerHTML =
+            '<div class="dh-weather-mini-error">' +
+            '<strong>Weather unavailable</strong>' +
+            '<button type="button" data-weather-retry>' +
+            '<i class="fas fa-rotate-right" aria-hidden="true"></i> Retry' +
+            '</button>' +
+            '</div>';
+        }
       } finally {
         loading = false;
       }
     }
 
     container.addEventListener("click", function (event) {
-      const retry = event.target.closest("[data-weather-retry]");
-      if (retry) {
+      if (event.target.closest("[data-weather-retry]")) {
         loadWeather();
       }
     });

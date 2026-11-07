@@ -1,0 +1,21 @@
+{% if weather.available %}
+<div class="dh-weather-mini-reading">
+  <span class="dh-weather-mini-temp">{{ weather.current.temperature|floatformat:0 }}&deg;C</span>
+  <span class="dh-weather-mini-condition">{{ weather.current.label|default:"Conditions normal" }}</span>
+</div>
+<div class="dh-weather-mini-meta">
+  <span title="Humidity"><i class="fas fa-droplet" aria-hidden="true"></i> {{ weather.current.humidity|floatformat:0 }}%</span>
+  <span title="Chance of rain today"><i class="fas fa-cloud-rain" aria-hidden="true"></i> {{ weather.daily.0.rain_probability|floatformat:0 }}%</span>
+</div>
+<small class="dh-weather-mini-updated">
+  Updated {{ weather.current.observed_at|default:"just now" }} &middot;
+  <a href="{{ weather.source_url }}" target="_blank" rel="noopener noreferrer">Weather by {{ weather.source }}</a>
+</small>
+{% else %}
+<div class="dh-weather-mini-error">
+  <strong>Weather unavailable</strong>
+  <button type="button" data-weather-retry>
+    <i class="fas fa-rotate-right" aria-hidden="true"></i> Retry
+  </button>
+</div>
+{% endif %}

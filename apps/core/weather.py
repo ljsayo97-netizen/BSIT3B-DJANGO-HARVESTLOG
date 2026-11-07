@@ -28,6 +28,11 @@ DEFAULT_LOCATION_NAME = 'Manila, Philippines'
 DEFAULT_LATITUDE = 14.5995
 DEFAULT_LONGITUDE = 120.9842
 
+# Fixed location for the compact dashboard weather card.
+KABANKALAN_LOCATION_NAME = 'Kabankalan City, Western Visayas'
+KABANKALAN_LATITUDE = 9.9833
+KABANKALAN_LONGITUDE = 122.8167
+
 CACHE_PREFIX = 'harvestlog:weather'
 
 # WMO weather interpretation codes used by Open-Meteo.
@@ -528,13 +533,8 @@ def _resolve_location(farm):
     }
 
 
-def build_weather_widget(user):
-    """Return everything the dashboard weather widget needs."""
-    farm = _primary_farm(user)
-    location = _resolve_location(farm)
-    forecast = fetch_forecast(
-        location['latitude'], location['longitude']
-    )
+def _weather_payload(location, forecast):
+    """Build the template-friendly weather payload for a resolved location."""
     if forecast is None:
         return {
             'available': False,
@@ -554,3 +554,35 @@ def build_weather_widget(user):
         'source': 'Open-Meteo',
         'source_url': 'https://open-meteo.com/',
     }
+
+
+def build_weather_widget(user):
+    """Return everything the dashboard weather widget needs."""
+    farm = _primary_farm(user)
+    location = _resolve_location(farm)
+    forecast = fetch_forecast(
+        location['latitude'], location['longitude']
+    )
+    return _weather_payload(location, forecast)
+
+
+def build_kabankalan_weather():
+    """Return the forecast for the fixed Kabankalan City weather card."""
+    location = {
+        'name': _setting(
+            'WEATHER_KABANKALAN_LOCATION_NAME', KABANKALAN_LOCATION_NAME
+        ),
+        'latitude': _setting(
+            'WEATHER_KABANKALAN_LATITUDE', KABANKALAN_LATITUDE
+        ),
+        'longitude': _setting(
+            'WEATHER_KABANKALAN_LONGITUDE', KABANKALAN_LONGITUDE
+        ),
+        'farm_name': '',
+        'is_default': False,
+    }
+    forecast = fetch_forecast(
+        location['latitude'], location['longitude']
+    )
+    return _weather_payload(location, forecast)
+

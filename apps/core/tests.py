@@ -119,6 +119,17 @@ class DashboardDataTests(TestCase):
             response.context['harvest_chart_data']['records'][-1],
             1,
         )
+        self.assertEqual(response.context['top_crops_data'][0]['name'], 'Rice')
+        self.assertEqual(
+            response.context['top_crops_data'][0]['farm_names'],
+            'Green Valley Farm',
+        )
+        self.assertContains(response, 'Total Farms')
+        self.assertContains(response, 'Registered Crops')
+        self.assertContains(response, 'Total Harvests')
+        self.assertContains(response, 'Total Farm Area')
+        self.assertContains(response, 'Kabankalan City')
+        self.assertContains(response, 'Western Visayas')
         self.assertEqual(response.context['unread_notification_count'], 1)
         self.assertEqual(response.context['notification_feed'][0]['title'], 'Rice')
         self.assertTrue(response.context['notification_feed'][0]['is_new'])
@@ -127,6 +138,29 @@ class DashboardDataTests(TestCase):
         self.assertEqual(response.context['harvest_progress']['completed'], 0)
         self.assertEqual(response.context['harvest_progress']['completed_percent'], 0)
         self.assertEqual(response.context['harvest_progress']['in_progress_percent'], 100)
+
+    def test_dashboard_shows_only_the_top_four_crops(self):
+        farm = self._create_farm()
+        quantities = [100, 80, 60, 40, 20]
+        for index, quantity in enumerate(quantities):
+            Harvest.objects.create(
+                user=self.user,
+                farm=farm,
+                harvest_date=self.today,
+                location='North Field',
+                crop_type=f'Crop {index + 1}',
+                quantity_harvested=Decimal(quantity),
+                unit='kg',
+                harvested_by='Mia Santos',
+            )
+
+        response = self.client.get(reverse('dashboard'))
+
+        top_crops = response.context['top_crops_data']
+        self.assertEqual(len(top_crops), 4)
+        self.assertEqual([crop['name'] for crop in top_crops], [
+            'Crop 1', 'Crop 2', 'Crop 3', 'Crop 4',
+        ])
 
     def test_dashboard_is_scoped_to_the_signed_in_user(self):
         self._create_farm()

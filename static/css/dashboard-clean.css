@@ -917,6 +917,138 @@ body.dh-app {
   opacity: 0.85 !important;
 }
 
+/* Compact overview row: farm stats + Kabankalan weather ------------------ */
+.dh-summary-grid {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-auto-rows: 176px !important;
+  gap: 16px !important;
+  margin-bottom: 18px !important;
+}
+
+.dh-summary-grid .dh-kpi {
+  height: 100% !important;
+  min-width: 0 !important;
+}
+
+.dh-kpi-weather {
+  background-color: #081726 !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+}
+
+.dh-kpi-weather .dh-kpi-icon,
+.dh-weather-mini-icon {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.dh-weather-mini-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+.dh-weather-mini-place {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.dh-weather-mini-place strong {
+  overflow: hidden !important;
+  color: #f1f5f9 !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.dh-weather-mini-place small {
+  color: #94a3b8 !important;
+  font-size: 0.65rem !important;
+}
+
+.dh-weather-mini-body {
+  margin-top: auto !important;
+}
+
+.dh-weather-mini-reading {
+  display: flex !important;
+  align-items: baseline !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.dh-weather-mini-temp {
+  color: #ffffff !important;
+  font-size: 1.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.1 !important;
+}
+
+.dh-weather-mini-condition {
+  color: #94a3b8 !important;
+  font-size: 0.7rem !important;
+}
+
+.dh-weather-mini-meta {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  margin-top: 6px !important;
+  color: #94a3b8 !important;
+  font-size: 0.7rem !important;
+}
+
+.dh-weather-mini-meta i {
+  color: #38bdf8 !important;
+}
+
+.dh-weather-mini-updated {
+  display: block !important;
+  margin-top: 6px !important;
+  color: #64748b !important;
+  font-size: 0.62rem !important;
+}
+
+.dh-weather-mini-updated a {
+  color: #64748b !important;
+  text-decoration: none !important;
+}
+
+.dh-weather-mini-updated a:hover {
+  color: #94a3b8 !important;
+}
+
+.dh-weather-mini-loading {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: #94a3b8 !important;
+  font-size: 0.72rem !important;
+}
+
+.dh-weather-mini-error {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  color: #fca5a5 !important;
+  font-size: 0.72rem !important;
+}
+
+.dh-weather-mini-error button {
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #e2e8f0 !important;
+  font-size: 0.68rem !important;
+  padding: 3px 8px !important;
+}
+
 /* 8. Row 2: Split Grid (Notifications & Weather) -------------------------- */
 .dh-split-grid {
   display: grid !important;
@@ -1560,10 +1692,25 @@ body.dh-app {
   .dh-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
+  .dh-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
   .dh-split-grid {
     grid-template-columns: minmax(0, 1fr) !important;
   }
   .dh-bottom-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .dh-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .dh-summary-grid {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
