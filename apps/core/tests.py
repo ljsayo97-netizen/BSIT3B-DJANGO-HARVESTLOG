@@ -193,6 +193,51 @@ class DashboardDataTests(TestCase):
         self.assertEqual(response.context['activity_summary']['total'], 0)
         self.assertNotContains(response, 'Hidden Farm')
 
+    def test_dashboard_renders_harvest_progress_in_this_year(self):
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('harvest_progress_data', response.context)
+        progress_data = response.context['harvest_progress_data']
+
+        # X-axis: January–December (12 months)
+        self.assertEqual(len(progress_data['months']), 12)
+        self.assertEqual(progress_data['months'][0], 'January')
+        self.assertEqual(progress_data['months'][-1], 'December')
+
+        # Y-axis: Harvest quantity (tons)
+        self.assertEqual(progress_data['unit'], 'tons')
+
+        # Multi-series data: Actual harvest & Target harvest
+        self.assertEqual(len(progress_data['actual']), 12)
+        self.assertEqual(len(progress_data['target']), 12)
+        self.assertEqual(progress_data['actual'][:6], [2.0, 4.0, 5.0, 6.0, 7.0, 6.5])
+        self.assertEqual(progress_data['target'][:6], [3.0, 5.0, 6.0, 7.0, 8.0, 8.0])
+
+        # Component specifications
+        comp_names = [c['component'] for c in progress_data['components']]
+        self.assertIn('X-axis', comp_names)
+        self.assertIn('Y-axis', comp_names)
+        self.assertIn('Green line', comp_names)
+        self.assertIn('Dashed line', comp_names)
+        self.assertIn('Area fill', comp_names)
+
+        # Template contains all required texts
+        self.assertContains(response, 'Harvest Progress in This Year')
+        self.assertContains(response, 'harvestProgressChart')
+        self.assertContains(response, 'Green line')
+        self.assertContains(response, 'Actual harvest')
+        self.assertContains(response, 'Dashed line')
+        self.assertContains(response, 'Target harvest')
+        self.assertContains(response, 'Area fill')
+        self.assertContains(response, 'Visualizes production progress')
+        self.assertContains(response, 'January–December')
+        self.assertContains(response, 'Harvest quantity (tons)')
+        self.assertContains(response, '2 tons')
+        self.assertContains(response, '3 tons')
+        self.assertContains(response, '6.5 tons')
+        self.assertContains(response, '8 tons')
+
     def test_dashboard_renders_empty_states_for_a_new_account(self):
         response = self.client.get(reverse('dashboard'))
 

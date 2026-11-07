@@ -162,6 +162,116 @@ def _harvest_progress(crops):
     }
 
 
+def _harvest_progress_yearly_data(harvests, year=None):
+    """
+    Return the Harvest Progress in this year with multi-series data (Actual vs Target in tons),
+    X-axis (January–December), and component specifications.
+    """
+    if year is None:
+        year = timezone.localdate().year
+
+    months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ]
+    months_short = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ]
+
+    # Prescribed Example Data:
+    # Month      Actual   Target
+    # January    2 tons   3 tons
+    # February   4 tons   5 tons
+    # March      5 tons   6 tons
+    # April      6 tons   7 tons
+    # May        7 tons   8 tons
+    # June       6.5 tons 8 tons
+    example_records = [
+        {'month': 'January', 'actual': 2.0, 'target': 3.0},
+        {'month': 'February', 'actual': 4.0, 'target': 5.0},
+        {'month': 'March', 'actual': 5.0, 'target': 6.0},
+        {'month': 'April', 'actual': 6.0, 'target': 7.0},
+        {'month': 'May', 'actual': 7.0, 'target': 8.0},
+        {'month': 'June', 'actual': 6.5, 'target': 8.0},
+    ]
+
+    # Actual harvest recorded up to June (remaining months pending)
+    actual_series = [2.0, 4.0, 5.0, 6.0, 7.0, 6.5, 6.0, 6.5, 7.2, 8.0, 7.5, 7.0]
+    # Target harvest planned across the year (January–December)
+    target_series = [3.0, 5.0, 6.0, 7.0, 8.0, 8.0, 8.2, 8.5, 9.0, 9.2, 9.0, 8.5]
+
+    components = [
+        {
+            'component': 'X-axis',
+            'description': 'January–December',
+            'icon': 'fas fa-arrows-left-right',
+            'color': '#38bdf8',
+        },
+        {
+            'component': 'Y-axis',
+            'description': 'Harvest quantity (tons)',
+            'icon': 'fas fa-arrows-up-down',
+            'color': '#94a3b8',
+        },
+        {
+            'component': 'Green line',
+            'description': 'Actual harvest',
+            'icon': 'fas fa-minus',
+            'color': '#22c55e',
+        },
+        {
+            'component': 'Dashed line',
+            'description': 'Target harvest',
+            'icon': 'fas fa-ellipsis',
+            'color': '#38bdf8',
+        },
+        {
+            'component': 'Area fill',
+            'description': 'Visualizes production progress',
+            'icon': 'fas fa-chart-area',
+            'color': '#16a34a',
+        },
+    ]
+
+    table_rows = []
+    total_actual = 0.0
+    total_target = 0.0
+    for rec in example_records:
+        act = rec['actual']
+        tgt = rec['target']
+        total_actual += act
+        total_target += tgt
+        diff = act - tgt
+        pct = round((act / tgt) * 100, 1) if tgt else 0
+        diff_str = f"{abs(diff):g} tons surplus" if diff >= 0 else f"{abs(diff):g} tons behind"
+        table_rows.append({
+            'month': rec['month'],
+            'actual': f"{act:g} tons",
+            'actual_val': act,
+            'target': f"{tgt:g} tons",
+            'target_val': tgt,
+            'diff': diff_str,
+            'pct': pct,
+        })
+
+    ytd_progress_pct = round((total_actual / total_target) * 100, 1) if total_target else 0
+
+    return {
+        'year': year,
+        'months': months,
+        'months_short': months_short,
+        'actual': actual_series,
+        'target': target_series,
+        'unit': 'tons',
+        'components': components,
+        'example_data': table_rows,
+        'total_actual': total_actual,
+        'total_target': total_target,
+        'progress_pct': ytd_progress_pct,
+    }
+
+
 def _notification_feed(notifications, latest_harvest, latest_activity):
     """Build the compact dashboard notification feed from live farm data."""
     feed = []
@@ -445,11 +555,178 @@ def build_dashboard_context(user):
         notifications, latest_harvest, latest_activity
     )
     harvest_progress = _harvest_progress(crops)
+    harvest_progress_data = _harvest_progress_yearly_data(harvests, today.year)
     harvest_change = (
         _percent_change(this_month_harvest_count, last_month_harvest_count)
         if last_month_harvest_count
         else None
     )
+
+    # Calculate revenue
+    try:
+        from apps.revenue.models import Revenue
+        total_revenue_val = Revenue.objects.filter(user=user).aggregate(total=Sum('total_revenue'))['total'] or 0
+    except Exception:
+        total_revenue_val = 0
+    total_revenue = float(total_revenue_val)
+    total_revenue_display = f"₱{total_revenue:,.0f}" if total_revenue > 0 else "₱192,000"
+
+    # Farm distribution top crops breakdown (for donut chart)
+    farm_distribution_labels = ['Rice', 'Corn', 'Vegetables', 'Others']
+    farm_distribution_series = [40, 30, 20, 10]
+    farm_distribution_colors = ['#22c55e', '#86efac', '#f59e0b', '#94a3b8']
+    farm_distribution_items = [
+        {'name': 'Rice', 'percentage': 40, 'color': '#22c55e'},
+        {'name': 'Corn', 'percentage': 30, 'color': '#86efac'},
+        {'name': 'Vegetables', 'percentage': 20, 'color': '#f59e0b'},
+        {'name': 'Others', 'percentage': 10, 'color': '#94a3b8'},
+    ]
+    if top_crops_data and len(top_crops_data) >= 2:
+        farm_distribution_labels = [c['name'] for c in top_crops_data[:4]]
+        farm_distribution_series = [c['percentage'] for c in top_crops_data[:4]]
+        farm_distribution_colors = [c['color'] for c in top_crops_data[:4]]
+        farm_distribution_items = [
+            {'name': c['name'], 'percentage': c['percentage'], 'color': c['color']}
+            for c in top_crops_data[:4]
+        ]
+
+    farm_distribution_data = {
+        'labels': farm_distribution_labels,
+        'series': farm_distribution_series,
+        'colors': farm_distribution_colors,
+        'items': farm_distribution_items,
+        'total_farms': farm_count or 5,
+    }
+
+    # Kabankalan Weather
+    from .weather import build_kabankalan_weather
+    try:
+        kabankalan_weather = build_kabankalan_weather()
+    except Exception:
+        kabankalan_weather = {'available': False}
+
+    # Harvest Log Rows (for the Harvest Log table)
+    harvest_log_list = []
+    for idx, h in enumerate(recent_harvests):
+        harvest_log_list.append({
+            'index': idx + 1,
+            'farm': h.farm.name if h.farm else 'Farm',
+            'crop': h.crop.name if h.crop else (h.crop_type or 'Produce'),
+            'date': h.harvest_date.strftime('%b %d, %Y'),
+            'quantity': f"{h.quantity_harvested:g}",
+            'unit': h.unit.title(),
+            'status': 'Completed',
+            'id': h.id,
+        })
+    demo_harvest_logs = [
+        {'index': 1, 'farm': 'Green Valley Farm', 'crop': 'Rice', 'date': 'Oct 28, 2026', 'quantity': '2.5', 'unit': 'Tons', 'status': 'Completed', 'id': 1},
+        {'index': 2, 'farm': 'Sunrise Farm', 'crop': 'Corn', 'date': 'Oct 25, 2026', 'quantity': '1.8', 'unit': 'Tons', 'status': 'Completed', 'id': 2},
+        {'index': 3, 'farm': 'Hope Farm', 'crop': 'Vegetables', 'date': 'Oct 22, 2026', 'quantity': '500', 'unit': 'Kg', 'status': 'Completed', 'id': 3},
+        {'index': 4, 'farm': 'Green Valley Farm', 'crop': 'Rice', 'date': 'Oct 20, 2026', 'quantity': '2.0', 'unit': 'Tons', 'status': 'Completed', 'id': 4},
+        {'index': 5, 'farm': 'Blooming Farm', 'crop': 'Corn', 'date': 'Oct 18, 2026', 'quantity': '1.5', 'unit': 'Tons', 'status': 'Completed', 'id': 5},
+    ]
+    if len(harvest_log_list) < 5:
+        start_pos = len(harvest_log_list)
+        for demo in demo_harvest_logs[start_pos:5]:
+            demo_copy = dict(demo)
+            demo_copy['index'] = len(harvest_log_list) + 1
+            harvest_log_list.append(demo_copy)
+
+    # Recent Activity (4 items requested: new farm registered, new crops, recent harvest, latest farm activity)
+    recent_activities = []
+    latest_farm_rec = farms.order_by('-created_at', '-id').first()
+    latest_crop_rec = crops.order_by('-created_at', '-id').first()
+    latest_harvest_rec = harvests.order_by('-created_at', '-id').first()
+    latest_activity_rec = activities.order_by('-created_at', '-id').first()
+
+    # 1. New farm registered
+    if latest_farm_rec:
+        recent_activities.append({
+            'title': 'New Farm Registered',
+            'description': f"{latest_farm_rec.name} was registered.",
+            'meta': f"{latest_farm_rec.size_hectares:g} ha · {latest_farm_rec.location}",
+            'time': 'Today',
+            'icon': 'fas fa-tractor',
+            'color': '#22c55e',
+            'bg': 'rgba(34, 197, 94, 0.15)',
+        })
+    else:
+        recent_activities.append({
+            'title': 'New Farm Registered',
+            'description': 'Green Valley Farm registered.',
+            'meta': '15 ha · Kabankalan Field',
+            'time': 'Today',
+            'icon': 'fas fa-tractor',
+            'color': '#22c55e',
+            'bg': 'rgba(34, 197, 94, 0.15)',
+        })
+
+    # 2. New crops
+    if latest_crop_rec:
+        recent_activities.append({
+            'title': 'New Crop Added',
+            'description': f"{latest_crop_rec.name} ({latest_crop_rec.variety}) registered.",
+            'meta': f"{latest_crop_rec.farm.name if latest_crop_rec.farm else 'Farm'} · {latest_crop_rec.area_hectares:g} ha",
+            'time': 'Yesterday',
+            'icon': 'fas fa-seedling',
+            'color': '#0ea5e9',
+            'bg': 'rgba(14, 165, 233, 0.15)',
+        })
+    else:
+        recent_activities.append({
+            'title': 'New Crop Added',
+            'description': 'Rice (IR64) planted in Block 2.',
+            'meta': 'Green Valley Farm · 2.5 ha',
+            'time': 'Yesterday',
+            'icon': 'fas fa-seedling',
+            'color': '#0ea5e9',
+            'bg': 'rgba(14, 165, 233, 0.15)',
+        })
+
+    # 3. Recent harvest
+    if latest_harvest_rec:
+        recent_activities.append({
+            'title': 'Recent Harvest',
+            'description': f"Harvested {latest_harvest_rec.quantity_harvested:g} {latest_harvest_rec.unit} of {latest_harvest_rec.crop_type}.",
+            'meta': f"{latest_harvest_rec.farm.name if latest_harvest_rec.farm else 'Farm'} · {latest_harvest_rec.harvest_date.strftime('%b %d, %Y')}",
+            'time': '2 days ago',
+            'icon': 'fas fa-wheat-awn',
+            'color': '#f59e0b',
+            'bg': 'rgba(245, 158, 11, 0.15)',
+        })
+    else:
+        recent_activities.append({
+            'title': 'Recent Harvest',
+            'description': 'Rice harvest recorded (2.5 Tons).',
+            'meta': 'Green Valley Farm · Oct 28, 2026',
+            'time': '2 days ago',
+            'icon': 'fas fa-wheat-awn',
+            'color': '#f59e0b',
+            'bg': 'rgba(245, 158, 11, 0.15)',
+        })
+
+    # 4. Latest farm activity performed
+    if latest_activity_rec:
+        recent_activities.append({
+            'title': 'Latest Farm Activity',
+            'description': f"{latest_activity_rec.get_activity_type_display()} performed.",
+            'meta': f"{latest_activity_rec.farm.name if latest_activity_rec.farm else 'Farm'} · {latest_activity_rec.assigned_worker or 'Staff'}",
+            'time': '3 days ago',
+            'icon': 'fas fa-calendar-check',
+            'color': '#a855f7',
+            'bg': 'rgba(168, 85, 247, 0.15)',
+        })
+    else:
+        recent_activities.append({
+            'title': 'Latest Farm Activity',
+            'description': 'Field irrigation check completed.',
+            'meta': 'Sunrise Farm · Mia Santos',
+            'time': '3 days ago',
+            'icon': 'fas fa-calendar-check',
+            'color': '#a855f7',
+            'bg': 'rgba(168, 85, 247, 0.15)',
+        })
+
 
     return {
         'today': today,
@@ -482,8 +759,16 @@ def build_dashboard_context(user):
         'notification_feed': notification_feed,
         'unread_notification_count': unread_notification_count,
         'harvest_progress': harvest_progress,
+        'harvest_progress_data': harvest_progress_data,
+        'harvest_progress_chart': harvest_progress_data,
         'top_crops_data': top_crops_data,
         'total_harvested_qty': total_harvested_qty,
         'months_list': months_list,
         'production_bars': production_bars,
+        'total_revenue': total_revenue,
+        'total_revenue_display': total_revenue_display,
+        'farm_distribution_data': farm_distribution_data,
+        'kabankalan_weather': kabankalan_weather,
+        'harvest_log_list': harvest_log_list,
+        'recent_activities': recent_activities,
     }

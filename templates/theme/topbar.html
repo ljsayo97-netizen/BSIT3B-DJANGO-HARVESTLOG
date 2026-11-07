@@ -35,6 +35,15 @@
   </form>
 
   <div class="dh-topbar-right" style="display:flex; align-items:center; gap:12px; margin-left:auto; flex-shrink:0;">
+    
+    <!-- Date Chip moved here, outside the dropdown -->
+    <div class="dh-page-head-actions" style="display:flex; justify-content:flex-start; align-items:center; gap:12px;">
+      <span class="dh-date-chip">
+        <i class="far fa-calendar" aria-hidden="true"></i>
+        {{ today|date:"M j, Y" }}
+      </span>
+    </div>
+
     <!-- Notification Bell Dropdown -->
     <div class="dropdown dh-notifications-dropdown">
       <button type="button"
