@@ -1,24 +1,22 @@
 <!--  BEGIN FOOTER  -->
 <footer class="footer footer-transparent dh-footer d-print-none">
   <div class="container-xl">
-    <div class="row text-center align-items-center flex-row-reverse">
-      <div class="col-lg-auto ms-lg-auto">
-        <ul class="list-inline list-inline-dots mb-0">
-          <li class="list-inline-item">
-            <a href="{% url 'dashboard' %}" class="link-secondary text-decoration-none">
-              <i class="fas fa-tractor me-1"></i> HARVEST.PH
-            </a>
-          </li>
-        </ul>
-      </div>
-      {% comment %} <div class="col-12 col-lg-auto mt-3 mt-lg-0">
-        <ul class="list-inline list-inline-dots mb-0">
-          <li class="list-inline-item">
-            Copyright &copy; 2026
-            <a href="." class="link-secondary text-decoration-none">Azuelo Technology</a>. All rights reserved.
-          </li>
-        </ul>
-      </div> {% endcomment %}
+    <div class="dh-footer-inner">
+      <a href="{% url 'dashboard' %}" class="dh-footer-brand">
+        <span class="dh-footer-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21V8.5"/>
+            <path d="M12 12c-2.2 0-4-1.8-4-4 2.2 0 4 1.8 4 4Z"/>
+            <path d="M12 12c2.2 0 4-1.8 4-4-2.2 0-4 1.8-4 4Z"/>
+            <path d="M12 16c-2.2 0-4-1.8-4-4 2.2 0 4 1.8 4 4Z"/>
+            <path d="M12 16c2.2 0 4-1.8 4-4-2.2 0-4 1.8-4 4Z"/>
+          </svg>
+        </span>
+        <span>Harvest<span class="dh-footer-accent">PH</span></span>
+        <span class="dh-footer-sep" aria-hidden="true">&bull;</span>
+        <span class="dh-footer-muted">Farm Operations</span>
+      </a>
+      <span class="dh-footer-tagline">Better Harvests. Brighter Futures.</span>
     </div>
   </div>
 </footer>

@@ -268,7 +268,8 @@ class HarvestCalendarTests(TestCase):
         self.assertTrue(
             all(event['extendedProps']['kind'] == 'activity' for event in events)
         )
-        self.assertContains(response, 'value="activities" selected')
+        self.assertContains(response, 'show=activities')
+        self.assertContains(response, 'aria-current="true"')
         self.assertContains(response, 'Activities only')
         self.assertContains(response, 'Next activities')
         self.assertNotContains(response, 'Upcoming harvests')
@@ -285,11 +286,48 @@ class HarvestCalendarTests(TestCase):
         self.assertTrue(
             all('harvest' in event['extendedProps']['kind'] for event in events)
         )
-        self.assertContains(response, 'value="harvests" selected')
+        self.assertContains(response, 'show=harvests')
+        self.assertContains(response, 'aria-current="true"')
         self.assertContains(response, 'Harvests only')
         self.assertContains(response, 'Upcoming harvests')
         self.assertNotContains(response, 'Next activities')
         self.assertNotContains(response, 'Activity pending')
+
+    def test_calendar_uses_a_source_dropdown_instead_of_filter_cards(self):
+        make_activity(self.user, self.farm)
+
+        response = self.client.get(reverse('harvest_calendar:calendar'))
+
+        # The four snapshot widgets and the farm/crop/show filter card are gone.
+        self.assertNotContains(response, 'Next 30 days')
+        self.assertNotContains(response, 'id="calendarFarm"')
+        self.assertNotContains(response, 'id="calendarCrop"')
+        self.assertNotContains(response, 'id="calendarSource"')
+        self.assertNotContains(response, 'data-calendar-filters')
+
+        # The calendar card now offers a dropdown for each content type.
+        self.assertContains(response, 'data-bs-toggle="dropdown"')
+        self.assertContains(response, 'Harvests &amp; activities')
+        self.assertContains(response, 'show=all')
+        self.assertContains(response, 'show=harvests')
+        self.assertContains(response, 'show=activities')
+
+    def test_source_dropdown_keeps_other_filters_when_switching(self):
+        response = self.client.get(
+            reverse('harvest_calendar:calendar'),
+            {'farm': str(self.farm.id), 'show': 'activities'},
+        )
+        links = response.context['source_links']
+
+        self.assertEqual(len(links), 3)
+        self.assertEqual(
+            [link['value'] for link in links],
+            ['all', 'harvests', 'activities'],
+        )
+        self.assertTrue(links[2]['active'])
+        self.assertIn('show=activities', links[2]['url'])
+        self.assertIn(f'farm={self.farm.id}', links[2]['url'])
+        self.assertIn('show=harvests', links[1]['url'])
 
     def test_other_users_records_are_not_exposed(self):
         other_farm = make_farm(self.other_user, name='Private Farm')

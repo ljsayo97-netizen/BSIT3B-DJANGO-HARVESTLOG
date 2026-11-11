@@ -1,0 +1,507 @@
+/* ==========================================================================
+   HarvestPH — Harvest Green Brand Theme
+   Loaded after app-theme.css and dashboard-clean.css. It only restyles the
+   shared app shell (topbar, sidebar, dropdowns, footer) so page content keeps
+   its existing layout and behavior.
+   ========================================================================== */
+
+/* 1. Brand tokens ---------------------------------------------------------- */
+:root,
+[data-bs-theme="dark"] {
+  --tblr-primary: #22c55e;
+  --tblr-primary-rgb: 34, 197, 94;
+  --tblr-accent: #f5b544;
+  --tblr-link-color: #4ade80;
+  --tblr-link-hover-color: #86efac;
+}
+
+body.dh-app {
+  --dh-bg: #07110d !important;
+  --dh-sidebar-bg: #08130f !important;
+  --dh-surface: #0c1a14 !important;
+  --dh-surface-soft: #10231a !important;
+  --dh-border: rgba(134, 239, 172, 0.12) !important;
+  --dh-border-soft: rgba(134, 239, 172, 0.07) !important;
+  --dh-text: #e8f5ec !important;
+  --dh-muted: #6f8f7d !important;
+  --dh-muted-strong: #9ab8a6 !important;
+  --dh-blue: #22c55e !important;
+  --dh-harvest-green: #22c55e;
+  --dh-harvest-green-strong: #16a34a;
+  --dh-harvest-green-deep: #15803d;
+  --dh-harvest-amber: #f5b544;
+  background-color: #07110d !important;
+  background-image: none !important;
+  color: #e8f5ec !important;
+}
+
+body.dh-app ::selection {
+  color: #ffffff;
+  background: rgba(34, 197, 94, 0.45);
+}
+
+/* 2. Topbar ---------------------------------------------------------------- */
+.dh-topbar {
+  background-color: #07120e !important;
+  border-bottom: 1px solid rgba(134, 239, 172, 0.1) !important;
+  box-shadow: 0 1px 0 rgba(34, 197, 94, 0.06) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dh-topbar::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(34, 197, 94, 0.55) 28%,
+    rgba(245, 181, 68, 0.45) 72%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.dh-brand-link {
+  gap: 11px !important;
+}
+
+.dh-brand-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  color: #f0fdf4 !important;
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 48%, #0f766e 100%) !important;
+  box-shadow:
+    0 6px 16px -8px rgba(34, 197, 94, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
+}
+
+.dh-brand-icon svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+}
+
+.dh-brand-text {
+  color: #f0fdf4 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.dh-brand-accent {
+  color: #4ade80 !important;
+}
+
+.dh-sidebar-toggle {
+  color: #9ab8a6 !important;
+}
+
+.dh-sidebar-toggle:hover {
+  color: #f0fdf4 !important;
+}
+
+.dh-topbar-search {
+  background-color: #0b1a13 !important;
+  border-color: rgba(134, 239, 172, 0.12) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.dh-topbar-search:focus-within {
+  border-color: rgba(74, 222, 128, 0.55) !important;
+  background-color: rgba(34, 197, 94, 0.07) !important;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1) !important;
+}
+
+.dh-search-icon {
+  color: #6f8f7d !important;
+}
+
+.dh-search-input {
+  color: #e8f5ec !important;
+}
+
+.dh-search-input::placeholder {
+  color: #5f7f6d !important;
+}
+
+.dh-search-kbd {
+  border-color: rgba(134, 239, 172, 0.14) !important;
+  background-color: rgba(34, 197, 94, 0.08) !important;
+  color: #8fb8a0 !important;
+}
+
+.dh-topbar-right {
+  gap: 10px !important;
+}
+
+.dh-icon-btn {
+  color: #9ab8a6 !important;
+  border-radius: 9px !important;
+}
+
+.dh-icon-btn:hover,
+.dh-icon-btn:focus {
+  color: #f0fdf4 !important;
+  background-color: rgba(34, 197, 94, 0.1) !important;
+  border-color: rgba(74, 222, 128, 0.18) !important;
+}
+
+.dh-bell {
+  color: #9ab8a6 !important;
+}
+
+.dh-bell:hover,
+.dh-bell:focus {
+  color: #f0fdf4 !important;
+}
+
+.dh-bell-dot {
+  background-color: #f5b544 !important;
+  box-shadow: 0 0 0 2px #07120e !important;
+}
+
+.dh-date-chip {
+  border-color: rgba(134, 239, 172, 0.14) !important;
+  border-radius: 9px !important;
+  color: #c7e6d3 !important;
+  background-color: rgba(34, 197, 94, 0.07) !important;
+}
+
+.dh-date-chip i {
+  color: #4ade80 !important;
+}
+
+/* 3. User menu ------------------------------------------------------------- */
+.dh-user-button {
+  border-radius: 9px !important;
+  color: #e8f5ec !important;
+}
+
+.dh-user-button:hover,
+.dh-user-button:focus {
+  background-color: rgba(34, 197, 94, 0.09) !important;
+  border-color: rgba(74, 222, 128, 0.16) !important;
+}
+
+.dh-avatar {
+  background: linear-gradient(135deg, #4ade80 0%, #16a34a 60%, #0f766e 100%) !important;
+  box-shadow: 0 4px 12px -6px rgba(34, 197, 94, 0.8) !important;
+}
+
+.dh-user-name {
+  color: #e8f5ec !important;
+}
+
+.dh-user-chevron {
+  color: #6f8f7d !important;
+}
+
+.dh-user-dropdown {
+  border-color: rgba(134, 239, 172, 0.14) !important;
+  background-color: #0b1811 !important;
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.8) !important;
+}
+
+.dh-user-dropdown-copy strong {
+  color: #f0fdf4 !important;
+}
+
+.dh-user-dropdown-copy small {
+  color: #7fa58e !important;
+}
+
+.dh-user-dropdown .dropdown-divider {
+  border-color: rgba(134, 239, 172, 0.1) !important;
+}
+
+.dh-user-dropdown .dropdown-item {
+  color: #a9c9b7 !important;
+}
+
+.dh-user-dropdown .dropdown-item i {
+  color: #6f8f7d !important;
+}
+
+.dh-user-dropdown .dropdown-item:hover,
+.dh-user-dropdown .dropdown-item:focus {
+  color: #ffffff !important;
+  background-color: rgba(34, 197, 94, 0.12) !important;
+}
+
+.dh-user-dropdown .dropdown-item:hover i {
+  color: #86efac !important;
+}
+
+.dh-user-dropdown .dh-dropdown-danger {
+  color: #f87171 !important;
+}
+
+.dh-user-dropdown .dh-dropdown-danger i {
+  color: #f87171 !important;
+}
+
+/* 4. Notification dropdown ------------------------------------------------- */
+.dh-notification-menu {
+  border-color: rgba(134, 239, 172, 0.14) !important;
+  background-color: #0b1811 !important;
+}
+
+.dh-dropdown-header {
+  border-bottom-color: rgba(134, 239, 172, 0.1) !important;
+  background: #08130f !important;
+}
+
+.dh-dropdown-title {
+  color: #f0fdf4 !important;
+}
+
+.dh-dropdown-mark-all:hover {
+  background: rgba(34, 197, 94, 0.14) !important;
+}
+
+.dh-dropdown-tabs {
+  border-bottom-color: rgba(134, 239, 172, 0.08) !important;
+  background: #07110d !important;
+}
+
+.dh-dropdown-tab {
+  color: #9ab8a6 !important;
+}
+
+.dh-dropdown-tab:hover {
+  color: #f0fdf4 !important;
+}
+
+.dh-dropdown-tab.is-active {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: #86efac !important;
+}
+
+.dh-dropdown-row:hover {
+  background-color: rgba(34, 197, 94, 0.05) !important;
+}
+
+.dh-dropdown-row.is-unread {
+  background-color: rgba(34, 197, 94, 0.07) !important;
+}
+
+.dh-dropdown-row.is-unread:hover {
+  background-color: rgba(34, 197, 94, 0.11) !important;
+}
+
+.dh-unread-dot {
+  background-color: #4ade80 !important;
+}
+
+.dh-dropdown-footer {
+  border-top-color: rgba(134, 239, 172, 0.1) !important;
+  background: #08130f !important;
+}
+
+.dh-dropdown-footer-link {
+  color: #4ade80 !important;
+}
+
+.dh-dropdown-footer-link:hover {
+  color: #86efac !important;
+}
+
+/* 5. Sidebar --------------------------------------------------------------- */
+.dh-sidebar {
+  z-index: 1040 !important;
+  border-right-color: rgba(134, 239, 172, 0.1) !important;
+  background-color: #08130f !important;
+}
+
+.dh-sidebar-overlay {
+  z-index: 1035 !important;
+}
+
+.dh-sidebar-scroll {
+  scrollbar-color: rgba(74, 222, 128, 0.22) transparent;
+}
+
+.dh-sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(74, 222, 128, 0.22) !important;
+}
+
+.dh-nav-section {
+  color: #5f7f6d !important;
+  letter-spacing: 0.14em !important;
+}
+
+.dh-nav-link {
+  color: #9ab8a6 !important;
+}
+
+.dh-nav-link i {
+  color: #6f8f7d !important;
+}
+
+.dh-nav-link:hover,
+.dh-nav-link:focus {
+  color: #f0fdf4 !important;
+  border-color: rgba(74, 222, 128, 0.1) !important;
+  background-color: rgba(34, 197, 94, 0.08) !important;
+}
+
+.dh-nav-link:hover i,
+.dh-nav-link:focus i {
+  color: #86efac !important;
+}
+
+.dh-nav-link.is-active {
+  color: #ffffff !important;
+  border-color: rgba(134, 239, 172, 0.35) !important;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 62%, #0f766e 100%) !important;
+  box-shadow:
+    inset 3px 0 0 #f5b544,
+    0 10px 24px -14px rgba(22, 163, 74, 0.9) !important;
+}
+
+.dh-nav-link.is-active i {
+  color: #ffffff !important;
+}
+
+.dh-nav-badge {
+  background: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(8, 19, 15, 0.9) !important;
+}
+
+.dh-sidebar-art {
+  opacity: 0.7 !important;
+}
+
+.dh-sidebar-art .dh-art-sun {
+  color: #f5b544;
+}
+
+.dh-sidebar-art .dh-art-hills {
+  color: #1f7a4d;
+}
+
+.dh-sidebar-art .dh-art-barn {
+  color: #4ade80;
+}
+
+.dh-sidebar-art .dh-art-wheat {
+  color: #f5b544;
+}
+
+.dh-sidebar-art .dh-art-fence {
+  color: #2f6b4f;
+}
+
+.dh-sidebar-tagline {
+  color: #5f7f6d !important;
+}
+
+.dh-sidebar-tagline em {
+  color: #7fa58e !important;
+}
+
+.dh-sidebar-tagline strong {
+  color: #9ab8a6 !important;
+}
+
+/* 6. Footer ---------------------------------------------------------------- */
+.dh-app .dh-footer {
+  margin-top: auto !important;
+  padding: 14px 24px 18px !important;
+  border-top: 1px solid rgba(134, 239, 172, 0.08) !important;
+  color: #5f7f6d !important;
+  font-size: 0.66rem !important;
+}
+
+.dh-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+}
+
+.dh-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #9ab8a6 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+  text-decoration: none !important;
+}
+
+.dh-footer-brand:hover {
+  color: #f0fdf4 !important;
+}
+
+.dh-footer-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  color: #f0fdf4;
+  background: linear-gradient(135deg, #22c55e, #0f766e);
+}
+
+.dh-footer-mark svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.dh-footer-accent {
+  color: #4ade80;
+}
+
+.dh-footer-sep {
+  color: rgba(134, 239, 172, 0.25);
+}
+
+.dh-footer-muted {
+  color: #5f7f6d;
+  font-weight: 500;
+}
+
+.dh-footer-tagline {
+  color: #5f7f6d;
+  font-style: italic;
+}
+
+/* 7. Responsive polish ----------------------------------------------------- */
+@media (max-width: 767.98px) {
+  .dh-topbar-search {
+    display: none !important;
+  }
+
+  .dh-brand-text {
+    font-size: 1.05rem !important;
+  }
+
+  .dh-topbar-right {
+    gap: 6px !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .dh-date-chip {
+    display: none !important;
+  }
+
+  .dh-footer-inner {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .dh-app .dh-footer {
+    padding: 12px 14px 16px !important;
+  }
+}

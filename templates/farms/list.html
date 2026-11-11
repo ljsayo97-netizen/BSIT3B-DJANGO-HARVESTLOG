@@ -4,21 +4,21 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'libs/leaflet/leaflet.css' %}">
 <style>
-  /* Dark-mode friendly Leaflet styling */
+  /* Light harvest theme Leaflet styling */
   .leaflet-container {
-    background: #1a2234;
+    background: #eef5ef;
     font-family: inherit;
     border-radius: 8px;
   }
   .leaflet-popup-content-wrapper {
-    background: #1e293b;
-    color: #e2e8f0;
+    background: #ffffff;
+    color: #1f3328;
     border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 25px -14px rgba(20, 61, 38, 0.4);
+    border: 1px solid #dfeae1;
   }
   .leaflet-popup-tip {
-    background: #1e293b;
+    background: #ffffff;
   }
   .leaflet-popup-content {
     margin: 12px 14px;
@@ -36,7 +36,7 @@
   .brgy-pin-marker .pin-icon {
     font-size: 34px;
     color: #e03131;
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+    filter: drop-shadow(0 3px 6px rgba(20, 61, 38, 0.35));
     transition: transform 0.18s ease;
   }
   .brgy-pin-marker:hover .pin-icon {
@@ -45,16 +45,32 @@
   .brgy-pin-marker .pin-shadow {
     width: 14px;
     height: 5px;
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(20, 61, 38, 0.25);
     border-radius: 50%;
     margin-top: -6px;
+  }
+  /* Exact barangay name shown on the map boundary */
+  .brgy-area-label {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e03131;
+    border-radius: 999px;
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 3px 10px;
+    box-shadow: 0 5px 14px -7px rgba(20, 61, 38, 0.55);
+    white-space: nowrap;
+  }
+  .brgy-area-label::before {
+    display: none;
   }
   .farm-detail-label {
     font-size: 0.75rem;
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: #64748b;
+    color: #64786b;
     margin-bottom: 2px;
   }
   .farm-detail-value {
@@ -170,23 +186,6 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="card card-sm farm-kpi-card">
-        <div class="card-body">
-          <div class="row align-items-center">
-            <div class="col-auto">
-              <span class="bg-danger text-white avatar">
-                <i class="fas fa-location-dot"></i>
-              </span>
-            </div>
-            <div class="col">
-              <div class="font-weight-medium">Barangay Pin</div>
-              <div class="text-muted small">Automated Mini Map</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Search + filter toolbar -->
@@ -227,12 +226,6 @@
         {% if query or status %}
         <span class="text-muted small">— {{ farms.paginator.count }} result{{ farms.paginator.count|pluralize }} found</span>
         {% endif %}
-        <span class="badge bg-primary-lt text-primary text-nowrap ms-1">
-          Total Registered Farms: {{ total_farms }}
-        </span>
-      </div>
-      <div class="text-muted small">
-        <i class="fas fa-info-circle text-primary me-1"></i> Click the <i class="fas fa-eye text-primary"></i> eye icon to view full details (including Farm ID & ZIP Code) and Barangay mini map pin.
       </div>
     </div>
 
@@ -396,7 +389,8 @@
 <div class="modal modal-blur fade" id="farmDetailModal" tabindex="-1" aria-labelledby="farmDetailModalTitle" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header border-bottom">
+      <!-- Added position-relative to ensure the X button anchors properly -->
+      <div class="modal-header border-bottom position-relative">
         <div class="d-flex align-items-center gap-3">
           <div class="avatar avatar-md bg-primary-lt text-primary rounded">
             <i class="fas fa-wheat-awn fa-lg"></i>
@@ -414,12 +408,13 @@
             </div>
           </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 pe-5">
           <button type="button" class="btn btn-outline-primary btn-sm" id="detailEditFarmBtn" title="Edit this farm">
             <i class="fas fa-edit me-1"></i> Edit Farm
           </button>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        <!-- Moved X button to absolute upper right corner -->
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
       <div class="modal-body p-3 p-md-4">
@@ -474,17 +469,12 @@
                   </div>
                 </div>
 
-                <!-- Active crops planted on this farm -->
-                <div class="mt-4 pt-3 border-top">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="farm-detail-label mb-0">
-                      <i class="fas fa-seedling text-success me-1"></i> Crops on this Farm
-                    </div>
-                    <span class="badge bg-success-lt" id="detailCropsCount">0 Crops</span>
+                <!-- Crop count only, so a farm with many crops does not stretch the card -->
+                <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                  <div class="farm-detail-label mb-0">
+                    <i class="fas fa-seedling text-success me-1"></i> Crops on this Farm
                   </div>
-                  <div id="detailCropsList" class="d-flex flex-column gap-2 small">
-                    <div class="text-muted font-italic">No crop records linked to this farm yet.</div>
-                  </div>
+                  <span class="badge bg-success-lt" id="detailCropsCount">0 Crops</span>
                 </div>
               </div>
             </div>
@@ -570,8 +560,8 @@
             </div>
             <div class="col-12">
               <label class="form-label required">Location / Barangay</label>
-              <input type="text" name="location" id="farm_location" class="form-control" required placeholder="e.g. Brgy. 5, Kabankalan City">
-              <div class="form-text text-muted">The mini map will automatically pin point this Barangay.</div>
+              <input type="text" name="location" id="farm_location" class="form-control" required placeholder="e.g. Vista Alegre, Ilog, Negros Occidental">
+              <div class="form-text text-muted">Use Barangay, Municipality/City, Province so the mini map pins the correct place.</div>
             </div>
             <!-- Farm ID (hidden from modal form) -->
             <div class="col-12 d-none">
@@ -802,7 +792,6 @@
   const detailEmail          = document.getElementById('detailEmail');
   const detailDescription    = document.getElementById('detailDescription');
   const detailCropsCount     = document.getElementById('detailCropsCount');
-  const detailCropsList      = document.getElementById('detailCropsList');
   const detailMapStatus      = document.getElementById('detailMapStatus');
   const detailMapCoords      = document.getElementById('detailMapCoords');
   const recenterMapBtn       = document.getElementById('recenterMapBtn');
@@ -818,6 +807,8 @@
   let miniMap        = null;
   let currentMarker  = null;
   let activeCoords   = null;
+  let barangayBoundaryLayer = null;
+  let barangayLabelLayer    = null;
 
   function getCookie(name) {
     const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -909,7 +900,7 @@
   }
 
   // Create a clean red map pin on the Barangay
-  function createBarangayPin(lat, lng, farm, brgyLabel) {
+  function createBarangayPin(lat, lng, farm, brgyLabel, precisionLabel) {
     if (currentMarker && miniMap) {
       miniMap.removeLayer(currentMarker);
     }
@@ -936,7 +927,7 @@
         </div>
         <div class="fw-semibold text-primary mb-1">${escapeHtml(farm.name)}</div>
         <div class="small text-muted mb-2">${escapeHtml(farm.owner)} &middot; ${farm.size_hectares} ha</div>
-        <span class="badge bg-danger-lt text-danger">Barangay Pinpoint</span>
+        <span class="badge bg-danger-lt text-danger">${escapeHtml(precisionLabel || 'Barangay Pinpoint')}</span>
       </div>
     `;
     currentMarker.bindPopup(popupHtml).openPopup();
@@ -948,34 +939,398 @@
     return text.replace(/[&<>"']/g, function(m) { return map[m]; });
   }
 
-  // Extract Barangay name from address text (e.g. "Brgy. 5, Kabankalan" -> "Barangay 5")
-  function extractBarangay(location) {
-    if (!location) return null;
-    const match = location.match(/(?:brgy\.?|barangay|bgy\.?)\s*([a-zA-Z0-9\s-]+?)(?:,|$)/i);
-    if (match && match[1]) {
-      const trimmed = match[1].trim();
-      return /^(?:brgy|barangay|bgy)/i.test(trimmed) ? trimmed : `Barangay ${trimmed}`;
+  // Clear the previous barangay outline, label, and pin before showing a farm.
+  function clearBarangayLayers() {
+    if (miniMap) {
+      if (barangayLabelLayer) miniMap.removeLayer(barangayLabelLayer);
+      if (barangayBoundaryLayer) miniMap.removeLayer(barangayBoundaryLayer);
+      if (currentMarker) miniMap.removeLayer(currentMarker);
+    }
+    barangayLabelLayer = null;
+    barangayBoundaryLayer = null;
+    currentMarker = null;
+    activeCoords = null;
+  }
+
+  // Return the barangay name without a leading "Brgy."/"Barangay" prefix.
+  function exactBarangayName(value) {
+    return (value || '').replace(BARANGAY_PREFIX_RE, '').trim();
+  }
+
+  // Format a barangay name for display, keeping numbered barangays readable.
+  function formatBarangayName(value) {
+    const name = exactBarangayName(value);
+    if (!name) return '';
+    if (/^\d+[a-z]?(?:-\d+)?$/i.test(name)) return `Barangay ${name}`;
+    return name;
+  }
+
+  // Draw the exact barangay boundary returned by Nominatim, fit the map to
+  // it, and pin the barangay name on the map so the location is unambiguous.
+  function drawBarangayBoundary(boundary, displayLabel) {
+    if (!miniMap || !boundary) return false;
+    try {
+      barangayBoundaryLayer = L.geoJSON(boundary, {
+        style: {
+          color: '#e03131',
+          weight: 2.5,
+          opacity: 0.95,
+          fillColor: '#e03131',
+          fillOpacity: 0.12,
+          dashArray: '7 5'
+        }
+      }).addTo(miniMap);
+
+      const bounds = barangayBoundaryLayer.getBounds();
+      if (!bounds.isValid()) {
+        miniMap.removeLayer(barangayBoundaryLayer);
+        barangayBoundaryLayer = null;
+        return false;
+      }
+
+      miniMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+
+      barangayLabelLayer = L.tooltip({
+        permanent: true,
+        direction: 'center',
+        className: 'brgy-area-label',
+        opacity: 1,
+        interactive: false
+      })
+        .setLatLng([bounds.getNorth(), bounds.getCenter().lng])
+        .setContent(escapeHtml(displayLabel))
+        .addTo(miniMap);
+      return true;
+    } catch (err) {
+      console.warn('Barangay boundary error:', err);
+      if (barangayBoundaryLayer && miniMap) {
+        miniMap.removeLayer(barangayBoundaryLayer);
+      }
+      barangayBoundaryLayer = null;
+      return false;
+    }
+  }
+
+  function fitBarangayView() {
+    if (!miniMap) return;
+    if (barangayBoundaryLayer) {
+      miniMap.fitBounds(barangayBoundaryLayer.getBounds(), {
+        padding: [30, 30],
+        maxZoom: 15
+      });
+    } else if (activeCoords) {
+      miniMap.setView(activeCoords, 13.5);
+    }
+  }
+
+  // Parse a free-text Philippine farm location into the same hierarchy used
+  // by the server-side geocoder: Barangay -> Municipality/City -> Province.
+  const COUNTRY_NAMES = ['philippines', 'ph', 'pilipinas'];
+  const PROVINCE_NAMES = [
+    'Abra', 'Agusan del Norte', 'Agusan del Sur', 'Aklan', 'Albay', 'Antique',
+    'Apayao', 'Aurora', 'Basilan', 'Bataan', 'Batanes', 'Batangas', 'Benguet',
+    'Biliran', 'Bohol', 'Bukidnon', 'Bulacan', 'Cagayan', 'Camarines Norte',
+    'Camarines Sur', 'Camiguin', 'Capiz', 'Catanduanes', 'Cavite', 'Cebu',
+    'Cotabato', 'Davao de Oro', 'Davao del Norte', 'Davao del Sur',
+    'Davao Occidental', 'Davao Oriental', 'Dinagat Islands', 'Eastern Samar',
+    'Guimaras', 'Ifugao', 'Ilocos Norte', 'Ilocos Sur', 'Iloilo', 'Isabela',
+    'Kalinga', 'La Union', 'Laguna', 'Lanao del Norte', 'Lanao del Sur',
+    'Leyte', 'Maguindanao del Norte', 'Maguindanao del Sur', 'Marinduque',
+    'Masbate', 'Misamis Occidental', 'Misamis Oriental', 'Mountain Province',
+    'Negros Occidental', 'Negros Oriental', 'Northern Samar', 'Nueva Ecija',
+    'Nueva Vizcaya', 'Occidental Mindoro', 'Oriental Mindoro', 'Palawan',
+    'Pampanga', 'Pangasinan', 'Quezon', 'Quirino', 'Rizal', 'Romblon', 'Samar',
+    'Sarangani', 'Siquijor', 'Sorsogon', 'South Cotabato', 'Southern Leyte',
+    'Sultan Kudarat', 'Sulu', 'Surigao del Norte', 'Surigao del Sur', 'Tarlac',
+    'Tawi-Tawi', 'Zambales', 'Zamboanga del Norte', 'Zamboanga del Sur',
+    'Zamboanga Sibugay', 'Compostela Valley', 'Negros Island Region'
+  ];
+  const BARANGAY_PREFIX_RE = /^(?:brgy\.?|barangay|bgy\.?)\s*/i;
+  const LOCALITY_LABEL_RE = /^(?:purok|sitio|zone|block|lot|phase)\b/i;
+  const CITY_SUFFIX_RE = /\b(?:city|municipality)\s*$/i;
+  const POSTAL_CODE_RE = /^\d{4,5}$/;
+
+  function cleanBarangay(value) {
+    return (value || '').replace(BARANGAY_PREFIX_RE, '').trim();
+  }
+
+  function barangayQueryName(value) {
+    const name = cleanBarangay(value);
+    if (!name) return '';
+    if (/^\d+[a-z]?(?:-\d+)?$/i.test(name)) return `Barangay ${name}`;
+    return name;
+  }
+
+  function splitProvinceSuffix(value) {
+    const words = (value || '').split(/\s+/).filter(Boolean);
+    if (words.length < 3) return null;
+
+    const maxWords = Math.min(4, words.length - 1);
+    for (let count = maxWords; count > 1; count--) {
+      const candidate = words.slice(-count).join(' ');
+      for (const province of PROVINCE_NAMES) {
+        if (placeNamesMatch(province, candidate)) {
+          const municipality = words.slice(0, -count).join(' ').trim();
+          if (municipality) {
+            return { municipality: municipality, province: province };
+          }
+        }
+      }
     }
     return null;
   }
 
-  // Extract City or Municipality from address
-  function extractCity(location) {
-    if (!location) return '';
-    const parts = location.split(',').map(s => s.trim());
-    for (const p of parts) {
-      if (!/(?:brgy|barangay|bgy)/i.test(p) && p.length > 2) {
-        return p;
+  function parseFarmLocation(location) {
+    let parts = (location || '').split(',').map(s => s.trim()).filter(Boolean);
+    while (parts.length && COUNTRY_NAMES.includes(parts[parts.length - 1].toLowerCase())) {
+      parts.pop();
+    }
+    if (parts.length && POSTAL_CODE_RE.test(parts[parts.length - 1])) {
+      parts.pop();
+    }
+    if (parts.length) {
+      const split = splitProvinceSuffix(parts[parts.length - 1]);
+      if (split) {
+        parts = parts.slice(0, -1).concat([split.municipality, split.province]);
       }
+    }
+
+    let barangay = '';
+    let municipality = '';
+    let province = '';
+    let alternate = null;
+
+    if (parts.length === 1) {
+      municipality = parts[0];
+    } else if (parts.length === 2) {
+      const first = parts[0];
+      const second = parts[1];
+      if (CITY_SUFFIX_RE.test(second) || BARANGAY_PREFIX_RE.test(first) || LOCALITY_LABEL_RE.test(first)) {
+        barangay = cleanBarangay(first);
+        municipality = second;
+      } else {
+        municipality = first;
+        province = second;
+        alternate = { barangay: cleanBarangay(first), municipality: second, province: '' };
+      }
+    } else if (parts.length >= 3) {
+      province = parts[parts.length - 1];
+      municipality = parts[parts.length - 2];
+      const localityParts = parts.slice(0, -2);
+      const namedParts = localityParts.filter(p => !LOCALITY_LABEL_RE.test(p));
+      const source = (namedParts.length ? namedParts : localityParts).slice(-1)[0] || '';
+      barangay = cleanBarangay(source);
+    }
+
+    return {
+      barangay: barangay,
+      municipality: municipality,
+      province: province,
+      alternate: alternate
+    };
+  }
+
+  function normalizePlaceName(value) {
+    return (value || '')
+      .toLowerCase()
+      .replace(/^(?:city|municipality|province)\s+of\s+/, '')
+      .replace(/\b(?:city|municipality)\s*$/, '')
+      .replace(BARANGAY_PREFIX_RE, '')
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function placeNamesMatch(expected, actual) {
+    const a = normalizePlaceName(expected);
+    const b = normalizePlaceName(actual);
+    if (!a || !b) return false;
+    if (a === b) return true;
+
+    // Levenshtein distance tolerates small spelling mistakes such as
+    // "Negros Ociddental" without matching unrelated names.
+    let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const current = [i];
+      for (let j = 1; j <= b.length; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        current[j] = Math.min(
+          current[j - 1] + 1,
+          previous[j] + 1,
+          previous[j - 1] + cost
+        );
+      }
+      previous = current;
+    }
+    const distance = previous[b.length];
+    return (1 - distance / Math.max(a.length, b.length)) >= 0.82;
+  }
+
+  const MUNICIPALITY_KEYS = ['city', 'town', 'municipality', 'county', 'district', 'city_district'];
+  const PROVINCE_KEYS = ['state', 'province', 'region', 'state_district'];
+
+  function nominatimResultMatches(item, municipality, province) {
+    const address = item.address || {};
+    const countryCode = (address.country_code || '').toLowerCase();
+    if (countryCode && countryCode !== 'ph') return false;
+
+    if (municipality) {
+      const values = MUNICIPALITY_KEYS.map(k => address[k]).filter(Boolean);
+      if (!values.some(v => placeNamesMatch(municipality, v))) return false;
+    }
+    if (province) {
+      const values = PROVINCE_KEYS.map(k => address[k]).filter(Boolean);
+      if (!values.some(v => placeNamesMatch(province, v))) return false;
+    }
+    return true;
+  }
+
+  function buildLocationQueries(parsed) {
+    const queries = [];
+
+    function add(queryParts, municipality, province) {
+      const query = queryParts.filter(Boolean).concat(['Philippines']).join(', ');
+      if (!query) return;
+      const existing = queries.find(q => q.query.toLowerCase() === query.toLowerCase());
+      if (existing) {
+        if (!existing.expectations.some(e => e.municipality === municipality && e.province === province)) {
+          existing.expectations.push({ municipality: municipality, province: province });
+        }
+        return;
+      }
+      queries.push({
+        query: query,
+        expectations: [{ municipality: municipality, province: province }]
+      });
+    }
+
+    const barangay = barangayQueryName(parsed.barangay);
+    if (barangay && parsed.municipality) {
+      if (parsed.province) {
+        add([barangay, parsed.municipality, parsed.province], parsed.municipality, parsed.province);
+      }
+      add([barangay, parsed.municipality], parsed.municipality, '');
+    }
+
+    if (parsed.municipality) {
+      if (parsed.province) {
+        add([parsed.municipality, parsed.province], parsed.municipality, parsed.province);
+      }
+      add([parsed.municipality], parsed.municipality, '');
+    }
+
+    if (parsed.alternate && parsed.alternate.municipality) {
+      const alternateBarangay = barangayQueryName(parsed.alternate.barangay);
+      if (alternateBarangay) {
+        add([alternateBarangay, parsed.alternate.municipality], parsed.alternate.municipality, '');
+      }
+      add([parsed.alternate.municipality], parsed.alternate.municipality, '');
+    }
+
+    return queries;
+  }
+
+  async function searchNominatim(query, expectations) {
+    const params = new URLSearchParams({
+      format: 'jsonv2',
+      addressdetails: '1',
+      limit: '5',
+      countrycodes: 'ph',
+      dedupe: '1',
+      polygon_geojson: '1',
+      q: query
+    });
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data)) return null;
+
+    for (const item of data) {
+      for (const expectation of expectations) {
+        if (!nominatimResultMatches(item, expectation.municipality, expectation.province)) {
+          continue;
+        }
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          const geojson = item.geojson;
+          const boundary = (
+            geojson && ['Polygon', 'MultiPolygon'].includes(geojson.type) &&
+            Array.isArray(geojson.coordinates) && geojson.coordinates.length
+          ) ? geojson : null;
+          return {
+            lat: lat,
+            lng: lng,
+            item: item,
+            boundary: boundary,
+            matchedBarangay: matchedBarangayFromResult(item)
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  function matchedBarangayFromResult(item) {
+    const address = item.address || {};
+    const keys = [
+      'village', 'hamlet', 'quarter', 'neighbourhood', 'neighborhood',
+      'suburb', 'isolated_dwelling'
+    ];
+    for (const key of keys) {
+      if (address[key]) return address[key];
     }
     return '';
   }
 
-  // Automated Barangay Pinpoint engine (locates the barangay area and drops a pin)
+  function resultPrecision(item) {
+    const placeType = (item.addresstype || item.type || '').toLowerCase();
+    if (['village', 'hamlet', 'quarter', 'neighbourhood', 'neighborhood', 'suburb', 'isolated_dwelling'].includes(placeType)) {
+      return 'barangay';
+    }
+    if (['city', 'town', 'municipality', 'administrative'].includes(placeType)) {
+      return 'municipality';
+    }
+    return 'approximate';
+  }
+
+  async function geocodeFarmLocation(location) {
+    const parsed = parseFarmLocation(location);
+    const queries = buildLocationQueries(parsed);
+    for (const candidate of queries) {
+      try {
+        const match = await searchNominatim(candidate.query, candidate.expectations);
+        if (match) {
+          return {
+            lat: match.lat,
+            lng: match.lng,
+            precision: resultPrecision(match.item),
+            parsed: parsed,
+            boundary: match.boundary,
+            matchedBarangay: match.matchedBarangay
+          };
+        }
+      } catch (err) {
+        console.warn('Location lookup error:', err);
+      }
+    }
+    return null;
+  }
+
+  // Automated Barangay Pinpoint engine: outlines the exact barangay named in
+  // the farm address, fits the map to it, and labels it by name.
   async function autoTrackFarmLocation(farm) {
-    const brgyName = extractBarangay(farm.location);
-    const cityName = extractCity(farm.location);
-    const displayLabel = brgyName || (cityName ? `Barangay in ${cityName}` : farm.location);
+    const parsed = parseFarmLocation(farm.location);
+    const requestedName = formatBarangayName(
+      farm.matched_barangay || parsed.barangay
+    );
+    const requestedLabel = requestedName
+      ? (/^Barangay\b/i.test(requestedName) ? requestedName : `Barangay ${requestedName}`)
+      : (parsed.municipality ? `Barangay in ${parsed.municipality}` : (farm.location || 'Farm location'));
+
+    clearBarangayLayers();
 
     detailMapStatus.className = 'badge bg-primary-lt';
     detailMapStatus.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Pinpointing Barangay...';
@@ -990,87 +1345,99 @@
 
     let lat = null;
     let lng = null;
+    let precision = 'approximate';
+    let boundary = null;
+    let matchedBarangay = '';
 
-    // 1. Search Nominatim specifically for the Barangay center
-    if (brgyName) {
-      try {
-        const query = cityName ? `${brgyName}, ${cityName}, Philippines` : `${brgyName}, Philippines`;
-        const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
-        const res = await fetch(searchUrl, {
-          headers: { 'Accept': 'application/json' }
-        });
-        const data = await res.json();
-        if (data && data.length > 0) {
-          lat = parseFloat(data[0].lat);
-          lng = parseFloat(data[0].lon);
-        }
-      } catch (err) {
-        console.warn('Barangay geocoding error:', err);
+    // 1. Prefer the server-validated coordinates. The backend checks the
+    //    barangay against the requested municipality and province, so a
+    //    same-named barangay in another city cannot be selected.
+    if (
+      farm.latitude !== null && farm.latitude !== undefined && farm.latitude !== '' &&
+      farm.longitude !== null && farm.longitude !== undefined && farm.longitude !== ''
+    ) {
+      const serverLat = parseFloat(farm.latitude);
+      const serverLng = parseFloat(farm.longitude);
+      if (Number.isFinite(serverLat) && Number.isFinite(serverLng)) {
+        lat = serverLat;
+        lng = serverLng;
+        precision = farm.location_precision || 'validated';
+        boundary = farm.barangay_boundary || null;
+        matchedBarangay = farm.matched_barangay || '';
       }
     }
 
-    // 2. Search municipality/city center if barangay alone wasn't returned
-    if (!lat || !lng) {
-      if (cityName) {
-        try {
-          const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cityName + ', Philippines')}`;
-          const res = await fetch(searchUrl, {
-            headers: { 'Accept': 'application/json' }
-          });
-          const data = await res.json();
-          if (data && data.length > 0) {
-            lat = parseFloat(data[0].lat);
-            lng = parseFloat(data[0].lon);
-          }
-        } catch (err) {
-          console.warn('City geocoding error:', err);
-        }
+    // 2. Hierarchy-aware client fallback if the server has no coordinates.
+    if (lat === null || lng === null) {
+      const match = await geocodeFarmLocation(farm.location);
+      if (match) {
+        lat = match.lat;
+        lng = match.lng;
+        precision = match.precision;
+        boundary = match.boundary || null;
+        matchedBarangay = match.matchedBarangay || '';
       }
     }
 
-    // 3. Fallback to backend coordinates if available
-    if (!lat || !lng) {
-      if (farm.latitude && farm.longitude) {
-        lat = parseFloat(farm.latitude);
-        lng = parseFloat(farm.longitude);
+    // 3. Never guess a region: show an explicit unresolved state instead of
+    //    dropping the pin in the wrong city.
+    if (lat === null || lng === null) {
+      detailMapStatus.className = 'badge bg-warning-lt text-warning';
+      detailMapStatus.innerHTML = '<i class="fas fa-triangle-exclamation me-1"></i> Could not pinpoint';
+      detailMapCoords.textContent = 'Use: Barangay, Municipality/City, Province';
+      if (miniMap) {
+        miniMap.setView([9.9833, 122.8167], 10);
       }
+      if (openExternalMapBtn) {
+        openExternalMapBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(farm.location || '')}`;
+      }
+      return;
     }
 
-    // 4. Regional fallback if unresolved
-    if (!lat || !lng) {
-      const locLower = (farm.location || '').toLowerCase();
-      if (locLower.includes('kabankalan')) {
-        lat = 9.9833; lng = 122.8167;
-      } else if (locLower.includes('bacolod') || locLower.includes('negros')) {
-        lat = 10.6766; lng = 122.9509;
-      } else if (locLower.includes('iloilo')) {
-        lat = 10.7202; lng = 122.5621;
-      } else if (locLower.includes('cebu')) {
-        lat = 10.3157; lng = 123.8854;
-      } else if (locLower.includes('davao')) {
-        lat = 7.1907; lng = 125.4553;
-      } else if (locLower.includes('cauayan') || locLower.includes('isabela')) {
-        lat = 16.9298; lng = 121.7709;
-      } else {
-        lat = 9.9833; lng = 122.8167;
-      }
+    // Prefer the barangay Nominatim actually matched, so the label shows the
+    // exact name of the barangay that the pin belongs to.
+    const exactName = formatBarangayName(
+      matchedBarangay || (precision === 'barangay' ? parsed.barangay : '')
+    );
+    const brgyLabel = exactName
+      ? (/^Barangay\b/i.test(exactName) ? exactName : `Barangay ${exactName}`)
+      : '';
+    const displayLabel = (
+      (precision === 'barangay' || precision === 'validated')
+        ? (brgyLabel || requestedLabel)
+        : (parsed.municipality || farm.location || requestedLabel)
+    );
+
+    let precisionLabel = 'Barangay Pinpoint';
+    if (precision === 'barangay') {
+      precisionLabel = boundary ? 'Exact Barangay Boundary' : 'Exact Barangay';
+    } else if (precision === 'municipality') {
+      precisionLabel = 'Municipality Center (approximate)';
+    } else if (precision === 'approximate') {
+      precisionLabel = 'Approximate Location';
+    } else if (precision === 'validated') {
+      precisionLabel = boundary ? 'Exact Barangay Boundary' : 'Validated Location';
     }
 
     activeCoords = [lat, lng];
 
-    // Center on the barangay with a moderate zoom level (13.5)
-    miniMap.flyTo([lat, lng], 13.5, {
-      animate: true,
-      duration: 1.2
-    });
+    // Outline and zoom to the exact barangay boundary when OSM has one.
+    const boundaryDrawn = drawBarangayBoundary(boundary, displayLabel);
+    if (!boundaryDrawn) {
+      const zoom = precision === 'barangay' ? 14 : 12.5;
+      miniMap.flyTo([lat, lng], zoom, {
+        animate: true,
+        duration: 1.2
+      });
+    }
 
     // Drop clean red location pin on the Barangay
-    createBarangayPin(lat, lng, farm, displayLabel);
+    createBarangayPin(lat, lng, farm, displayLabel, precisionLabel);
 
     // Update coordinates and status badge
-    detailMapCoords.innerHTML = `Barangay Pin: <b>${lat.toFixed(4)}</b>, <b>${lng.toFixed(4)}</b>`;
+    detailMapCoords.innerHTML = `Pin: <b>${lat.toFixed(4)}</b>, <b>${lng.toFixed(4)}</b>`;
     detailMapStatus.className = 'badge bg-success-lt text-success';
-    detailMapStatus.innerHTML = `<i class="fas fa-location-dot me-1"></i> ${escapeHtml(displayLabel)} Pinpointed`;
+    detailMapStatus.innerHTML = `<i class="fas fa-location-dot me-1"></i> ${escapeHtml(displayLabel)} &middot; ${escapeHtml(precisionLabel)}`;
 
     // Configure External Google Maps link
     if (openExternalMapBtn) {
@@ -1081,10 +1448,16 @@
   // Recenter button
   if (recenterMapBtn) {
     recenterMapBtn.addEventListener('click', function () {
-      if (miniMap && activeCoords) {
+      if (!miniMap) return;
+      if (barangayBoundaryLayer) {
+        miniMap.fitBounds(barangayBoundaryLayer.getBounds(), {
+          padding: [30, 30],
+          maxZoom: 15
+        });
+      } else if (activeCoords) {
         miniMap.flyTo(activeCoords, 14, { animate: true, duration: 1 });
-        if (currentMarker) currentMarker.openPopup();
       }
+      if (currentMarker) currentMarker.openPopup();
     });
   }
 
@@ -1095,6 +1468,9 @@
   function openFarmDetails(farmId) {
     currentId = farmId;
     currentDetailFarm = null;
+
+    // Remove the previous farm's pin, outline, and label while loading.
+    clearBarangayLayers();
 
     // Show loading state
     detailFarmName.textContent        = 'Loading...';
@@ -1109,7 +1485,7 @@
     detailContact.textContent         = '...';
     detailEmail.textContent           = '...';
     detailDescription.textContent     = 'Loading field information...';
-    detailCropsList.innerHTML         = '<div class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i> Loading crop data...</div>';
+    detailCropsCount.textContent      = '...';
 
     // Show the modal
     const modalInstance = bootstrap.Modal.getOrCreateInstance(detailModalEl);
@@ -1154,27 +1530,9 @@
         detailFarmStatusBadge.textContent = 'Archived';
       }
 
-      // Populate Crops
+      // Show only the crop count so a long crop list does not stretch the card.
       const cropsCount = data.crops_count || 0;
       detailCropsCount.textContent = `${cropsCount} Crop${cropsCount === 1 ? '' : 's'}`;
-      if (data.crops && data.crops.length > 0) {
-        let cropsHtml = '';
-        data.crops.forEach(function (crop) {
-          cropsHtml += `
-            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light-lt">
-              <div>
-                <span class="fw-semibold text-primary">${escapeHtml(crop.name)}</span>
-                ${crop.variety ? `<span class="text-muted small">(${escapeHtml(crop.variety)})</span>` : ''}
-                ${crop.planting_date ? `<div class="text-muted extra-small" style="font-size:0.75rem;"><i class="fas fa-calendar-day me-1"></i>Planted ${crop.planting_date}</div>` : ''}
-              </div>
-              <span class="badge bg-secondary-lt small">${crop.status_display || crop.status}</span>
-            </div>
-          `;
-        });
-        detailCropsList.innerHTML = cropsHtml;
-      } else {
-        detailCropsList.innerHTML = '<div class="text-muted fst-italic">No active crops registered on this farm field yet.</div>';
-      }
 
       // Pinpoint the Barangay on the mini map
       autoTrackFarmLocation(data);
@@ -1182,6 +1540,7 @@
     .catch((err) => {
       detailFarmName.textContent = 'Error loading farm';
       detailFarmLocHeader.textContent = err.message;
+      clearBarangayLayers();
       detailMapStatus.className = 'badge bg-danger-lt text-danger';
       detailMapStatus.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Failed to pin';
     });
@@ -1224,9 +1583,7 @@
     detailModalEl.addEventListener('shown.bs.modal', function () {
       if (miniMap) {
         miniMap.invalidateSize();
-        if (activeCoords) {
-          miniMap.setView(activeCoords, 13.5);
-        }
+        fitBarangayView();
       }
     });
   }

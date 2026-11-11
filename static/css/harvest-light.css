@@ -1,0 +1,942 @@
+/* ==========================================================================
+   HarvestPH — Light Harvest Theme
+   Loaded after app-theme.css, dashboard-clean.css, and harvest-theme.css.
+   It converts the dark harvest shell and dashboard components to a light,
+   green-tinted palette while keeping the Harvest green / amber identity.
+   ========================================================================== */
+
+/* 1. Brand tokens ---------------------------------------------------------- */
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="light"][data-bs-theme-primary="green"] {
+  --tblr-primary: #16a34a;
+  --tblr-primary-rgb: 22, 163, 74;
+  --tblr-primary-hover: #15803d;
+  --tblr-primary-active: #166534;
+  --tblr-primary-lt: #e8f5ec;
+  --tblr-accent: #f59e0b;
+  --tblr-link-color: #15803d;
+  --tblr-link-hover-color: #166534;
+  --tblr-body-bg: #f3f7f2;
+  --tblr-body-bg-rgb: 243, 247, 242;
+  --tblr-body-color: #1f3328;
+  --tblr-body-color-rgb: 31, 51, 40;
+  --tblr-muted: #64786b;
+  --tblr-muted-rgb: 100, 120, 107;
+  --tblr-border-color: #dfeae1;
+  --tblr-border-color-translucent: rgba(22, 101, 52, 0.1);
+  --tblr-bg-surface: #ffffff;
+  --tblr-bg-surface-secondary: #f7faf6;
+  --tblr-bg-surface-tertiary: #eef5ef;
+  --tblr-shadow-card: 0 1px 2px rgba(20, 61, 38, 0.03), 0 12px 30px -24px rgba(20, 61, 38, 0.18);
+  --tblr-shadow-sm: 0 1px 2px rgba(20, 61, 38, 0.05);
+  --tblr-shadow: 0 2px 6px -2px rgba(20, 61, 38, 0.08);
+  --tblr-box-shadow: 0 1px 3px rgba(20, 61, 38, 0.05);
+  --tblr-box-shadow-sm: 0 1px 2px rgba(20, 61, 38, 0.06);
+  --tblr-box-shadow-lg: 0 18px 42px -18px rgba(20, 61, 38, 0.24);
+}
+
+html {
+  background-color: #f3f7f2;
+}
+
+body.dh-app {
+  --dh-bg: #f3f7f2 !important;
+  --dh-sidebar-bg: #ffffff !important;
+  --dh-surface: #ffffff !important;
+  --dh-surface-soft: #f7faf6 !important;
+  --dh-border: rgba(22, 101, 52, 0.14) !important;
+  --dh-border-soft: rgba(22, 101, 52, 0.08) !important;
+  --dh-text: #1f3328 !important;
+  --dh-muted: #64786b !important;
+  --dh-muted-strong: #475c4f !important;
+  --dh-blue: #16a34a !important;
+  background-color: #f3f7f2 !important;
+  background-image: none !important;
+  color: #1f3328 !important;
+}
+
+body.dh-app ::selection {
+  color: #ffffff;
+  background: rgba(22, 163, 74, 0.45);
+}
+
+/* 2. Topbar ---------------------------------------------------------------- */
+.dh-topbar {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+  border-bottom: 1px solid #dfeae1 !important;
+  box-shadow: 0 1px 2px rgba(20, 61, 38, 0.04), 0 10px 28px -24px rgba(20, 61, 38, 0.3) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dh-topbar::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(22, 163, 74, 0.32) 28%,
+    rgba(245, 158, 11, 0.28) 72%,
+    transparent 100%
+  );
+}
+
+.dh-brand-text {
+  color: #14261c !important;
+}
+
+.dh-brand-accent {
+  color: #15803d !important;
+}
+
+.dh-sidebar-toggle {
+  color: #5f7267 !important;
+}
+
+.dh-sidebar-toggle:hover {
+  color: #14261c !important;
+}
+
+.dh-topbar-search {
+  background-color: #f4f8f3 !important;
+  border-color: #dfeae1 !important;
+  box-shadow: none !important;
+}
+
+.dh-topbar-search:focus-within {
+  border-color: rgba(22, 163, 74, 0.55) !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12) !important;
+}
+
+.dh-search-icon {
+  color: #64786b !important;
+}
+
+.dh-search-input {
+  color: #1f3328 !important;
+}
+
+.dh-search-input::placeholder {
+  color: #84968a !important;
+}
+
+.dh-search-kbd {
+  border-color: #dfeae1 !important;
+  background-color: #ffffff !important;
+  color: #64786b !important;
+}
+
+.dh-icon-btn {
+  color: #5f7267 !important;
+}
+
+.dh-icon-btn:hover,
+.dh-icon-btn:focus {
+  color: #14261c !important;
+  background-color: #eef6ef !important;
+  border-color: #cfe3d4 !important;
+}
+
+.dh-bell {
+  color: #5f7267 !important;
+}
+
+.dh-bell:hover,
+.dh-bell:focus {
+  color: #14261c !important;
+}
+
+.dh-bell-dot {
+  background-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px #ffffff !important;
+}
+
+.dh-date-chip {
+  border-color: #dfeae1 !important;
+  color: #334155 !important;
+  background-color: #f4f8f3 !important;
+}
+
+.dh-date-chip i {
+  color: #16a34a !important;
+}
+
+/* 3. User menu ------------------------------------------------------------- */
+.dh-user-button {
+  color: #1f3328 !important;
+}
+
+.dh-user-button:hover,
+.dh-user-button:focus {
+  background-color: #eef6ef !important;
+  border-color: #cfe3d4 !important;
+}
+
+.dh-user-name {
+  color: #14261c !important;
+}
+
+.dh-user-chevron {
+  color: #7b8f82 !important;
+}
+
+.dh-user-dropdown {
+  border-color: #dfeae1 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 18px 40px -18px rgba(20, 61, 38, 0.22) !important;
+}
+
+.dh-user-dropdown-copy strong {
+  color: #14261c !important;
+}
+
+.dh-user-dropdown-copy small {
+  color: #64786b !important;
+}
+
+.dh-user-dropdown .dropdown-divider {
+  border-color: #e8f0e9 !important;
+}
+
+.dh-user-dropdown .dropdown-item {
+  color: #475c4f !important;
+}
+
+.dh-user-dropdown .dropdown-item i {
+  color: #7b8f82 !important;
+}
+
+.dh-user-dropdown .dropdown-item:hover,
+.dh-user-dropdown .dropdown-item:focus {
+  color: #14532d !important;
+  background-color: #eef6ef !important;
+}
+
+.dh-user-dropdown .dropdown-item:hover i {
+  color: #15803d !important;
+}
+
+.dh-user-dropdown .dh-dropdown-danger,
+.dh-user-dropdown .dh-dropdown-danger i {
+  color: #dc2626 !important;
+}
+
+/* 4. Notification dropdown ------------------------------------------------- */
+.dh-notification-menu {
+  border-color: #dfeae1 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 10px 25px -5px rgba(20, 61, 38, 0.14), 0 8px 10px -6px rgba(20, 61, 38, 0.1) !important;
+}
+
+.dh-dropdown-header {
+  border-bottom-color: #e8f0e9 !important;
+  background: #f7faf6 !important;
+}
+
+.dh-dropdown-title {
+  color: #14261c !important;
+}
+
+.dh-dropdown-mark-all {
+  background: #ffffff !important;
+  border-color: #dfeae1 !important;
+  color: #475c4f !important;
+}
+
+.dh-dropdown-mark-all:hover {
+  background: #eef6ef !important;
+  color: #14532d !important;
+}
+
+.dh-dropdown-tabs {
+  border-bottom-color: #e8f0e9 !important;
+  background: #f3f7f2 !important;
+}
+
+.dh-dropdown-tab {
+  color: #64786b !important;
+}
+
+.dh-dropdown-tab:hover {
+  color: #14261c !important;
+}
+
+.dh-dropdown-tab.is-active {
+  background: #e8f5ec !important;
+  color: #15803d !important;
+}
+
+.dh-dropdown-list::-webkit-scrollbar-thumb {
+  background: rgba(22, 101, 52, 0.2) !important;
+}
+
+.dh-dropdown-row {
+  border-bottom-color: #eef4ef !important;
+}
+
+.dh-dropdown-row:hover {
+  background-color: #f4f8f3 !important;
+}
+
+.dh-dropdown-row.is-unread {
+  background-color: #f0f9f2 !important;
+}
+
+.dh-dropdown-row.is-unread:hover {
+  background-color: #e8f5ec !important;
+}
+
+.dh-unread-dot {
+  background-color: #16a34a !important;
+}
+
+.dh-dropdown-footer {
+  border-top-color: #e8f0e9 !important;
+  background: #f7faf6 !important;
+}
+
+.dh-dropdown-footer-link {
+  color: #15803d !important;
+}
+
+.dh-dropdown-footer-link:hover {
+  color: #166534 !important;
+}
+
+.dh-dropdown-empty {
+  color: #64786b !important;
+}
+
+.dh-dropdown-empty-icon {
+  color: #9ab0a0 !important;
+}
+
+.dh-dropdown-empty-title {
+  color: #475c4f !important;
+}
+
+.dh-dropdown-empty-sub {
+  color: #64786b !important;
+}
+
+.dh-item-check-btn {
+  background: #ffffff !important;
+  border-color: #dfeae1 !important;
+  color: #64786b !important;
+}
+
+.dh-item-check-btn:hover {
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+  color: #ffffff !important;
+}
+
+/* 5. Sidebar --------------------------------------------------------------- */
+.dh-sidebar {
+  border-right-color: #dfeae1 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.dh-sidebar-scroll {
+  scrollbar-color: rgba(22, 101, 52, 0.25) transparent;
+}
+
+.dh-sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(22, 101, 52, 0.2) !important;
+}
+
+.dh-nav-section {
+  color: #7b8f82 !important;
+}
+
+.dh-nav-link {
+  color: #475c4f !important;
+}
+
+.dh-nav-link i {
+  color: #7b8f82 !important;
+}
+
+.dh-nav-link:hover,
+.dh-nav-link:focus {
+  color: #14532d !important;
+  border-color: #e8f0e9 !important;
+  background-color: #f0f7f2 !important;
+}
+
+.dh-nav-link:hover i,
+.dh-nav-link:focus i {
+  color: #15803d !important;
+}
+
+.dh-nav-link.is-active {
+  color: #ffffff !important;
+  border-color: transparent !important;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 60%, #15803d 100%) !important;
+  box-shadow:
+    inset 3px 0 0 #f5b544,
+    0 10px 24px -14px rgba(22, 163, 74, 0.55) !important;
+}
+
+.dh-nav-link.is-active i {
+  color: #ffffff !important;
+}
+
+.dh-nav-badge {
+  background: #ef4444 !important;
+  box-shadow: 0 0 0 2px #ffffff !important;
+}
+
+.dh-sidebar-art {
+  opacity: 0.85 !important;
+}
+
+.dh-sidebar-art .dh-art-sun {
+  color: #f59e0b;
+}
+
+.dh-sidebar-art .dh-art-hills {
+  color: #86c79a;
+}
+
+.dh-sidebar-art .dh-art-barn {
+  color: #16a34a;
+}
+
+.dh-sidebar-art .dh-art-wheat {
+  color: #d97706;
+}
+
+.dh-sidebar-art .dh-art-fence {
+  color: #a7c9b1;
+}
+
+.dh-sidebar-tagline {
+  color: #7b8f82 !important;
+}
+
+.dh-sidebar-tagline em {
+  color: #64786b !important;
+}
+
+.dh-sidebar-tagline strong {
+  color: #475c4f !important;
+}
+
+/* 6. Footer ---------------------------------------------------------------- */
+.dh-app .dh-footer {
+  border-top-color: #dfeae1 !important;
+  color: #7b8f82 !important;
+}
+
+.dh-footer-brand {
+  color: #475c4f !important;
+}
+
+.dh-footer-brand:hover {
+  color: #14532d !important;
+}
+
+.dh-footer-mark {
+  color: #ffffff;
+  background: linear-gradient(135deg, #22c55e, #15803d);
+}
+
+.dh-footer-accent {
+  color: #15803d;
+}
+
+.dh-footer-sep {
+  color: #c3d5c8;
+}
+
+.dh-footer-muted {
+  color: #7b8f82;
+}
+
+.dh-footer-tagline {
+  color: #7b8f82;
+}
+
+/* 7. Main shell ------------------------------------------------------------ */
+.dh-main-shell {
+  background-color: #f3f7f2 !important;
+}
+
+/* 8. Page headers and shared cards ---------------------------------------- */
+.dh-page-title {
+  color: #14261c !important;
+}
+
+.dh-page-sub {
+  color: #64786b !important;
+}
+
+.dh-chevron-xs {
+  color: #7b8f82 !important;
+}
+
+.dh-btn-primary {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+}
+
+.dh-btn-primary:hover {
+  background-color: #15803d !important;
+  color: #ffffff !important;
+}
+
+.dh-card {
+  background: #ffffff !important;
+  border-color: #dfeae1 !important;
+  box-shadow: 0 1px 2px rgba(20, 61, 38, 0.03), 0 12px 30px -24px rgba(20, 61, 38, 0.18) !important;
+}
+
+.dh-card-title {
+  color: #14261c !important;
+}
+
+.dh-card-sub {
+  color: #64786b !important;
+}
+
+/* 9. Legacy dashboard KPI cards ------------------------------------------- */
+.dh-kpi {
+  background: #ffffff !important;
+  border-color: #dfeae1 !important;
+}
+
+.dh-kpi-green {
+  background-color: #f0f9f2 !important;
+  border-color: rgba(16, 185, 129, 0.28) !important;
+}
+
+.dh-kpi-blue {
+  background-color: #eff8ff !important;
+  border-color: rgba(2, 132, 199, 0.25) !important;
+}
+
+.dh-kpi-purple {
+  background-color: #f7f4ff !important;
+  border-color: rgba(139, 92, 246, 0.25) !important;
+}
+
+.dh-kpi-orange {
+  background-color: #fff8ed !important;
+  border-color: rgba(245, 158, 11, 0.28) !important;
+}
+
+.dh-kpi-weather {
+  background-color: #eff8ff !important;
+  border-color: rgba(2, 132, 199, 0.25) !important;
+}
+
+.dh-kpi-value {
+  color: #14261c !important;
+}
+
+.dh-kpi-label,
+.dh-kpi-unit,
+.dh-trend-sub {
+  color: #64786b !important;
+}
+
+.dh-kpi-meta {
+  color: #7b8f82 !important;
+}
+
+.dh-kpi-trend {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #047857 !important;
+}
+
+/* 10. Weather cards -------------------------------------------------------- */
+.dh-weather-panel {
+  background-color: #ffffff !important;
+}
+
+.dh-weather-head-icon {
+  color: #0284c7 !important;
+}
+
+.dh-auto-pill {
+  background-color: #ecfeff !important;
+  border-color: #a5f3fc !important;
+  color: #0e7490 !important;
+}
+
+.dh-auto-pill i {
+  color: #0e7490 !important;
+}
+
+.dh-weather-location {
+  color: #64786b !important;
+}
+
+.dh-weather-location i {
+  color: #16a34a !important;
+}
+
+.dh-weather-icon-large {
+  color: #0284c7 !important;
+}
+
+.dh-weather-temp {
+  color: #14261c !important;
+}
+
+.dh-weather-condition {
+  color: #475c4f !important;
+}
+
+.dh-weather-feels {
+  color: #7b8f82 !important;
+}
+
+.dh-weather-metric {
+  background-color: #f7faf6 !important;
+  border-color: #e8f0e9 !important;
+}
+
+.dh-weather-metric-icon {
+  color: #0284c7 !important;
+}
+
+.dh-weather-metric-copy strong {
+  color: #14261c !important;
+}
+
+.dh-weather-metric-copy small {
+  color: #7b8f82 !important;
+}
+
+.dh-weather-day {
+  background-color: #f7faf6 !important;
+  border-color: #e8f0e9 !important;
+}
+
+.dh-weather-day-name {
+  color: #334155 !important;
+}
+
+.dh-weather-day-date {
+  color: #7b8f82 !important;
+}
+
+.dh-weather-day-icon {
+  color: #0284c7 !important;
+}
+
+.dh-weather-day-temp {
+  color: #14261c !important;
+}
+
+.dh-weather-day-min {
+  color: #7b8f82 !important;
+}
+
+.dh-weather-day-rain {
+  color: #0284c7 !important;
+}
+
+.dh-weather-mini-place strong,
+.dh-weather-mini-temp {
+  color: #14261c !important;
+}
+
+.dh-weather-mini-place small,
+.dh-weather-mini-condition,
+.dh-weather-mini-meta,
+.dh-weather-mini-updated,
+.dh-weather-mini-updated a,
+.dh-weather-mini-loading {
+  color: #64786b !important;
+}
+
+.dh-weather-mini-meta i {
+  color: #0284c7 !important;
+}
+
+.dh-weather-mini-error button {
+  background: #ffffff !important;
+  border-color: #dfeae1 !important;
+  color: #334155 !important;
+}
+
+/* Full weather widget (used by the non-compact weather endpoint). */
+.dh-weather-content {
+  color: #334155;
+}
+
+.dh-weather-location-name {
+  color: #334155;
+}
+
+.dh-weather-farm {
+  background-color: #eef6ef;
+  color: #15803d;
+}
+
+.dh-weather-tip {
+  background-color: #f7faf6;
+  border-color: #e8f0e9;
+}
+
+.dh-weather-tip-copy strong {
+  color: #14261c;
+}
+
+.dh-weather-tip-copy small {
+  color: #64786b;
+}
+
+.dh-weather-foot {
+  border-top-color: #e8f0e9;
+}
+
+.dh-weather-note {
+  color: #7b8f82;
+}
+
+.dh-weather-foot a {
+  color: #15803d;
+}
+
+.dh-weather-error {
+  background-color: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+/* 11. Notifications, quick actions, tables, progress ---------------------- */
+.dh-mark-all-btn {
+  background-color: #ffffff !important;
+  border-color: #dfeae1 !important;
+  color: #475c4f !important;
+}
+
+.dh-mark-all-btn:hover {
+  background-color: #eef6ef !important;
+}
+
+.dh-notification-row:hover {
+  background-color: #f4f8f3 !important;
+}
+
+.dh-notification-row.is-unread {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.09) 0%, rgba(34, 197, 94, 0) 68%) !important;
+}
+
+.dh-notification-title {
+  color: #14261c !important;
+}
+
+.dh-notification-text {
+  color: #5f7267 !important;
+}
+
+.dh-notification-meta {
+  color: #7b8f82 !important;
+}
+
+.dh-notification-arrow {
+  color: #9ab0a0 !important;
+}
+
+.dh-tone-ready {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #047857 !important;
+}
+
+.dh-tone-info {
+  background-color: rgba(14, 165, 233, 0.12) !important;
+  color: #0369a1 !important;
+}
+
+.dh-tone-schedule {
+  background-color: rgba(139, 92, 246, 0.12) !important;
+  color: #6d28d9 !important;
+}
+
+.dh-tone-warning {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+  color: #b45309 !important;
+}
+
+.dh-tone-danger {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  color: #b91c1c !important;
+}
+
+.dh-tone-system {
+  background-color: rgba(6, 182, 212, 0.12) !important;
+  color: #0e7490 !important;
+}
+
+.dh-tone-slate {
+  background-color: rgba(100, 116, 139, 0.12) !important;
+  color: #475569 !important;
+}
+
+.dh-quick-btn {
+  background-color: #f7faf6 !important;
+  border-color: #e8f0e9 !important;
+}
+
+.dh-quick-btn:hover {
+  background-color: #eef6ef !important;
+  border-color: #cfe3d4 !important;
+}
+
+.dh-quick-btn-label {
+  color: #334155 !important;
+}
+
+.dh-table th {
+  color: #7b8f82 !important;
+  border-bottom-color: #e8f0e9 !important;
+}
+
+.dh-table td {
+  border-bottom-color: #eef4ef !important;
+}
+
+.dh-table-id {
+  color: #15803d !important;
+}
+
+.dh-table-farm {
+  color: #14261c !important;
+}
+
+.dh-table-crop {
+  color: #64786b !important;
+}
+
+.dh-table-date {
+  color: #7b8f82 !important;
+}
+
+.dh-table-qty {
+  color: #334155 !important;
+}
+
+.dh-donut-inner {
+  background-color: #ffffff !important;
+}
+
+.dh-donut-fraction {
+  color: #14261c !important;
+}
+
+.dh-donut-sub {
+  color: #7b8f82 !important;
+}
+
+.dh-progress-donut {
+  background: conic-gradient(
+    #10b981 0 calc(var(--dh-donut-completed, 33) * 1%),
+    #e6efe8 0 100%
+  ) !important;
+}
+
+.dh-legend-name {
+  color: #475c4f !important;
+}
+
+.dh-legend-val {
+  color: #14261c !important;
+}
+
+.dh-empty-icon {
+  color: #7b8f82;
+  background-color: #f0f5f1;
+}
+
+.dh-empty-title {
+  color: #334155;
+}
+
+.dh-empty-text {
+  color: #64786b;
+}
+
+/* 12. Global search results ----------------------------------------------- */
+.dh-search-group-icon {
+  color: #16a34a !important;
+}
+
+.dh-search-result {
+  border-top-color: #eef4ef !important;
+}
+
+.dh-search-result:hover,
+.dh-search-result:focus-visible {
+  background-color: #f4f8f3 !important;
+}
+
+.dh-search-result-title {
+  color: #14261c !important;
+}
+
+.dh-search-result-sub {
+  color: #5f7267 !important;
+}
+
+.dh-search-result-meta {
+  color: #7b8f82 !important;
+}
+
+.dh-search-result-badge {
+  border-color: rgba(22, 163, 74, 0.2) !important;
+  background-color: #e8f5ec !important;
+  color: #15803d !important;
+}
+
+.dh-search-result-chevron {
+  color: #9ab0a0 !important;
+}
+
+.dh-search-empty-icon {
+  background-color: #e8f5ec !important;
+  color: #16a34a !important;
+}
+
+.dh-search-empty-title {
+  color: #14261c !important;
+}
+
+.dh-search-empty-sub {
+  color: #64786b !important;
+}
+
+.dh-search-quick-link {
+  border-color: #dfeae1 !important;
+  background-color: #ffffff !important;
+  color: #475c4f !important;
+}
+
+.dh-search-quick-link:hover,
+.dh-search-quick-link:focus-visible {
+  border-color: rgba(22, 163, 74, 0.35) !important;
+  background-color: #eef6ef !important;
+  color: #14532d !important;
+}
+
+.dh-search-quick-link i {
+  color: #16a34a !important;
+}
+
+/* 13. Responsive shell polish --------------------------------------------- */
+@media (max-width: 767.98px) {
+  .dh-topbar-search {
+    display: none !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .dh-date-chip {
+    display: none !important;
+  }
+}

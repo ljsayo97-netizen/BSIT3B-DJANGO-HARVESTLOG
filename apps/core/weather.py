@@ -20,6 +20,13 @@ from django.core.cache import cache
 
 from apps.farms.models import Farm
 
+from .geocoding import (
+    barangay_query_name,
+    geocode_ph_location,
+    parse_location,
+    place_names_match,
+)
+
 
 GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search'
 FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
@@ -151,57 +158,117 @@ def _display_name(result, query=''):
     return ', '.join(parts) or 'Farm location'
 
 
-def _preferred_result(results, query):
+def _open_meteo_matches(result, municipality, province):
+    """Validate an Open-Meteo result against the requested hierarchy."""
+    municipality_values = [
+        result.get('name'),
+        result.get('admin3'),
+        result.get('admin4'),
+        result.get('admin2'),
+    ]
+    if municipality and not any(
+        place_names_match(municipality, value)
+        for value in municipality_values
+        if value
+    ):
+        return False
+
+    if province:
+        # Open-Meteo's admin2 is the province. admin1 is the region, so it is
+        # only used as an additional match when a province-level value exists.
+        admin2 = result.get('admin2')
+        if admin2:
+            province_values = [admin2, result.get('admin1')]
+            if not any(
+                place_names_match(province, value)
+                for value in province_values
+                if value
+            ):
+                return False
+    return True
+
+
+def _preferred_result(results, query, municipality=None, province=None):
     """Pick the best geocoding result, preferring the configured country."""
     country = (_setting('WEATHER_COUNTRY_CODE', 'PH') or '').upper()
-    if not country:
-        return results[0] if results else None
-
     for result in results:
-        if (result.get('country_code') or '').upper() == country:
-            return result
+        if country and (result.get('country_code') or '').upper() != country:
+            continue
+        if not _open_meteo_matches(result, municipality, province):
+            continue
+        return result
 
     # An explicitly named country in the farm location overrides the default.
     lowered = query.lower()
     for result in results:
         country_name = (result.get('country') or '').lower()
         if country_name and country_name in lowered:
+            if not _open_meteo_matches(result, municipality, province):
+                continue
             return result
 
-    # Do not guess with a match from the wrong country; the caller falls back
+    # Do not guess with a match from the wrong place; the caller falls back
     # to the configured default location instead.
     return None
 
 
-def _location_variants(query):
-    """Build simpler searches from a detailed free-text farm location.
+def _open_meteo_variants(parsed):
+    """Build simple place-name searches for Open-Meteo.
 
-    Farm locations are often written as ``Barangay, City, Province``. Open-Meteo
-    only recognises place names, so also try the city or municipality (usually
-    the second-to-last comma-separated part).
+    Open-Meteo geocodes place names, not full street addresses, so search the
+    barangay first and then the municipality. Each variant carries the
+    hierarchy values needed to reject a same-named place in another town.
     """
-    variants = [query]
-    parts = [part.strip() for part in query.split(',') if part.strip()]
-    if len(parts) > 1:
-        variants.append(parts[-2])
-
-    unique = []
+    variants = []
     seen = set()
-    for variant in variants:
-        key = variant.lower()
-        if key not in seen and len(variant) >= 3:
-            seen.add(key)
-            unique.append(variant)
-    return unique
+
+    def add(name, municipality, province):
+        name = (name or '').strip()
+        if len(name) < 3:
+            return
+        key = name.lower()
+        if key in seen:
+            return
+        seen.add(key)
+        variants.append((name, municipality or '', province or ''))
+
+    barangay = barangay_query_name(parsed['barangay'])
+    if barangay:
+        add(barangay, parsed['municipality'], parsed['province'])
+
+    if parsed['municipality']:
+        add(
+            parsed['municipality'],
+            parsed['municipality'],
+            parsed['province'],
+        )
+
+    alternate = parsed.get('alternate')
+    if alternate and alternate.get('municipality'):
+        add(alternate['municipality'], alternate['municipality'], '')
+
+    if not variants:
+        add(parsed['raw'], '', '')
+
+    return variants
 
 
 def geocode_location(location):
-    """Resolve a free-text farm location to coordinates (cached)."""
+    """Resolve a free-text farm location to coordinates (cached).
+
+    The hierarchy-aware Nominatim lookup runs first so addresses such as
+    "Vista Alegre, Ilog, Negros Occidental" resolve inside Ilog. Open-Meteo
+    remains as a fallback when Nominatim is unavailable.
+    """
     query = (location or '').strip()
     if len(query) < 3:
         return None
 
-    key = _cache_key('geocode', query.lower())
+    resolved = geocode_ph_location(query)
+    if resolved:
+        return resolved
+
+    key = _cache_key('geocode:v2', query.lower())
     cached = cache.get(key)
     if cached is not None:
         return cached or None
@@ -210,15 +277,16 @@ def geocode_location(location):
     failure_ttl = _setting('WEATHER_FAILURE_CACHE_SECONDS', 300)
     timeout = _setting('WEATHER_GEOCODE_TIMEOUT', 10)
 
+    parsed = parse_location(query)
     result = None
     matched = query
-    for variant in _location_variants(query):
+    for variant, municipality, province in _open_meteo_variants(parsed):
         try:
             payload = _request_json(
                 GEOCODING_URL,
                 {
                     'name': variant,
-                    'count': 5,
+                    'count': 10,
                     'language': 'en',
                     'format': 'json',
                 },
@@ -228,20 +296,35 @@ def geocode_location(location):
             cache.set(key, {}, failure_ttl)
             return None
 
-        result = _preferred_result(payload.get('results') or [], variant)
+        result = _preferred_result(
+            payload.get('results') or [],
+            variant,
+            municipality,
+            province,
+        )
         if result:
             matched = variant
             break
 
     if not result:
-        cache.set(key, {}, success_ttl)
+        cache.set(key, {}, failure_ttl)
         return None
 
+    matched_barangay = barangay_query_name(parsed['barangay'])
     resolved = {
         'name': _display_name(result, matched),
-        'latitude': _number(result.get('latitude'), 4),
-        'longitude': _number(result.get('longitude'), 4),
+        'latitude': _number(result.get('latitude'), 6),
+        'longitude': _number(result.get('longitude'), 6),
         'country_code': (result.get('country_code') or '').upper(),
+        'barangay': parsed['barangay'],
+        'municipality': parsed['municipality'],
+        'province': parsed['province'],
+        'level': (
+            'barangay'
+            if matched_barangay and matched == matched_barangay
+            else 'municipality'
+        ),
+        'source': 'open-meteo',
     }
     cache.set(key, resolved, success_ttl)
     return resolved

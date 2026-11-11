@@ -866,7 +866,7 @@
         toolbar: { show: false },
         animations: { enabled: false },
       },
-      theme: { mode: 'dark' },
+      theme: { mode: 'light' },
       series: [{ name: 'Revenue', data: series }],
       colors: ['#22c55e'],
       plotOptions: {
@@ -899,6 +899,7 @@
         },
       },
       tooltip: {
+        theme: 'light',
         y: {
           formatter: function (value) {
             return formatMoney(value);

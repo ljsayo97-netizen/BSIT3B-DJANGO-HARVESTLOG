@@ -10,19 +10,9 @@
       <div class="row align-items-center">
         <div class="col">
           <div class="page-pretitle">Farm timeline</div>
-          <h2 class="page-title mb-0">Harvest Calendar</h2>
+          <h2 class="page-title mb-0"> Calendar</h2>
           <div class="text-muted mt-1">
             Every crop's system-assigned harvest date and every scheduled farm activity in one place.
-          </div>
-        </div>
-        <div class="col-auto">
-          <div class="btn-list">
-            <a href="{% url 'crops:crop_list' %}" class="btn btn-outline-primary">
-              <i class="fas fa-seedling me-2"></i> Add Crop
-            </a>
-            <a href="{% url 'activities:activity_list' %}" class="btn btn-primary">
-              <i class="fas fa-calendar-plus me-2"></i> Schedule Activity
-            </a>
           </div>
         </div>
       </div>
@@ -30,127 +20,31 @@
   </div>
   <br>
 
-  <!-- Snapshot cards -->
-  <div class="row row-cards mb-3">
-    {% if source != 'activities' %}
-    <div class="{% if source == 'all' %}col-sm-6 col-xl-3{% else %}col-sm-6 col-xl-4{% endif %}">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1">
-              <span class="badge bg-info-lt text-info rounded-pill">Next 30 days</span>
-              <h2 class="card-title mb-1 mt-2">{{ calendar_summary.upcoming_harvests }}</h2>
-              <p class="text-muted small mb-0">Upcoming harvest date{{ calendar_summary.upcoming_harvests|pluralize }}</p>
-            </div>
-            <div class="flex-shrink-0"><i class="fas fa-seedling fa-2x text-info"></i></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="{% if source == 'all' %}col-sm-6 col-xl-3{% else %}col-sm-6 col-xl-4{% endif %}">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1">
-              <span class="badge bg-danger-lt text-danger rounded-pill">Ready now</span>
-              <h2 class="card-title mb-1 mt-2">{{ calendar_summary.ready_harvests }}</h2>
-              <p class="text-muted small mb-0">Crop{{ calendar_summary.ready_harvests|pluralize }} ready for harvest</p>
-            </div>
-            <div class="flex-shrink-0"><i class="fas fa-triangle-exclamation fa-2x text-danger"></i></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="{% if source == 'all' %}col-sm-6 col-xl-3{% else %}col-sm-6 col-xl-4{% endif %}">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1">
-              <span class="badge bg-success-lt text-success rounded-pill">Recorded</span>
-              <h2 class="card-title mb-1 mt-2">{{ calendar_summary.recorded_harvests }}</h2>
-              <p class="text-muted small mb-0">Harvest record{{ calendar_summary.recorded_harvests|pluralize }} plotted</p>
-            </div>
-            <div class="flex-shrink-0"><i class="fas fa-clipboard-check fa-2x text-success"></i></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-    {% if source != 'harvests' %}
-    <div class="{% if source == 'all' %}col-sm-6 col-xl-3{% else %}col-sm-6 col-xl-4{% endif %}">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-grow-1">
-              <span class="badge bg-primary-lt text-primary rounded-pill">Activities</span>
-              <h2 class="card-title mb-1 mt-2">{{ calendar_summary.active_activities }}</h2>
-              <p class="text-muted small mb-0">
-                Open activity{{ calendar_summary.active_activities|pluralize }} &middot;
-                {{ calendar_summary.completed_activities }} completed
-              </p>
-            </div>
-            <div class="flex-shrink-0"><i class="fas fa-list-check fa-2x text-primary"></i></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-  </div>
-
-  <!-- Filters -->
-  <div class="card mb-3">
-    <div class="card-body py-3">
-      <form method="GET" action="{% url 'harvest_calendar:calendar' %}" class="row g-2 align-items-end" data-calendar-filters>
-        <div class="col-sm-6 col-lg-3">
-          <label class="form-label small text-muted mb-1" for="calendarFarm">Farm</label>
-          <select name="farm" id="calendarFarm" class="form-select" data-auto-submit>
-            <option value="">All farms</option>
-            {% for farm in farms %}
-            <option value="{{ farm.id }}" {% if farm_id == farm.id %}selected{% endif %}>{{ farm.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <label class="form-label small text-muted mb-1" for="calendarCrop">Crop</label>
-          <select name="crop" id="calendarCrop" class="form-select" data-auto-submit>
-            <option value="">All crops</option>
-            {% for crop in crops %}
-            <option value="{{ crop.id }}" {% if crop_id == crop.id %}selected{% endif %}>
-              {{ crop.name }} — {{ crop.farm.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <label class="form-label small text-muted mb-1" for="calendarSource">Show</label>
-          <select name="show" id="calendarSource" class="form-select" data-auto-submit>
-            {% for value, label in source_choices %}
-            <option value="{{ value }}" {% if source == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-sm-6 col-lg-3 d-flex gap-2">
-          <button type="submit" class="btn btn-primary flex-fill">
-            <i class="fas fa-filter me-1"></i> Apply
-          </button>
-          <a href="{% url 'harvest_calendar:calendar' %}" class="btn btn-outline-secondary">Reset</a>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <div class="row row-cards">
     <div class="col-lg-8">
       <div class="card">
         <div class="card-header">
           <div>
             <h3 class="card-title mb-1">Calendar</h3>
-            <div class="text-muted small">
-              Click a date item to see the crop, farm, worker, and full details.
-            </div>
           </div>
           <div class="card-actions d-flex align-items-center gap-2">
-            <span class="badge bg-primary-lt text-primary">{{ source_label }}</span>
+            <!-- Content switcher: harvests, activities, or both -->
+            <div class="dropdown">
+              <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Change what the calendar shows">
+                <i class="fas fa-filter me-1"></i>{{ source_label }}
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                {% for link in source_links %}
+                <li>
+                  <a class="dropdown-item d-flex align-items-center gap-2{% if link.active %} active{% endif %}" href="{{ link.url }}"{% if link.active %} aria-current="true"{% endif %}>
+                    <i class="{{ link.icon }} text-center" style="width: 16px;"></i>
+                    <span>{{ link.label }}</span>
+                    {% if link.active %}<i class="fas fa-check ms-auto"></i>{% endif %}
+                  </a>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
             <span class="badge bg-secondary-lt text-secondary">
               {{ calendar_summary.total_events }} item{{ calendar_summary.total_events|pluralize }}
             </span>
@@ -306,23 +200,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-(function () {
-  const form = document.querySelector('[data-calendar-filters]');
-  if (!form) {
-    return;
-  }
-  form.querySelectorAll('[data-auto-submit]').forEach(function (field) {
-    field.addEventListener('change', function () {
-      if (typeof form.requestSubmit === 'function') {
-        form.requestSubmit();
-      } else {
-        form.submit();
-      }
-    });
-  });
-})();
-</script>
 <script src="{% static 'libs/fullcalendar/index.global.min.js' %}"></script>
 <script>
 (function () {

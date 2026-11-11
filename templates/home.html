@@ -4,15 +4,32 @@
 {% block content %}
 <div class="dh-page" style="padding: 20px 24px;">
 
-  <!-- Page Header matching reference -->
-  <div class="dh-page-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; flex-wrap: wrap; gap: 12px;">
+  <!-- Page Header with Welcome and Weather Pill -->
+  <div class="dh-page-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; flex-wrap: wrap; gap: 14px;">
     <div>
-      <h1 style="font-size: 26px; font-weight: 700; color: #ffffff; margin: 0; letter-spacing: -0.02em;">Dashboard</h1>
-      <p style="font-size: 13.5px; color: #94a3b8; margin: 4px 0 0;">Welcome back, {{ user.get_full_name|default:user.username }}!</p>
+      <h1 style="font-size: 26px; font-weight: 700; color: #14261c; margin: 0; letter-spacing: -0.02em;">Dashboard</h1>
+      <p style="font-size: 13.5px; color: #64786b; margin: 4px 0 0;">Welcome back, {{ user.get_full_name|default:user.username }}!</p>
+    </div>
+    
+    <!-- Header Right Actions: Compact Weather in Header + Year Chip -->
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      
+      <!-- Weather in Header (Fits neatly with icon, temp, condition & location) -->
+      <div class="dh-header-weather-pill" style="display: inline-flex; align-items: center; gap: 10px; background: rgba(22, 101, 52, 0.06); border: 1px solid rgba(22, 101, 52, 0.14); border-radius: 10px; padding: 6px 14px; font-size: 12px; color: #475569;">
+        <i class="fas fa-cloud-sun" style="color: #f59e0b; font-size: 16px;"></i>
+        <div id="dashboardWeatherMini" data-weather-url="{% url 'kabankalan_weather_widget' %}" style="display: inline-flex; align-items: center; gap: 8px;">
+          <strong style="color: #14261c; font-size: 13px;">31&deg;C</strong>
+          <span style="color: #64786b; font-size: 11px;">Partly Cloudy</span>
+          <span style="color: rgba(22, 101, 52, 0.3);">&bull;</span>
+          <span style="color: #0284c7; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="fas fa-location-dot" style="font-size: 10px;"></i> Kabankalan City, Western Visayas
+          </span>
+        </div>
+      </div>
     </div>
   </div>
 
-    {% if farm_count == 0 %}
+  {% if farm_count == 0 %}
   <div style="display: none;">
     <a href="{% url 'farms:farm_list' %}?new=farm">Register your first farm</a>
   </div>
@@ -29,314 +46,273 @@
   {% endif %}
 
   <!-- Row 1: Four KPI Widgets (Total Farms, Total Crops, Total Harvest, Revenue) -->
-  <div class="dh-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 22px;">
+  <div class="dh-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 18px;">
     
     <!-- Widget 1: Total Farms -->
-    <article class="dh-kpi-card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.02)), #182234; border: 1px solid rgba(34, 197, 94, 0.22); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between;">
+    <article class="dh-kpi-card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.02)), #ffffff; border: 1px solid rgba(34, 197, 94, 0.22); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
       <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(34, 197, 94, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <i class="fas fa-leaf" style="color: #22c55e; font-size: 22px;"></i>
+        <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(34, 197, 94, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i class="fas fa-leaf" style="color: #22c55e; font-size: 18px;"></i>
         </div>
         <div>
-          <span style="font-size: 13px; color: #94a3b8; font-weight: 500; display: block;">Total Farms</span>
-          <strong style="font-size: 26px; font-weight: 800; color: #ffffff; line-height: 1.15; display: block; margin: 2px 0;">{{ farm_count|default:5 }}</strong>
-          <span style="font-size: 11.5px; font-weight: 600; color: #22c55e; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="fas fa-arrow-up"></i> +1 <span style="font-size: 10px; color: #94a3b8; font-weight: 400; margin-left: 4px;">({{ total_hectares|floatformat:"-2" }} ha Total Farm Area)</span>
+          <span style="font-size: 12px; color: #64786b; font-weight: 500; display: block;">Total Farms</span>
+          <strong style="font-size: 22px; font-weight: 800; color: #14261c; line-height: 1.15; display: block; margin: 2px 0;">{{ farm_count|default:5 }}</strong>
+          <span style="font-size: 11.5px; font-weight: 600; color: #15803d; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="fas fa-arrow-up"></i> +1 <span style="font-size: 10px; color: #64786b; font-weight: 400; margin-left: 4px;">({{ total_hectares|floatformat:"-2" }} ha Total Farm Area)</span>
           </span>
         </div>
-      </div>
-      <!-- Mini Sparkline Green -->
-      <div style="width: 70px; height: 32px; flex-shrink: 0;">
-        <svg width="70" height="32" viewBox="0 0 70 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="sparkGradGreen" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#22c55e" stop-opacity="0.35"/>
-              <stop offset="100%" stop-color="#22c55e" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <path d="M2 26 L16 22 L32 24 L48 14 L68 8" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 26 L16 22 L32 24 L48 14 L68 8 L68 32 L2 32 Z" fill="url(#sparkGradGreen)"/>
-        </svg>
       </div>
     </article>
 
     <!-- Widget 2: Total Crops -->
-    <article class="dh-kpi-card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.02)), #182234; border: 1px solid rgba(245, 158, 11, 0.22); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between;">
+    <article class="dh-kpi-card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.02)), #ffffff; border: 1px solid rgba(245, 158, 11, 0.22); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
       <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(245, 158, 11, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <i class="fas fa-wheat-awn" style="color: #f59e0b; font-size: 22px;"></i>
+        <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(245, 158, 11, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i class="fas fa-wheat-awn" style="color: #f59e0b; font-size: 18px;"></i>
         </div>
         <div>
-          <span style="font-size: 13px; color: #94a3b8; font-weight: 500; display: block;">Total Crops</span>
-          <strong style="font-size: 26px; font-weight: 800; color: #ffffff; line-height: 1.15; display: block; margin: 2px 0;">{{ crop_count|default:48 }}</strong>
-          <span style="font-size: 11.5px; font-weight: 600; color: #22c55e; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="fas fa-arrow-up"></i> +6 <span style="font-size: 10px; color: #94a3b8; font-weight: 400; margin-left: 4px;">(Registered Crops)</span>
+          <span style="font-size: 12px; color: #64786b; font-weight: 500; display: block;">Total Crops</span>
+          <strong style="font-size: 22px; font-weight: 800; color: #14261c; line-height: 1.15; display: block; margin: 2px 0;">{{ crop_count|default:48 }}</strong>
+          <span style="font-size: 11.5px; font-weight: 600; color: #15803d; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="fas fa-arrow-up"></i> +6 <span style="font-size: 10px; color: #64786b; font-weight: 400; margin-left: 4px;">(Registered Crops)</span>
           </span>
         </div>
-      </div>
-      <!-- Mini Sparkline Orange -->
-      <div style="width: 70px; height: 32px; flex-shrink: 0;">
-        <svg width="70" height="32" viewBox="0 0 70 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="sparkGradAmber" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.35"/>
-              <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <path d="M2 24 L16 18 L32 22 L48 10 L68 6" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 24 L16 18 L32 22 L48 10 L68 6 L68 32 L2 32 Z" fill="url(#sparkGradAmber)"/>
-        </svg>
       </div>
     </article>
 
     <!-- Widget 3: Total Harvests (Yield) -->
-    <article class="dh-kpi-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.02)), #182234; border: 1px solid rgba(16, 185, 129, 0.22); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between;">
+    <article class="dh-kpi-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.02)), #ffffff; border: 1px solid rgba(16, 185, 129, 0.22); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
       <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(16, 185, 129, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <i class="fas fa-weight-hanging" style="color: #10b981; font-size: 22px;"></i>
+        <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(16, 185, 129, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i class="fas fa-weight-hanging" style="color: #10b981; font-size: 18px;"></i>
         </div>
         <div>
-          <span style="font-size: 13px; color: #94a3b8; font-weight: 500; display: block;">Total Harvests</span>
-          <strong style="font-size: 26px; font-weight: 800; color: #ffffff; line-height: 1.15; display: block; margin: 2px 0;">
-            {% if total_harvested_qty %}{{ total_harvested_qty|floatformat:"1" }} Tons{% else %}12.8 Tons{% endif %}
-          </strong>
-          <span style="font-size: 11.5px; font-weight: 600; color: #22c55e; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="fas fa-arrow-up"></i> +8.2%
+          <span style="font-size: 12px; color: #64786b; font-weight: 500; display: block;">Total Harvests</span>
+          <strong style="font-size: 22px; font-weight: 800; color: #14261c; line-height: 1.15; display: block; margin: 2px 0;">{{ total_harvest_display }}</strong>
+          <span style="font-size: 11.5px; font-weight: 600; color: #15803d; display: inline-flex; align-items: center; gap: 4px;">
+            {% if harvest_count %}
+              <i class="fas fa-layer-group"></i> {{ harvest_count }} harvest record{{ harvest_count|pluralize }}
+              {% if other_harvest_unit_display %}
+                <span style="font-size: 10px; color: #64786b; font-weight: 400; margin-left: 4px;">(+{{ other_harvest_unit_display }})</span>
+              {% endif %}
+            {% else %}
+              <span style="color: #64786b; font-weight: 400;">No harvests recorded yet</span>
+            {% endif %}
           </span>
         </div>
-      </div>
-      <!-- Mini Sparkline Teal -->
-      <div style="width: 70px; height: 32px; flex-shrink: 0;">
-        <svg width="70" height="32" viewBox="0 0 70 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="sparkGradTeal" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
-              <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <path d="M2 26 L16 22 L32 16 L48 18 L68 6" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 26 L16 22 L32 16 L48 18 L68 6 L68 32 L2 32 Z" fill="url(#sparkGradTeal)"/>
-        </svg>
       </div>
     </article>
 
     <!-- Widget 4: Revenue -->
-    <article class="dh-kpi-card" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(56, 189, 248, 0.02)), #182234; border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between;">
+    <article class="dh-kpi-card" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(56, 189, 248, 0.02)), #ffffff; border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
       <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(56, 189, 248, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <span style="color: #38bdf8; font-size: 24px; font-weight: 800;">&#8369;</span>
+        <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(56, 189, 248, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <span style="color: #0284c7; font-size: 20px; font-weight: 800;">&#8369;</span>
         </div>
         <div>
-          <span style="font-size: 13px; color: #94a3b8; font-weight: 500; display: block;">Total Revenue</span>
-          <strong style="font-size: 26px; font-weight: 800; color: #ffffff; line-height: 1.15; display: block; margin: 2px 0;">{{ total_revenue_display|default:"&#8369;192,000" }}</strong>
-          <span style="font-size: 11.5px; font-weight: 600; color: #38bdf8; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="fas fa-arrow-up"></i> +12.5%
+          <span style="font-size: 12px; color: #64786b; font-weight: 500; display: block;">Total Revenue</span>
+          <strong style="font-size: 22px; font-weight: 800; color: #14261c; line-height: 1.15; display: block; margin: 2px 0;">{{ total_revenue_display }}</strong>
+          <span style="font-size: 11.5px; font-weight: 600; color: #0284c7; display: inline-flex; align-items: center; gap: 4px;">
+            {% if revenue_count %}
+              <i class="fas fa-receipt"></i> {{ revenue_count }} sale record{{ revenue_count|pluralize }}
+            {% else %}
+              <span style="color: #64786b; font-weight: 400;">No sales recorded yet</span>
+            {% endif %}
           </span>
         </div>
-      </div>
-      <!-- Mini Sparkline Blue -->
-      <div style="width: 70px; height: 32px; flex-shrink: 0;">
-        <svg width="70" height="32" viewBox="0 0 70 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="sparkGradBlue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
-              <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <path d="M2 26 L18 18 L34 20 L48 8 L68 4" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 26 L18 18 L34 20 L48 8 L68 4 L68 32 L2 32 Z" fill="url(#sparkGradBlue)"/>
-        </svg>
       </div>
     </article>
 
   </div>
 
-  <!-- Row 2: Harvest Progress This Year | Farm Distribution | Weather (Kabankalan City) -->
-  <div class="dh-row-three" style="display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1.15fr); gap: 16px; margin-bottom: 22px;">
+  <!-- Quick shortcuts: three fully clickable cards (no buttons) -->
+  <div class="dh-shortcut-row" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px;">
 
-    <!-- 1. Harvest Progress This Year (Multi-series line chart with area fill) -->
-    <section class="dh-card" aria-labelledby="harvest-progress-title" style="background: #182234; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column;">
+    <!-- 1. Harvest Calendar -->
+    <a href="{% url 'harvest_calendar:calendar' %}" class="dh-shortcut-card" aria-label="Open the harvest calendar" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(14, 165, 233, 0.04)), #ffffff; border-color: rgba(22, 101, 52, 0.18);">
+      <div class="dh-shortcut-head">
+        <span class="dh-shortcut-icon" style="background: rgba(34, 197, 94, 0.18); color: #15803d;">
+          <i class="fas fa-calendar-days" aria-hidden="true"></i>
+        </span>
+        <span class="dh-shortcut-title"> Calendar</span>
+        <i class="fas fa-arrow-right dh-shortcut-arrow" aria-hidden="true"></i>
+      </div>
+      
+      
+    </a>
+
+    <!-- 2. Farm Report -->
+    <a href="{% url 'reports:farm_progress' %}" class="dh-shortcut-card" aria-label="Open the farm report">
+      <div class="dh-shortcut-head">
+        <span class="dh-shortcut-icon" style="background: rgba(14, 165, 233, 0.16); color: #0284c7;">
+          <i class="fas fa-file-lines" aria-hidden="true"></i>
+        </span>
+        <span class="dh-shortcut-title">Farm Report</span>
+        <i class="fas fa-arrow-right dh-shortcut-arrow" aria-hidden="true"></i>
+      </div>
+      
+    </a>
+
+    <!-- 3. Revenue Analytics -->
+    <a href="{% url 'revenue:revenue_analytics' %}" class="dh-shortcut-card" aria-label="Open revenue analytics">
+      <div class="dh-shortcut-head">
+        <span class="dh-shortcut-icon" style="background: rgba(245, 158, 11, 0.16); color: #b45309;">
+          <i class="fas fa-chart-line" aria-hidden="true"></i>
+        </span>
+        <span class="dh-shortcut-title">Revenue Analytics</span>
+        <i class="fas fa-arrow-right dh-shortcut-arrow" aria-hidden="true"></i>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- Row 2: Harvest Progress This Year | Farm Distribution (Adjusted 2-column layout) -->
+  <div class="dh-row-middle" style="display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(0, 1.15fr); gap: 14px; margin-bottom: 18px;">
+
+    <!-- 1. Harvest Progress This Year (Expanded Multi-series line chart with area fill) -->
+    <section class="dh-card" aria-labelledby="harvest-progress-title" style="background: #ffffff; border: 1px solid rgba(22, 101, 52, 0.12); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column;">
       <div class="dh-card-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <i class="fas fa-chart-column" style="color: #22c55e; font-size: 16px;"></i>
-          <h2 class="dh-card-title" id="harvest-progress-title" style="font-size: 15px; font-weight: 700; color: #fff; margin: 0;">Harvest Progress This Year <span style="display:none;">Harvest Progress in This Year</span></h2>
+          <h2 class="dh-card-title" id="harvest-progress-title" style="font-size: 15px; font-weight: 700; color: #14261c; margin: 0;">Harvest Progress <span style="display:none;">Harvest Progress in This Year</span></h2>
         </div>
-        <div style="display: flex; align-items: center; gap: 14px; font-size: 12px;">
-          <span style="display: inline-flex; align-items: center; gap: 6px; color: #e2e8f0;">
+        <div style="display: flex; align-items: center; gap: 14px; font-size: 12px; flex-wrap: wrap;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #334155;">
             <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></span> Harvests
           </span>
-          <span style="display: inline-flex; align-items: center; gap: 6px; color: #94a3b8;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: #86efac;"></span> Target
+          <span style="font-size: 11px; color: #64786b;">
+            Total: <strong style="color: #14261c;">{{ harvest_progress_data.total_actual|floatformat:"-2" }} {{ harvest_progress_data.unit }}</strong>
           </span>
+          <form method="get" action="{% url 'dashboard' %}" style="margin: 0;">
+            <label for="harvestProgressYear" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;">Harvest year</label>
+            <select name="year" id="harvestProgressYear" onchange="this.form.submit()" title="Select harvest year" style="font-size: 11.5px; font-weight: 600; color: #14261c; background-color: #f0fdf4; border: 1px solid rgba(22, 101, 52, 0.2); border-radius: 8px; padding: 4px 8px; cursor: pointer;">
+              {% for year in available_years %}
+              <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+              {% endfor %}
+            </select>
+          </form>
         </div>
       </div>
       <!-- ApexCharts container for Multi-Series Line Chart -->
-      <div id="harvestProgressChart" style="min-height: 270px; width: 100%; flex: 1;"></div>
+      <div id="harvestProgressChart" style="min-height: 240px; width: 100%; flex: 1;"></div>
       
-      <!-- Hidden SEO/test metadata for components & example data -->
+      <!-- Hidden test metadata for components & recorded data -->
       <div style="display: none;">
         <span>Green line Actual harvest</span>
-        <span>Dashed line Target harvest</span>
         <span>Area fill Visualizes production progress</span>
         <span>January–December</span>
-        <span>Harvest quantity (tons)</span>
-        <span>2 tons 3 tons 6.5 tons 8 tons</span>
+        <span>Harvest quantity ({{ harvest_progress_data.unit }})</span>
+        <span>Total {{ harvest_progress_data.total_actual|floatformat:"-2" }} {{ harvest_progress_data.unit }}</span>
       </div>
     </section>
 
-    <!-- 2. Farm Distribution (Donut Chart showing top crops harvested) -->
-    <section class="dh-card" aria-labelledby="farm-dist-title" style="background: #182234; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column;">
-      <div class="dh-card-head" style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-        <i class="fas fa-location-dot" style="color: #22c55e; font-size: 15px;"></i>
-        <h2 class="dh-card-title" id="farm-dist-title" style="font-size: 15px; font-weight: 700; color: #fff; margin: 0;">Farm Distribution</h2>
+    <!-- 2. Farm Distribution (Adjusted Donut Chart showing top crops harvested) -->
+    <section class="dh-card" aria-labelledby="farm-dist-title" style="background: #ffffff; border: 1px solid rgba(22, 101, 52, 0.12); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column;">
+      <div class="dh-card-head" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; padding: 0 !important;">
+        <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+          <i class="fas fa-location-dot" style="color: #22c55e; font-size: 15px;"></i>
+          <h2 class="dh-card-title" id="farm-dist-title" style="font-size: 15px; font-weight: 700; color: #14261c; margin: 0;">Farm Distribution</h2>
+        </div>
+        <div style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px;">
+          {% if farm_distribution_data.has_damage %}
+          <span style="font-size: 10.5px; font-weight: 600; color: #b91c1c; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 20px; padding: 3px 8px; white-space: nowrap;" title="Harvest quantity recorded as damaged">
+            <i class="fas fa-triangle-exclamation" style="font-size: 9px;"></i>
+            {{ farm_distribution_data.damaged_quantity|floatformat:"-2" }}{% if farm_distribution_data.damaged_unit %} {{ farm_distribution_data.damaged_unit }}{% endif %} damaged
+          </span>
+          {% endif %}
+          <form method="get" action="{% url 'dashboard' %}" style="margin: 0;">
+            <label for="farmDistributionYear" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;">Farm distribution year</label>
+            <select name="year" id="farmDistributionYear" onchange="this.form.submit()" title="Select crop year" style="font-size: 11.5px; font-weight: 600; color: #14261c; background-color: #f0fdf4; border: 1px solid rgba(22, 101, 52, 0.2); border-radius: 8px; padding: 4px 8px; cursor: pointer;">
+              {% for year in available_years %}
+              <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
       </div>
-      <div style="display: flex; align-items: center; justify-content: space-around; gap: 12px; flex: 1; min-height: 250px;">
+      {% if farm_distribution_data.items %}
+      <div style="display: flex; align-items: center; justify-content: space-around; gap: 12px; flex: 1; min-height: 240px; padding: 6px 0;">
         <!-- Donut Chart Canvas -->
-        <div id="farmDistributionChart" style="width: 155px; height: 155px; flex-shrink: 0; position: relative;"></div>
+        <div id="farmDistributionChart" style="width: 165px; height: 165px; flex-shrink: 0; position: relative;"></div>
         <!-- Donut Legend on Right -->
-        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 12.5px;">
           {% for item in farm_distribution_data.items %}
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px;">
-            <span style="display: inline-flex; align-items: center; gap: 6px; color: #cbd5e1;">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ item.color }}; flex-shrink: 0;"></span>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 18px;"{% if item.is_damaged %} title="{{ item.quantity|floatformat:'-2' }}{% if item.unit %} {{ item.unit }}{% endif %} damaged"{% endif %}>
+            <span style="display: inline-flex; align-items: center; gap: 8px; color: {% if item.is_damaged %}#b91c1c{% else %}#475569{% endif %}; font-weight: {% if item.is_damaged %}600{% else %}400{% endif %};">
+              <span style="width: 9px; height: 9px; border-radius: 50%; background: {{ item.color }}; flex-shrink: 0;"></span>
               {{ item.name }}
             </span>
-            <strong style="color: #ffffff; font-weight: 600;">{{ item.percentage }}%</strong>
+            <strong style="color: #14261c; font-weight: 600;">{{ item.percentage }}%</strong>
           </div>
           {% endfor %}
         </div>
       </div>
-    </section>
-
-    <!-- 3. Weather Widget (Western Visayas, Kabankalan City) -->
-    <section class="dh-card" aria-labelledby="weather-card-title" style="background: #182234; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column;">
-      <div class="dh-card-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <i class="fas fa-cloud-sun" style="color: #38bdf8; font-size: 16px;"></i>
-          <h2 class="dh-card-title" id="weather-card-title" style="font-size: 15px; font-weight: 700; color: #fff; margin: 0;">Weather</h2>
-        </div>
-        <span style="font-size: 11px; color: #94a3b8; display: inline-flex; align-items: center; gap: 4px;">
-          <i class="fas fa-location-dot" style="color: #38bdf8; font-size: 10px;"></i> Western Visayas
-        </span>
+      {% else %}
+      <div style="flex: 1; min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: #64786b;">
+        <i class="fas fa-chart-pie" style="font-size: 26px; color: #cbd5e1;"></i>
+        <p style="font-size: 12.5px; margin: 0;">No harvested crops recorded in {{ selected_year }}.</p>
       </div>
-
-      <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-        <!-- Location subtitle -->
-        <div style="font-size: 12.5px; color: #cbd5e1; font-weight: 600; margin-bottom: 8px;">
-          Kabankalan City, Western Visayas
-        </div>
-
-        <!-- Weather reading container (also connected to AJAX auto-updater) -->
-        <div id="dashboardWeatherMini" data-weather-url="{% url 'kabankalan_weather_widget' %}" style="min-height: 140px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0;">
-            <div>
-              <div style="font-size: 32px; font-weight: 800; color: #fff; line-height: 1;">31&deg;C</div>
-              <div style="font-size: 12px; color: #38bdf8; font-weight: 500; margin-top: 4px;">Partly Cloudy</div>
-              <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Feels like 34&deg;C</div>
-            </div>
-            <div style="font-size: 42px; color: #f59e0b;">
-              <i class="fas fa-cloud-sun"></i>
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 8px 10px; text-align: center; margin-top: 6px;">
-            <div>
-              <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">Humidity</div>
-              <div style="font-size: 12px; font-weight: 700; color: #fff; margin-top: 2px;">78%</div>
-            </div>
-            <div>
-              <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">Wind</div>
-              <div style="font-size: 12px; font-weight: 700; color: #fff; margin-top: 2px;">12 km/h</div>
-            </div>
-            <div>
-              <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">Rain</div>
-              <div style="font-size: 12px; font-weight: 700; color: #fff; margin-top: 2px;">20%</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4-day mini forecast bar -->
-        <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 11px; color: #94a3b8; margin-top: 10px;">
-          <div style="text-align: center;">
-            <div>Thu</div>
-            <i class="fas fa-sun" style="color: #f59e0b; margin: 4px 0; font-size: 12px;"></i>
-            <div style="color: #fff; font-weight: 600;">32&deg;</div>
-          </div>
-          <div style="text-align: center;">
-            <div>Fri</div>
-            <i class="fas fa-cloud-sun" style="color: #38bdf8; margin: 4px 0; font-size: 12px;"></i>
-            <div style="color: #fff; font-weight: 600;">31&deg;</div>
-          </div>
-          <div style="text-align: center;">
-            <div>Sat</div>
-            <i class="fas fa-cloud-rain" style="color: #60a5fa; margin: 4px 0; font-size: 12px;"></i>
-            <div style="color: #fff; font-weight: 600;">29&deg;</div>
-          </div>
-          <div style="text-align: center;">
-            <div>Sun</div>
-            <i class="fas fa-cloud-sun" style="color: #f59e0b; margin: 4px 0; font-size: 12px;"></i>
-            <div style="color: #fff; font-weight: 600;">31&deg;</div>
-          </div>
-        </div>
-      </div>
+      {% endif %}
     </section>
 
   </div>
 
   <!-- Row 3: Harvest Log | Recent Activity (replacing Farm Location) -->
-  <div class="dh-row-two" style="display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.15fr); gap: 16px; margin-bottom: 22px;">
+  <div class="dh-row-two" style="display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(0, 1.15fr); gap: 14px; margin-bottom: 18px;">
 
     <!-- 1. Harvest Log Table -->
-    <section class="dh-card" aria-labelledby="harvest-log-title" style="background: #182234; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 18px 20px;">
-      <div class="dh-card-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+    <section class="dh-card" aria-labelledby="harvest-log-title" style="background: #ffffff; border: 1px solid rgba(22, 101, 52, 0.12); border-radius: 12px; padding: 18px 14px 14px;">
+      <div class="dh-card-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <i class="fas fa-list-check" style="color: #22c55e; font-size: 16px;"></i>
-          <h2 class="dh-card-title" id="harvest-log-title" style="font-size: 15px; font-weight: 700; color: #fff; margin: 0;">Harvest Log</h2>
+          <i class="fas fa-basket-shopping" style="color: #22c55e; font-size: 16px;"></i>
+          <h2 class="dh-card-title" id="harvest-log-title" style="font-size: 15px; font-weight: 700; color: #14261c; margin: 0;">Recent Harvest</h2>
         </div>
-        <a href="{% url 'harvests:harvest_list' %}?new=harvest" class="dh-btn" style="background: #16a34a; color: #ffffff; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s;">
-          <i class="fas fa-plus"></i> Add Harvest
+        {% if harvest_count > 5 %}
+        <a href="{% url 'harvests:harvest_history' %}" style="color: #15803d; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+          View All <i class="fas fa-arrow-right" style="font-size: 10px;"></i>
         </a>
+        {% endif %}
       </div>
 
       <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
           <thead>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">
-              <th style="padding: 10px 8px; width: 35px;">#</th>
-              <th style="padding: 10px 10px;">FARM</th>
-              <th style="padding: 10px 10px;">CROP</th>
-              <th style="padding: 10px 10px;">HARVEST DATE</th>
-              <th style="padding: 10px 10px;">QUANTITY</th>
-              <th style="padding: 10px 10px;">UNIT</th>
-              <th style="padding: 10px 10px;">STATUS</th>
-              <th style="padding: 10px 8px; text-align: center;">ACTIONS</th>
+            <tr style="border-bottom: 1px solid rgba(22, 101, 52, 0.12); color: #64748b; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em;">
+              <th style="padding: 8px 6px; width: 30px;">#</th>
+              <th style="padding: 8px 6px;">FARM</th>
+              <th style="padding: 8px 6px;">CROP</th>
+              <th style="padding: 8px 6px;">HARVEST DATE</th>
+              <th style="padding: 8px 6px;">QUANTITY</th>
+              <th style="padding: 8px 6px;">UNIT</th>
+              <th style="padding: 8px 6px;">STATUS</th>
+              <th style="padding: 8px 6px; text-align: center;">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             {% for row in harvest_log_list %}
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04); transition: background 0.15s;">
-              <td style="padding: 12px 8px; color: #94a3b8; font-weight: 600;">{{ row.index }}</td>
-              <td style="padding: 12px 10px; color: #ffffff; font-weight: 500;">{{ row.farm }}</td>
-              <td style="padding: 12px 10px; color: #cbd5e1;">{{ row.crop }}</td>
-              <td style="padding: 12px 10px; color: #94a3b8;">{{ row.date }}</td>
-              <td style="padding: 12px 10px; color: #ffffff; font-weight: 600;">{{ row.quantity }}</td>
-              <td style="padding: 12px 10px; color: #cbd5e1;">{{ row.unit }}</td>
-              <td style="padding: 12px 10px;">
-                <span style="background: rgba(34, 197, 94, 0.14); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.28); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block;">
+            <tr style="border-bottom: 1px solid rgba(22, 101, 52, 0.06); transition: background 0.15s;">
+              <td style="padding: 8px 6px; color: #64786b; font-weight: 600;">{{ row.index }}</td>
+              <td style="padding: 8px 6px; color: #14261c; font-weight: 500;">{{ row.farm }}</td>
+              <td style="padding: 8px 6px; color: #475569;">{{ row.crop }}</td>
+              <td style="padding: 8px 6px; color: #64786b; white-space: nowrap;">{{ row.date }}</td>
+              <td style="padding: 8px 6px; color: #14261c; font-weight: 600;">{{ row.quantity }}</td>
+              <td style="padding: 8px 6px; color: #475569;">{{ row.unit }}</td>
+              <td style="padding: 8px 6px;">
+                <span style="background: rgba(34, 197, 94, 0.14); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.28); padding: 3px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 600; display: inline-block;">
                   {{ row.status }}
                 </span>
               </td>
-              <td style="padding: 12px 8px; text-align: center;">
-                <div style="display: inline-flex; align-items: center; gap: 8px;">
-                  <a href="{% url 'harvests:harvest_history' %}" title="View" style="color: #94a3b8; text-decoration: none;"><i class="fas fa-eye" style="font-size: 12px;"></i></a>
-                  <a href="{% url 'harvests:harvest_list' %}?edit={{ row.id }}" title="Edit" style="color: #94a3b8; text-decoration: none;"><i class="fas fa-pen" style="font-size: 12px;"></i></a>
-                  <a href="{% url 'harvests:harvest_list' %}" title="Delete" style="color: #94a3b8; text-decoration: none;"><i class="fas fa-trash-can" style="font-size: 12px;"></i></a>
+              <td style="padding: 8px 6px; text-align: center;">
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                  <a href="{% url 'harvests:harvest_history' %}" title="View" style="color: #64786b; text-decoration: none;"><i class="fas fa-eye" style="font-size: 12px;"></i></a>
+                  <a href="{% url 'harvests:harvest_list' %}?edit={{ row.id }}" title="Edit" style="color: #64786b; text-decoration: none;"><i class="fas fa-pen" style="font-size: 12px;"></i></a>
+                  <a href="{% url 'harvests:harvest_list' %}" title="Delete" style="color: #64786b; text-decoration: none;"><i class="fas fa-trash-can" style="font-size: 12px;"></i></a>
                 </div>
               </td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="8" style="padding: 30px; text-align: center; color: #94a3b8;">
+              <td colspan="8" style="padding: 30px; text-align: center; color: #64786b;">
                 <i class="fas fa-clipboard-list" style="font-size: 24px; margin-bottom: 8px; display: block; color: #64748b;"></i>
                 No harvests recorded yet
               </td>
@@ -348,32 +324,32 @@
     </section>
 
     <!-- 2. Recent Activity (replacing Farm Location) -->
-    <section class="dh-card" aria-labelledby="recent-activity-title" style="background: #182234; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 18px 20px;">
-      <div class="dh-card-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+    <section class="dh-card" aria-labelledby="recent-activity-title" style="background: #ffffff; border: 1px solid rgba(22, 101, 52, 0.12); border-radius: 12px; padding: 18px 14px 14px;">
+      <div class="dh-card-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <i class="fas fa-clock-rotate-left" style="color: #22c55e; font-size: 16px;"></i>
-          <h2 class="dh-card-title" id="recent-activity-title" style="font-size: 15px; font-weight: 700; color: #fff; margin: 0;">Recent Activity</h2>
+          <i class="fas fa-clock-rotate-left" style="color: #22c55e; font-size: 14px;"></i>
+          <h2 class="dh-card-title" id="recent-activity-title" style="font-size: 13px; font-weight: 700; color: #14261c; margin: 0;">Recent Activity</h2>
         </div>
-        <a href="{% url 'activities:activity_list' %}" style="color: #22c55e; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+        <a href="{% url 'activities:activity_list' %}" style="color: #15803d; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
           View All <i class="fas fa-arrow-right" style="font-size: 10px;"></i>
         </a>
       </div>
 
       <!-- Activity Items Feed: new farm registered, new crops, recent harvest, latest farm activity -->
-      <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
         {% for act in recent_activities %}
-        <div style="display: flex; align-items: flex-start; gap: 12px; padding-bottom: 12px; {% if not forloop.last %}border-bottom: 1px solid rgba(255, 255, 255, 0.05);{% endif %}">
-          <div style="width: 38px; height: 38px; border-radius: 10px; background: {{ act.bg }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <i class="{{ act.icon }}" style="color: {{ act.color }}; font-size: 15px;"></i>
+        <div style="display: flex; align-items: flex-start; gap: 10px; padding-bottom: 8px; {% if not forloop.last %}border-bottom: 1px solid rgba(22, 101, 52, 0.07);{% endif %}">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: {{ act.bg }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i class="{{ act.icon }}" style="color: {{ act.color }}; font-size: 12px;"></i>
           </div>
           <div style="flex: 1; min-width: 0;">
             <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 6px;">
-              <strong style="font-size: 13px; color: #ffffff; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ act.title }}</strong>
-              <span style="font-size: 11px; color: #64748b; flex-shrink: 0;">{{ act.time }}</span>
+              <strong style="font-size: 12px; color: #14261c; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ act.title }}</strong>
+              <span style="font-size: 10px; color: #64748b; flex-shrink: 0;">{{ act.time }}</span>
             </div>
-            <p style="font-size: 12px; color: #cbd5e1; margin: 2px 0 0; line-height: 1.35;">{{ act.description }}</p>
+            <p style="font-size: 11px; color: #475569; margin: 1px 0 0; line-height: 1.3;">{{ act.description }}</p>
             {% if act.meta %}
-            <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 2px;">{{ act.meta }}</span>
+            <span style="font-size: 10px; color: #64786b; display: block; margin-top: 1px;">{{ act.meta }}</span>
             {% endif %}
           </div>
         </div>
@@ -416,7 +392,7 @@ document.addEventListener("DOMContentLoaded", function () {
     window.setInterval(refreshWeather, 30 * 60 * 1000);
   }
 
-  // 2. ApexCharts: Harvest Progress This Year (Multi-Series Line Chart with Area Fill)
+  // 2. ApexCharts: Harvest Progress This Year (recorded harvests by month)
   function initProgressChart() {
     if (typeof ApexCharts === "undefined") {
       setTimeout(initProgressChart, 50);
@@ -430,9 +406,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const chartData = JSON.parse(dataEl.textContent);
 
     const progressOptions = {
+      theme: { mode: "light" },
       chart: {
         type: "line",
-        height: 270,
+        height: 240,
         fontFamily: "inherit",
         toolbar: { show: false },
         parentHeightOffset: 0,
@@ -443,68 +420,63 @@ document.addEventListener("DOMContentLoaded", function () {
           name: "Harvests",
           type: "area",
           data: chartData.actual
-        },
-        {
-          name: "Target",
-          type: "line",
-          data: chartData.target
         }
       ],
-      colors: ["#22c55e", "#86efac"],
+      colors: ["#22c55e"],
       stroke: {
         curve: "smooth",
-        width: [3, 2],
-        dashArray: [0, 5] // 0 = solid green, 5 = dashed target
+        width: 3
       },
       fill: {
-        type: ["gradient", "solid"],
+        type: "gradient",
         gradient: {
-          shade: "dark",
+          shade: "light",
           type: "vertical",
-          shadeIntensity: 0.3,
-          gradientToColors: ["#16a34a", "transparent"],
+          shadeIntensity: 0.15,
+          gradientToColors: ["#bbf7d0"],
           inverseColors: false,
-          opacityFrom: 0.28,
-          opacityTo: 0.02,
-          stops: [0, 95, 100]
+          opacityFrom: 0.65,
+          opacityTo: 0.05,
+          stops: [0, 90, 100]
         }
       },
       markers: {
-        size: [5, 4],
-        colors: ["#22c55e", "#86efac"],
-        strokeColors: ["#182234", "#182234"],
+        size: 5,
+        colors: ["#22c55e"],
+        strokeColors: ["#ffffff"],
         strokeWidth: 2,
         hover: { size: 7 }
       },
       grid: {
-        borderColor: "rgba(255, 255, 255, 0.06)",
+        borderColor: "rgba(22, 101, 52, 0.1)",
         strokeDashArray: 4,
-        padding: { top: 5, right: 10, left: 10, bottom: 0 }
+        padding: { top: 5, right: 15, left: 15, bottom: 0 }
       },
       xaxis: {
-        categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        categories: chartData.months_short,
         labels: {
-          style: { colors: "#94a3b8", fontSize: "11px" }
+          style: { colors: "#64786b", fontSize: "11px" }
         },
         axisBorder: { show: false },
-        axisTicks: { color: "rgba(255, 255, 255, 0.08)" }
+        axisTicks: { color: "rgba(22, 101, 52, 0.12)" }
       },
       yaxis: {
         min: 0,
-        max: 10,
         tickAmount: 5,
         labels: {
-          style: { colors: "#94a3b8", fontSize: "11px" },
+          style: { colors: "#64786b", fontSize: "11px" },
           formatter: function (v) { return v != null ? Math.round(v) : ""; }
         }
       },
       legend: { show: false }, // Shown in card header
       tooltip: {
-        theme: "dark",
+        theme: "light",
         shared: true,
         intersect: false,
         y: {
-          formatter: function (v) { return v != null ? v + " Tons" : "--"; }
+          formatter: function (v) {
+            return v != null ? v + " " + chartData.unit : "--";
+          }
         }
       }
     };
@@ -527,10 +499,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const distData = JSON.parse(distEl.textContent);
 
     const donutOptions = {
+      theme: { mode: "light" },
       chart: {
         type: "donut",
-        width: 155,
-        height: 155,
+        width: 165,
+        height: 165,
         fontFamily: "inherit",
         toolbar: { show: false },
         animations: { enabled: true, speed: 600 }
@@ -550,14 +523,14 @@ document.addEventListener("DOMContentLoaded", function () {
               name: {
                 show: true,
                 fontSize: "11px",
-                color: "#94a3b8",
+                color: "#64786b",
                 offsetY: 14
               },
               value: {
                 show: true,
                 fontSize: "22px",
                 fontWeight: 800,
-                color: "#ffffff",
+                color: "#14261c",
                 offsetY: -10,
                 formatter: function () {
                   return distData.total_farms || 5;
@@ -566,7 +539,7 @@ document.addEventListener("DOMContentLoaded", function () {
               total: {
                 show: true,
                 label: "Farms",
-                color: "#94a3b8",
+                color: "#64786b",
                 fontSize: "10px",
                 formatter: function () {
                   return distData.total_farms || 5;
@@ -577,9 +550,14 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       },
       tooltip: {
-        theme: "dark",
+        theme: "light",
         y: {
-          formatter: function (val) {
+          formatter: function (val, opts) {
+            const index = opts && typeof opts.seriesIndex === "number" ? opts.seriesIndex : -1;
+            const item = index >= 0 && distData.items ? distData.items[index] : null;
+            if (item && item.is_damaged && item.quantity != null) {
+              return val + "% · " + item.quantity + (item.unit ? " " + item.unit : "") + " damaged";
+            }
             return val + "%";
           }
         }
@@ -596,20 +574,147 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <style>
-@media (max-width: 1200px) {
-  .dh-row-three {
-    grid-template-columns: 1fr 1fr !important;
+/* --- Dashboard shortcut cards (whole card is the click target) --- */
+.dh-shortcut-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid rgba(22, 101, 52, 0.14);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.dh-shortcut-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 10px 24px rgba(22, 101, 52, 0.14);
+}
+.dh-shortcut-card:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+.dh-shortcut-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.dh-shortcut-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+.dh-shortcut-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #14261c;
+  letter-spacing: -0.01em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dh-shortcut-arrow {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.dh-shortcut-card:hover .dh-shortcut-arrow {
+  transform: translateX(3px);
+  color: #15803d;
+}
+.dh-shortcut-desc {
+  margin: 0;
+  font-size: 11.5px;
+  color: #64786b;
+  line-height: 1.45;
+}
+.dh-shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+.dh-shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(22, 101, 52, 0.1);
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+.dh-shortcut-item strong {
+  color: #14261c;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.dh-shortcut-item-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dh-shortcut-days {
+  color: #64786b;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.dh-shortcut-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dh-shortcut-empty {
+  margin: 0;
+  font-size: 11.5px;
+  color: #64786b;
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px dashed rgba(22, 101, 52, 0.2);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+@media (max-width: 1279px) {
+  .dh-shortcut-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
-  .dh-row-three > :first-child {
-    grid-column: 1 / -1;
+}
+@media (max-width: 767px) {
+  .dh-shortcut-row {
+    grid-template-columns: 1fr !important;
   }
+}
+@media (max-width: 1279px) {
   .dh-row-two {
     grid-template-columns: 1fr !important;
   }
 }
-@media (max-width: 768px) {
-  .dh-row-three {
+@media (max-width: 1024px) {
+  .dh-row-middle {
     grid-template-columns: 1fr !important;
+  }
+  .dh-header-weather-pill {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

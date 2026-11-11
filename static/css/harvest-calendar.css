@@ -1,20 +1,20 @@
-/* Harvest calendar page */
+/* Harvest calendar page — light harvest theme */
 
 #harvest-calendar {
-  --fc-border-color: rgba(148, 163, 184, 0.22);
+  --fc-border-color: #dfeae1;
   --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: rgba(30, 41, 59, 0.55);
-  --fc-neutral-text-color: #94a3b8;
+  --fc-neutral-bg-color: #f4f8f3;
+  --fc-neutral-text-color: #64786b;
   --fc-today-bg-color: rgba(34, 197, 94, 0.1);
   --fc-event-text-color: #ffffff;
-  --fc-button-text-color: #e2e8f0;
-  --fc-button-bg-color: #1e293b;
-  --fc-button-border-color: #334155;
-  --fc-button-hover-bg-color: #334155;
-  --fc-button-hover-border-color: #475569;
-  --fc-button-active-bg-color: #2563eb;
-  --fc-button-active-border-color: #2563eb;
-  color: #cbd5e1;
+  --fc-button-text-color: #475c4f;
+  --fc-button-bg-color: #ffffff;
+  --fc-button-border-color: #dfeae1;
+  --fc-button-hover-bg-color: #eef6ef;
+  --fc-button-hover-border-color: #cfe3d4;
+  --fc-button-active-bg-color: #16a34a;
+  --fc-button-active-border-color: #16a34a;
+  color: #334155;
   font-size: 0.85rem;
 }
 
@@ -27,7 +27,7 @@
 #harvest-calendar .fc-toolbar-title {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #f1f5f9;
+  color: #14261c;
 }
 
 #harvest-calendar .fc-button {
@@ -39,12 +39,12 @@
 }
 
 #harvest-calendar .fc-button:focus {
-  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(22, 163, 74, 0.18);
 }
 
 #harvest-calendar .fc-col-header-cell-cushion,
 #harvest-calendar .fc-daygrid-day-number {
-  color: #cbd5e1;
+  color: #475c4f;
   text-decoration: none;
 }
 
@@ -61,7 +61,7 @@
 }
 
 #harvest-calendar .fc-day-today .fc-daygrid-day-number {
-  color: #4ade80;
+  color: #15803d;
   font-weight: 700;
 }
 
@@ -77,46 +77,46 @@
 }
 
 #harvest-calendar .fc-event:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.05);
 }
 
 #harvest-calendar .fc-daygrid-more-link {
-  color: #93c5fd;
+  color: #0369a1;
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 #harvest-calendar .fc-list {
-  border-color: rgba(148, 163, 184, 0.22);
+  border-color: #dfeae1;
 }
 
 #harvest-calendar .fc-list-day-cushion,
 #harvest-calendar .fc-list-day th {
-  background-color: rgba(30, 41, 59, 0.75);
-  color: #e2e8f0;
+  background-color: #f4f8f3;
+  color: #14261c;
 }
 
 #harvest-calendar .fc-list-event:hover td {
-  background-color: rgba(51, 65, 85, 0.5);
+  background-color: #f4f8f3;
 }
 
 #harvest-calendar .fc-list-event-title a,
 #harvest-calendar .fc-list-event-time {
-  color: #cbd5e1;
+  color: #334155;
 }
 
 #harvest-calendar .fc-list-empty {
   background-color: transparent;
-  color: #94a3b8;
+  color: #64786b;
 }
 
 #harvest-calendar .fc-scrollgrid {
-  border-color: rgba(148, 163, 184, 0.22);
+  border-color: #dfeae1;
 }
 
 #harvest-calendar .fc-theme-standard td,
 #harvest-calendar .fc-theme-standard th {
-  border-color: rgba(148, 163, 184, 0.16);
+  border-color: #e8f0e9;
 }
 
 /* Event content */
@@ -155,7 +155,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: #94a3b8;
+  color: #64786b;
   font-size: 0.75rem;
 }
 
@@ -177,8 +177,8 @@
   min-width: 2.6rem;
   padding: 0.25rem;
   border-radius: 0.45rem;
-  background-color: rgba(37, 99, 235, 0.16);
-  color: #93c5fd;
+  background-color: #e8f5ec;
+  color: #15803d;
   font-size: 0.68rem;
   font-weight: 700;
   line-height: 1.1;
@@ -199,7 +199,7 @@
   grid-template-columns: minmax(7.5rem, 35%) 1fr;
   gap: 0.75rem;
   padding-bottom: 0.55rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  border-bottom: 1px solid #e8f0e9;
 }
 
 .hc-detail-row:last-child {
@@ -208,13 +208,13 @@
 }
 
 .hc-detail-label {
-  color: #94a3b8;
+  color: #64786b;
   font-size: 0.78rem;
   font-weight: 600;
 }
 
 .hc-detail-value {
-  color: #e2e8f0;
+  color: #1f3328;
   font-size: 0.82rem;
   white-space: pre-line;
   overflow-wrap: anywhere;

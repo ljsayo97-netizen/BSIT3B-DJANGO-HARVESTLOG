@@ -2,22 +2,52 @@
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.crops.models import Crop
 from apps.farms.models import Farm
 
 from .services import (
+    SOURCE_ACTIVITIES,
     SOURCE_ALL,
     SOURCE_CHOICES,
+    SOURCE_HARVESTS,
     SOURCE_KEYS,
     build_calendar_context,
 )
+
+SOURCE_ICONS = {
+    SOURCE_ALL: 'fas fa-layer-group',
+    SOURCE_HARVESTS: 'fas fa-wheat-awn',
+    SOURCE_ACTIVITIES: 'fas fa-list-check',
+}
 
 
 def _parse_id(raw_value):
     raw_value = (raw_value or '').strip()
     return int(raw_value) if raw_value.isdigit() else None
+
+
+def _source_links(request, source):
+    """Build the dropdown links that switch what the calendar displays.
+
+    Any other active filters (farm/crop) are kept so switching the content
+    type never silently resets the rest of the view.
+    """
+    base_url = reverse('harvest_calendar:calendar')
+    links = []
+    for value, label in SOURCE_CHOICES:
+        params = request.GET.copy()
+        params['show'] = value
+        links.append({
+            'value': value,
+            'label': label,
+            'icon': SOURCE_ICONS.get(value, 'fas fa-calendar-days'),
+            'url': f'{base_url}?{params.urlencode()}',
+            'active': value == source,
+        })
+    return links
 
 
 @login_required(login_url='login')
@@ -56,6 +86,7 @@ def harvest_calendar_page(request):
         'source': source,
         'source_label': dict(SOURCE_CHOICES)[source],
         'source_choices': SOURCE_CHOICES,
+        'source_links': _source_links(request, source),
         'today': timezone.localdate(),
     })
     return render(request, 'harvest_calendar/list.html', context)

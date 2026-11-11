@@ -535,7 +535,7 @@
         toolbar: { show: false },
         animations: { enabled: false },
       },
-      theme: { mode: 'dark' },
+      theme: { mode: 'light' },
       series: [{ name: 'Harvests', data: counts }],
       colors: ['var(--tblr-primary)'],
       plotOptions: {
@@ -564,6 +564,7 @@
         },
       },
       tooltip: {
+        theme: 'light',
         y: {
           formatter: function (value) {
             return value + ' harvest' + (value === 1 ? '' : 's');

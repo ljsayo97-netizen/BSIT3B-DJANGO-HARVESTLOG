@@ -105,6 +105,13 @@ def _request_side_effect(url, params, timeout=None):
 class WeatherServiceTests(TestCase):
     def setUp(self):
         cache.clear()
+        # These tests exercise the Open-Meteo fallback. Keep the hierarchical
+        # Nominatim lookup out of the picture so the mocks stay deterministic.
+        self.nominatim_patcher = patch(
+            'apps.core.weather.geocode_ph_location', return_value=None
+        )
+        self.nominatim_patcher.start()
+        self.addCleanup(self.nominatim_patcher.stop)
 
     def tearDown(self):
         cache.clear()
@@ -166,9 +173,43 @@ class WeatherServiceTests(TestCase):
         self.assertEqual(request_json.call_count, 1)
 
 
+class HierarchicalGeocodeIntegrationTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_geocode_prefers_the_hierarchy_aware_result(self):
+        resolved = {
+            'name': 'Vista Alegre, Ilog, Negros Occidental',
+            'latitude': 9.9944,
+            'longitude': 122.7568,
+            'country_code': 'PH',
+            'level': 'barangay',
+            'source': 'nominatim',
+        }
+        with patch(
+            'apps.core.weather.geocode_ph_location', return_value=resolved
+        ), patch('apps.core.weather._request_json') as request_json:
+            location = geocode_location(
+                'Vista Alegre, Ilog, Negros Occidental'
+            )
+
+        self.assertEqual(location['latitude'], 9.9944)
+        self.assertEqual(location['longitude'], 122.7568)
+        self.assertEqual(location['level'], 'barangay')
+        request_json.assert_not_called()
+
+
 class WeatherWidgetBuilderTests(TestCase):
     def setUp(self):
         cache.clear()
+        self.nominatim_patcher = patch(
+            'apps.core.weather.geocode_ph_location', return_value=None
+        )
+        self.nominatim_patcher.start()
+        self.addCleanup(self.nominatim_patcher.stop)
         self.user = get_user_model().objects.create_user(
             username='weather-owner',
             password='secret1234',
@@ -308,6 +349,11 @@ class WeatherAdviceTests(TestCase):
 class WeatherWidgetViewTests(TestCase):
     def setUp(self):
         cache.clear()
+        self.nominatim_patcher = patch(
+            'apps.core.weather.geocode_ph_location', return_value=None
+        )
+        self.nominatim_patcher.start()
+        self.addCleanup(self.nominatim_patcher.stop)
         self.user = get_user_model().objects.create_user(
             username='weather-viewer',
             password='secret1234',

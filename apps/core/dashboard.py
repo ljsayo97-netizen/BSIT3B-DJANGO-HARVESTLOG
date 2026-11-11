@@ -10,6 +10,7 @@ from django.utils import timezone
 from apps.activities.models import FarmActivity
 from apps.crops.models import Crop
 from apps.farms.models import Farm
+from apps.harvest_calendar.services import build_calendar_context
 from apps.harvests.models import Harvest, HarvestNotification
 from apps.harvests.services import (
     get_harvest_board,
@@ -22,6 +23,16 @@ UPCOMING_HARVESTS_LIMIT = 6
 RECENT_HARVESTS_LIMIT = 5
 ACTIVITY_QUEUE_LIMIT = 5
 NOTIFICATION_FEED_LIMIT = 4
+CALENDAR_WIDGET_AGENDA_LIMIT = 3
+
+HARVEST_CALENDAR_EMPTY_SUMMARY = {
+    'upcoming_harvests': 0,
+    'ready_harvests': 0,
+    'recorded_harvests': 0,
+    'active_activities': 0,
+    'completed_activities': 0,
+    'total_events': 0,
+}
 
 CROP_STATUS_LABELS = {
     Crop.Status.PLANTING: 'Planted',
@@ -162,10 +173,41 @@ def _harvest_progress(crops):
     }
 
 
-def _harvest_progress_yearly_data(harvests, year=None):
+KG_UNITS = {'kg', 'kgs', 'kilogram', 'kilograms'}
+TON_UNITS = {'t', 'ton', 'tons', 'tonne', 'tonnes', 'metric ton', 'metric tons'}
+
+
+def _convert_quantity(quantity, source_unit, display_unit):
+    """Convert kilograms and tons to each other; return None for other units."""
+    source = (source_unit or 'kg').strip().lower() or 'kg'
+    display = (display_unit or 'kg').strip().lower() or 'kg'
+    try:
+        value = float(quantity or 0)
+    except (TypeError, ValueError):
+        return None
+
+    if source == display:
+        return value
+    if source in KG_UNITS and display in KG_UNITS:
+        return value
+    if source in TON_UNITS and display in TON_UNITS:
+        return value
+    if display in KG_UNITS and source in TON_UNITS:
+        return value * 1000
+    if display in TON_UNITS and source in KG_UNITS:
+        return value / 1000
+    return None
+
+
+def _format_quantity(value):
+    """Render a quantity with thousands separators and no trailing zeros."""
+    return f'{float(value):,.2f}'.rstrip('0').rstrip('.')
+
+
+def _harvest_progress_yearly_data(harvests, year=None, display_unit=''):
     """
-    Return the Harvest Progress in this year with multi-series data (Actual vs Target in tons),
-    X-axis (January–December), and component specifications.
+    Return the signed-in user's recorded harvest totals for each month of the
+    year, normalized to the dashboard's primary harvest unit.
     """
     if year is None:
         year = timezone.localdate().year
@@ -179,27 +221,23 @@ def _harvest_progress_yearly_data(harvests, year=None):
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ]
 
-    # Prescribed Example Data:
-    # Month      Actual   Target
-    # January    2 tons   3 tons
-    # February   4 tons   5 tons
-    # March      5 tons   6 tons
-    # April      6 tons   7 tons
-    # May        7 tons   8 tons
-    # June       6.5 tons 8 tons
-    example_records = [
-        {'month': 'January', 'actual': 2.0, 'target': 3.0},
-        {'month': 'February', 'actual': 4.0, 'target': 5.0},
-        {'month': 'March', 'actual': 5.0, 'target': 6.0},
-        {'month': 'April', 'actual': 6.0, 'target': 7.0},
-        {'month': 'May', 'actual': 7.0, 'target': 8.0},
-        {'month': 'June', 'actual': 6.5, 'target': 8.0},
-    ]
+    unit = (display_unit or '').strip() or 'kg'
+    monthly_totals = [0.0] * 12
 
-    # Actual harvest recorded up to June (remaining months pending)
-    actual_series = [2.0, 4.0, 5.0, 6.0, 7.0, 6.5, 6.0, 6.5, 7.2, 8.0, 7.5, 7.0]
-    # Target harvest planned across the year (January–December)
-    target_series = [3.0, 5.0, 6.0, 7.0, 8.0, 8.0, 8.2, 8.5, 9.0, 9.2, 9.0, 8.5]
+    records = (
+        harvests.filter(harvest_date__year=year)
+        .values_list('harvest_date', 'quantity_harvested', 'unit')
+    )
+    for harvest_date, quantity, source_unit in records:
+        if not harvest_date:
+            continue
+        converted = _convert_quantity(quantity, source_unit, unit)
+        if converted is None:
+            continue
+        monthly_totals[harvest_date.month - 1] += converted
+
+    actual_series = [round(total, 2) for total in monthly_totals]
+    total_actual = round(sum(actual_series), 2)
 
     components = [
         {
@@ -210,7 +248,7 @@ def _harvest_progress_yearly_data(harvests, year=None):
         },
         {
             'component': 'Y-axis',
-            'description': 'Harvest quantity (tons)',
+            'description': f'Harvest quantity ({unit})',
             'icon': 'fas fa-arrows-up-down',
             'color': '#94a3b8',
         },
@@ -221,12 +259,6 @@ def _harvest_progress_yearly_data(harvests, year=None):
             'color': '#22c55e',
         },
         {
-            'component': 'Dashed line',
-            'description': 'Target harvest',
-            'icon': 'fas fa-ellipsis',
-            'color': '#38bdf8',
-        },
-        {
             'component': 'Area fill',
             'description': 'Visualizes production progress',
             'icon': 'fas fa-chart-area',
@@ -234,41 +266,14 @@ def _harvest_progress_yearly_data(harvests, year=None):
         },
     ]
 
-    table_rows = []
-    total_actual = 0.0
-    total_target = 0.0
-    for rec in example_records:
-        act = rec['actual']
-        tgt = rec['target']
-        total_actual += act
-        total_target += tgt
-        diff = act - tgt
-        pct = round((act / tgt) * 100, 1) if tgt else 0
-        diff_str = f"{abs(diff):g} tons surplus" if diff >= 0 else f"{abs(diff):g} tons behind"
-        table_rows.append({
-            'month': rec['month'],
-            'actual': f"{act:g} tons",
-            'actual_val': act,
-            'target': f"{tgt:g} tons",
-            'target_val': tgt,
-            'diff': diff_str,
-            'pct': pct,
-        })
-
-    ytd_progress_pct = round((total_actual / total_target) * 100, 1) if total_target else 0
-
     return {
         'year': year,
         'months': months,
         'months_short': months_short,
         'actual': actual_series,
-        'target': target_series,
-        'unit': 'tons',
+        'unit': unit,
         'components': components,
-        'example_data': table_rows,
         'total_actual': total_actual,
-        'total_target': total_target,
-        'progress_pct': ytd_progress_pct,
     }
 
 
@@ -346,7 +351,87 @@ def _notification_feed(notifications, latest_harvest, latest_activity):
     return feed[:NOTIFICATION_FEED_LIMIT]
 
 
-def build_dashboard_context(user):
+def _event_start_date(event):
+    """Parse the ISO date stored on a calendar event, or return None."""
+    try:
+        return date.fromisoformat(str(event.get('start') or '')[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+def _day_delta_label(event_date, today):
+    """Return a friendly countdown label such as 'Tomorrow' or 'In 5 days'."""
+    delta = (event_date - today).days
+    if delta == 0:
+        return 'Today'
+    if delta == 1:
+        return 'Tomorrow'
+    if delta <= 14:
+        return f'In {delta} days'
+    return event_date.strftime('%b %d')
+
+
+def _calendar_agenda(events, today, limit=CALENDAR_WIDGET_AGENDA_LIMIT):
+    """Pick the next ``limit`` dated events (today onward) for the widget."""
+    agenda = []
+    for event in events:
+        event_date = _event_start_date(event)
+        if not event_date or event_date < today:
+            continue
+        props = event.get('extendedProps') or {}
+        agenda.append({
+            'title': (
+                props.get('activity_type')
+                or props.get('crop_name')
+                or event.get('title')
+                or 'Scheduled item'
+            ),
+            'kind': props.get('kind_label') or '',
+            'farm': props.get('farm_name') or '',
+            'date': event_date,
+            'date_label': event_date.strftime('%b %d, %Y'),
+            'days_label': _day_delta_label(event_date, today),
+            'color': event.get('backgroundColor') or '#22c55e',
+            'icon': props.get('icon') or 'fas fa-calendar-day',
+        })
+        if len(agenda) >= limit:
+            break
+    return agenda
+
+
+def _harvest_calendar_widget(user, today):
+    """Summarize the Harvest Calendar page so the dashboard can link to it."""
+    events = []
+    summary = dict(HARVEST_CALENDAR_EMPTY_SUMMARY)
+    try:
+        calendar_context = build_calendar_context(user, {})
+    except Exception:
+        calendar_context = None
+
+    if calendar_context:
+        events = calendar_context.get('calendar_events') or []
+        summary.update(calendar_context.get('calendar_summary') or {})
+
+    month_event_count = 0
+    for event in events:
+        event_date = _event_start_date(event)
+        if (
+            event_date
+            and event_date.year == today.year
+            and event_date.month == today.month
+        ):
+            month_event_count += 1
+
+    return {
+        'url': reverse('harvest_calendar:calendar'),
+        'month_label': today.strftime('%B %Y'),
+        'month_event_count': month_event_count,
+        'summary': summary,
+        'agenda': _calendar_agenda(events, today),
+    }
+
+
+def build_dashboard_context(user, year=None):
     """Collect the signed-in user's farm data for the dashboard."""
     today = timezone.localdate()
     month_starts = _month_starts(DASHBOARD_MONTHS)
@@ -396,6 +481,24 @@ def build_dashboard_context(user):
     harvests = Harvest.objects.filter(user=user)
     harvest_count = harvests.count()
 
+    # Year options for the Harvest Progress and Farm Distribution cards. Both
+    # cards are scoped to the selected year so previous seasons stay reviewable.
+    harvest_years = {
+        harvest_date.year
+        for harvest_date in harvests.exclude(harvest_date=None)
+        .values_list('harvest_date', flat=True)
+    }
+    current_year = today.year
+    try:
+        selected_year = int(year)
+    except (TypeError, ValueError):
+        selected_year = current_year
+    available_years = sorted(
+        harvest_years | {current_year, selected_year},
+        reverse=True,
+    )
+    year_harvests = harvests.filter(harvest_date__year=selected_year)
+
     unit_totals = list(
         harvests.values('unit')
         .annotate(total=Sum('quantity_harvested'), records=Count('id'))
@@ -403,6 +506,30 @@ def build_dashboard_context(user):
     )
     primary_unit = unit_totals[0]['unit'] if unit_totals else ''
     primary_unit_total = unit_totals[0]['total'] if unit_totals else 0
+
+    # Totals in the primary unit, including kg <-> ton conversions. Quantities
+    # recorded in other units are listed separately instead of being mixed in.
+    total_harvest_unit = (primary_unit or 'kg').strip() or 'kg'
+    total_harvest_value = 0.0
+    other_harvest_units = []
+    for row in unit_totals:
+        row_unit = (row['unit'] or 'kg').strip() or 'kg'
+        converted = _convert_quantity(row['total'], row_unit, total_harvest_unit)
+        if converted is None:
+            other_harvest_units.append({
+                'unit': row_unit,
+                'total': float(row['total'] or 0),
+            })
+        else:
+            total_harvest_value += converted
+    total_harvest_value = round(total_harvest_value, 2)
+    total_harvest_display = (
+        f'{_format_quantity(total_harvest_value)} {total_harvest_unit}'
+    )
+    other_harvest_unit_display = ', '.join(
+        f"{_format_quantity(row['total'])} {row['unit']}"
+        for row in other_harvest_units
+    )
 
     this_month_harvest_count = harvests.filter(
         harvest_date__gte=this_month_start
@@ -454,7 +581,7 @@ def build_dashboard_context(user):
         })
     quality_rows.sort(key=lambda row: row['count'], reverse=True)
 
-    top_crops_data, total_harvested_qty = _top_crops_data(harvests)
+    top_crops_data, _ = _top_crops_data(year_harvests)
 
     # Build month labels + record counts for the production bar chart
     months_list = [month.strftime('%b %Y') for month in month_starts]
@@ -555,23 +682,56 @@ def build_dashboard_context(user):
         notifications, latest_harvest, latest_activity
     )
     harvest_progress = _harvest_progress(crops)
-    harvest_progress_data = _harvest_progress_yearly_data(harvests, today.year)
+    harvest_progress_data = _harvest_progress_yearly_data(
+        harvests, selected_year, primary_unit
+    )
     harvest_change = (
         _percent_change(this_month_harvest_count, last_month_harvest_count)
         if last_month_harvest_count
         else None
     )
 
-    # Calculate revenue
+    # Shortcut widget that opens the Harvest Calendar page with a live preview
+    # of what is scheduled there.
+    harvest_calendar_widget = _harvest_calendar_widget(user, today)
+
+    # Calculate revenue from the user's recorded sales
     try:
         from apps.revenue.models import Revenue
-        total_revenue_val = Revenue.objects.filter(user=user).aggregate(total=Sum('total_revenue'))['total'] or 0
+        revenue_summary = Revenue.objects.filter(user=user).aggregate(
+            total=Sum('total_revenue'),
+            count=Count('id'),
+        )
+        total_revenue_val = revenue_summary['total'] or 0
+        revenue_count = revenue_summary['count'] or 0
     except Exception:
         total_revenue_val = 0
+        revenue_count = 0
     total_revenue = float(total_revenue_val)
-    total_revenue_display = f"₱{total_revenue:,.0f}" if total_revenue > 0 else "₱192,000"
+    total_revenue_display = f'₱{total_revenue:,.2f}'
 
-    # Farm distribution top crops breakdown (for donut chart)
+    # Farm distribution top crops breakdown (for donut chart), including the
+    # amount recorded as damaged so produce loss appears in the distribution.
+    damaged_rows = list(
+        year_harvests.exclude(damaged_quantity=None).values_list('damaged_quantity', 'unit')
+    )
+    damaged_amount = sum(float(quantity or 0) for quantity, _unit in damaged_rows)
+    damaged_units = sorted({
+        (unit or 'kg').strip() or 'kg'
+        for quantity, unit in damaged_rows
+        if float(quantity or 0) > 0
+    })
+    damaged_unit = damaged_units[0] if len(damaged_units) == 1 else ''
+    damaged_distribution_item = None
+    if damaged_amount > 0:
+        damaged_distribution_item = {
+            'name': 'Damaged Crops',
+            'quantity': round(damaged_amount, 2),
+            'unit': damaged_unit,
+            'color': '#ef4444',
+            'is_damaged': True,
+        }
+
     farm_distribution_labels = ['Rice', 'Corn', 'Vegetables', 'Others']
     farm_distribution_series = [40, 30, 20, 10]
     farm_distribution_colors = ['#22c55e', '#86efac', '#f59e0b', '#94a3b8']
@@ -581,14 +741,44 @@ def build_dashboard_context(user):
         {'name': 'Vegetables', 'percentage': 20, 'color': '#f59e0b'},
         {'name': 'Others', 'percentage': 10, 'color': '#94a3b8'},
     ]
-    if top_crops_data and len(top_crops_data) >= 2:
-        farm_distribution_labels = [c['name'] for c in top_crops_data[:4]]
-        farm_distribution_series = [c['percentage'] for c in top_crops_data[:4]]
-        farm_distribution_colors = [c['color'] for c in top_crops_data[:4]]
-        farm_distribution_items = [
-            {'name': c['name'], 'percentage': c['percentage'], 'color': c['color']}
-            for c in top_crops_data[:4]
+    if top_crops_data:
+        distribution_items = [
+            {
+                'name': crop['name'],
+                'quantity': crop['quantity'],
+                'unit': crop['unit'],
+                'color': crop['color'],
+            }
+            for crop in top_crops_data[:4]
         ]
+        distribution_total = sum(
+            float(item['quantity'] or 0) for item in distribution_items
+        )
+        if damaged_distribution_item:
+            distribution_total += damaged_amount
+
+        for item in distribution_items:
+            item['percentage'] = (
+                round(float(item['quantity'] or 0) * 100 / distribution_total)
+                if distribution_total else 0
+            )
+        if damaged_distribution_item:
+            damaged_distribution_item['percentage'] = (
+                round(damaged_amount * 100 / distribution_total)
+                if distribution_total else 0
+            )
+            distribution_items.append(damaged_distribution_item)
+
+        farm_distribution_labels = [item['name'] for item in distribution_items]
+        farm_distribution_series = [item['percentage'] for item in distribution_items]
+        farm_distribution_colors = [item['color'] for item in distribution_items]
+        farm_distribution_items = distribution_items
+    elif harvest_count:
+        # The user has harvest records, but none in the selected year.
+        farm_distribution_labels = []
+        farm_distribution_series = []
+        farm_distribution_colors = []
+        farm_distribution_items = []
 
     farm_distribution_data = {
         'labels': farm_distribution_labels,
@@ -596,6 +786,9 @@ def build_dashboard_context(user):
         'colors': farm_distribution_colors,
         'items': farm_distribution_items,
         'total_farms': farm_count or 5,
+        'has_damage': damaged_amount > 0,
+        'damaged_quantity': round(damaged_amount, 2),
+        'damaged_unit': damaged_unit,
     }
 
     # Kabankalan Weather
@@ -761,14 +954,21 @@ def build_dashboard_context(user):
         'harvest_progress': harvest_progress,
         'harvest_progress_data': harvest_progress_data,
         'harvest_progress_chart': harvest_progress_data,
+        'selected_year': selected_year,
+        'available_years': available_years,
         'top_crops_data': top_crops_data,
-        'total_harvested_qty': total_harvested_qty,
+        'total_harvested_qty': total_harvest_value,
+        'total_harvest_display': total_harvest_display,
+        'total_harvest_unit': total_harvest_unit,
+        'other_harvest_unit_display': other_harvest_unit_display,
         'months_list': months_list,
         'production_bars': production_bars,
         'total_revenue': total_revenue,
         'total_revenue_display': total_revenue_display,
+        'revenue_count': revenue_count,
         'farm_distribution_data': farm_distribution_data,
         'kabankalan_weather': kabankalan_weather,
+        'harvest_calendar_widget': harvest_calendar_widget,
         'harvest_log_list': harvest_log_list,
         'recent_activities': recent_activities,
     }

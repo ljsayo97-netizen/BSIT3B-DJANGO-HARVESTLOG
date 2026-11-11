@@ -1,9 +1,20 @@
 {% load static %}
-<header class="dh-topbar" role="banner" style="display:flex; align-items:center; justify-content:flex-start; gap:16px; padding:0 16px;">
-  <div class="dh-topbar-left" style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
-    <a href="{% url 'dashboard' %}" class="dh-brand-link" aria-label="HarvestPH">
-      <span class="dh-brand-icon"><i class="fas fa-tractor" aria-hidden="true"></i></span>
-      <span class="dh-brand-text">HarvestPH</span>
+<header class="dh-topbar" role="banner">
+  <div class="dh-topbar-left">
+    <a href="{% url 'dashboard' %}" class="dh-brand-link" aria-label="HarvestPH home">
+      <span class="dh-brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21V8.5"/>
+          <path d="M12 12c-2.2 0-4-1.8-4-4 2.2 0 4 1.8 4 4Z"/>
+          <path d="M12 12c2.2 0 4-1.8 4-4-2.2 0-4 1.8-4 4Z"/>
+          <path d="M12 16c-2.2 0-4-1.8-4-4 2.2 0 4 1.8 4 4Z"/>
+          <path d="M12 16c2.2 0 4-1.8 4-4-2.2 0-4 1.8-4 4Z"/>
+          <path d="M12 9c-1.5 0-2.8-1.2-2.8-2.8C10.7 6.2 12 7.4 12 9Z"/>
+          <path d="M12 9c1.5 0 2.8-1.2 2.8-2.8C13.3 6.2 12 7.4 12 9Z"/>
+          <path d="M12 21c-1.7-1.1-2.6-2.6-2.6-4.4 1.7.3 2.6 1.6 2.6 4.4Z"/>
+        </svg>
+      </span>
+      <span class="dh-brand-text">Harvest<span class="dh-brand-accent">PH</span></span>
     </a>
     <button type="button"
             class="dh-icon-btn dh-sidebar-toggle"
@@ -19,7 +30,7 @@
         role="search"
         action="{% url 'global_search' %}"
         method="get"
-        style="flex:0 1 420px; margin-left:8px; margin-right:auto;">
+        style="flex:0 1 460px; margin-left:8px; margin-right:auto;">
     <button type="submit" class="dh-search-icon dh-search-submit" aria-label="Search" title="Search">
       <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
     </button>
@@ -32,17 +43,14 @@
            aria-label="Search farms, crops, activities, harvests, or revenue"
            enterkeyhint="search"
            autocomplete="off">
+
   </form>
 
-  <div class="dh-topbar-right" style="display:flex; align-items:center; gap:12px; margin-left:auto; flex-shrink:0;">
-    
-    <!-- Date Chip moved here, outside the dropdown -->
-    <div class="dh-page-head-actions" style="display:flex; justify-content:flex-start; align-items:center; gap:12px;">
-      <span class="dh-date-chip">
-        <i class="far fa-calendar" aria-hidden="true"></i>
-        {{ today|date:"M j, Y" }}
-      </span>
-    </div>
+  <div class="dh-topbar-right">
+    <span class="dh-date-chip">
+      <i class="far fa-calendar" aria-hidden="true"></i>
+      {% now "M j, Y" %}
+    </span>
 
     <!-- Notification Bell Dropdown -->
     <div class="dropdown dh-notifications-dropdown">

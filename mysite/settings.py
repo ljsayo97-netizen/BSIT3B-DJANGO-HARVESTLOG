@@ -155,6 +155,11 @@ WEATHER_GEOCODE_TIMEOUT = 10
 # Prefer results from this country when geocoding free-text farm locations.
 # Set to '' to accept the first geocoding match from any country.
 WEATHER_COUNTRY_CODE = 'PH'
+
+# Hierarchy-aware farm geocoding (OpenStreetMap Nominatim). Nominatim asks
+# clients to identify themselves and to stay at or below one request/second.
+GEOCODING_USER_AGENT = 'HarvestLog/1.0 (farm location lookup)'
+GEOCODING_MIN_INTERVAL_SECONDS = 1.0
 WEATHER_DEFAULT_LOCATION_NAME = 'Manila, Philippines'
 WEATHER_DEFAULT_LATITUDE = 14.5995
 WEATHER_DEFAULT_LONGITUDE = 120.9842

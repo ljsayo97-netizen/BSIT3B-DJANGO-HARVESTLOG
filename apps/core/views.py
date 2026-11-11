@@ -148,7 +148,11 @@ def logout_view(request):
 @login_required(login_url='login')
 def home(request):
     """Render the farm operations dashboard for the signed-in user."""
-    return render(request, 'home.html', build_dashboard_context(request.user))
+    return render(
+        request,
+        'home.html',
+        build_dashboard_context(request.user, year=request.GET.get('year')),
+    )
 
 
 @login_required(login_url='login')

@@ -106,10 +106,10 @@
                aria-label="Field revenue density map">
             <defs>
               <pattern id="ra-field-rows" width="14" height="14" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
-                <line x1="0" y1="0" x2="0" y2="14" stroke="rgba(255,255,255,0.16)" stroke-width="1"></line>
+                <line x1="0" y1="0" x2="0" y2="14" stroke="rgba(20,61,38,0.14)" stroke-width="1"></line>
               </pattern>
               <pattern id="ra-map-grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(148,163,184,0.10)" stroke-width="1"></path>
+                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(22,101,52,0.10)" stroke-width="1"></path>
               </pattern>
             </defs>
             <rect x="0" y="0" width="1000" height="{{ map_view_height }}" fill="url(#ra-map-grid)"></rect>
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function () {
         toolbar: { show: false },
         animations: { enabled: true }
       },
-      theme: { mode: 'dark' },
+      theme: { mode: 'light' },
       series: [{ name: 'Revenue / hectare', data: barData.series }],
       colors: barData.colors,
       plotOptions: {
@@ -633,28 +633,28 @@ document.addEventListener('DOMContentLoaded', function () {
         style: {
           fontSize: '10px',
           fontWeight: 700,
-          colors: ['#e2e8f0']
+          colors: ['#14261c']
         }
       },
       grid: {
-        borderColor: 'rgba(148, 163, 184, 0.14)',
+        borderColor: 'rgba(22, 101, 52, 0.12)',
         strokeDashArray: 4,
         padding: { top: 36, right: 12, left: 12 }
       },
       xaxis: {
         categories: barData.labels,
-        labels: { style: { colors: '#94a3b8', fontSize: '11px' } },
+        labels: { style: { colors: '#64786b', fontSize: '11px' } },
         axisBorder: { show: false },
         axisTicks: { show: false }
       },
       yaxis: {
         labels: {
-          style: { colors: '#64748b', fontSize: '10px' },
+          style: { colors: '#7b8f82', fontSize: '10px' },
           formatter: function (value) { return compactMoney(value); }
         }
       },
       tooltip: {
-        theme: 'dark',
+        theme: 'light',
         y: {
           formatter: function (value) { return money(value) + ' per hectare'; }
         }
@@ -674,12 +674,12 @@ document.addEventListener('DOMContentLoaded', function () {
         fontFamily: 'inherit',
         toolbar: { show: false }
       },
-      theme: { mode: 'dark' },
+      theme: { mode: 'light' },
       series: compositionData.series,
       labels: compositionData.labels,
       colors: compositionData.colors,
       stroke: {
-        colors: ['#0b1322'],
+        colors: ['#ffffff'],
         width: 3
       },
       plotOptions: {
@@ -690,12 +690,12 @@ document.addEventListener('DOMContentLoaded', function () {
               show: true,
               name: {
                 show: true,
-                color: '#94a3b8',
+                color: '#64786b',
                 fontSize: '11px'
               },
               value: {
                 show: true,
-                color: '#f1f5f9',
+                color: '#14261c',
                 fontSize: '19px',
                 fontWeight: 700,
                 formatter: function (value) { return compactMoney(value); }
@@ -703,7 +703,7 @@ document.addEventListener('DOMContentLoaded', function () {
               total: {
                 show: true,
                 label: 'Total Revenue',
-                color: '#94a3b8',
+                color: '#64786b',
                 fontSize: '11px',
                 formatter: function () { return compositionData.total_display; }
               }
@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function () {
       legend: { show: false },
       dataLabels: { enabled: false },
       tooltip: {
-        theme: 'dark',
+        theme: 'light',
         y: {
           formatter: function (value) { return money(value); }
         }
@@ -734,9 +734,9 @@ document.addEventListener('DOMContentLoaded', function () {
         fontFamily: 'inherit',
         toolbar: { show: false }
       },
-      theme: { mode: 'dark' },
+      theme: { mode: 'light' },
       series: [{ name: 'Revenue / hectare', data: quarterlyData.series }],
-      colors: ['#38bdf8'],
+      colors: ['#0284c7'],
       stroke: { curve: 'smooth', width: 3 },
       fill: {
         type: 'gradient',
@@ -753,24 +753,24 @@ document.addEventListener('DOMContentLoaded', function () {
         hover: { size: 6 }
       },
       grid: {
-        borderColor: 'rgba(148, 163, 184, 0.14)',
+        borderColor: 'rgba(22, 101, 52, 0.12)',
         strokeDashArray: 4,
         padding: { top: 10, right: 12, left: 12 }
       },
       xaxis: {
         categories: quarterlyData.labels,
-        labels: { style: { colors: '#94a3b8' } },
+        labels: { style: { colors: '#64786b' } },
         axisBorder: { show: false },
         axisTicks: { show: false }
       },
       yaxis: {
         labels: {
-          style: { colors: '#64748b', fontSize: '10px' },
+          style: { colors: '#7b8f82', fontSize: '10px' },
           formatter: function (value) { return compactMoney(value); }
         }
       },
       tooltip: {
-        theme: 'dark',
+        theme: 'light',
         y: {
           formatter: function (value) { return money(value) + ' per hectare'; }
         }
