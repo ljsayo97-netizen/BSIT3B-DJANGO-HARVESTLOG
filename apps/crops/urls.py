@@ -9,6 +9,8 @@ urlpatterns = [
     # AJAX
     path('ajax/list/', views.crop_list_ajax, name='crop_list_ajax'),
     path('ajax/get/<int:pk>/', views.crop_get_ajax, name='crop_get_ajax'),
+    path('ajax/detail/<int:pk>/', views.crop_detail_ajax, name='crop_detail_ajax'),
+    path('ajax/inventory/', views.crop_inventory_ajax, name='crop_inventory_ajax'),
     path('ajax/save/', views.crop_save_ajax, name='crop_save_ajax'),
     path('ajax/delete/<int:pk>/', views.crop_delete_ajax, name='crop_delete_ajax'),
 ]

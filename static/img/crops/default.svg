@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Crop placeholder">
+  <rect width="400" height="400" fill="#f0fdf4"/>
+  <circle cx="200" cy="196" r="132" fill="#dcfce7"/>
+  <path d="M200 312V176" stroke="#15803d" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <path d="M200 208c-58 0-94-32-100-98 64 4 98 38 100 98Z" fill="#22c55e"/>
+  <path d="M200 238c60-8 94-42 98-108-66 8-96 44-98 108Z" fill="#4ade80"/>
+  <path d="M200 312c34 0 62 10 84 30" stroke="#15803d" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.35"/>
+</svg>

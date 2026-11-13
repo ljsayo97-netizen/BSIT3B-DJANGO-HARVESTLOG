@@ -5,8 +5,10 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.templatetags.static import static
 from django.utils import timezone
 
+from .images import crop_image_path
 from .maturity import DEFAULT_MATURITY_DAYS, suggest_maturity_days
 
 
@@ -34,6 +36,13 @@ class Crop(models.Model):
         STANDARD = 'standard', 'Standard'
         FAIR = 'fair', 'Fair'
 
+    class Category(models.TextChoices):
+        """Broad crop groups used by the crop inventory filters."""
+        VEGETABLE = 'vegetable', 'Vegetables'
+        GRAIN = 'grain', 'Grains'
+        FRUIT = 'fruit', 'Fruits'
+        OTHER = 'other', 'Others'
+
     farm = models.ForeignKey(
         'farms.Farm',
         related_name='crops',
@@ -41,7 +50,30 @@ class Crop(models.Model):
         verbose_name='farm',
     )
     name = models.CharField('crop name', max_length=255)
+    category = models.CharField(
+        'category',
+        max_length=20,
+        choices=Category.choices,
+        default=Category.OTHER,
+        db_index=True,
+    )
     variety = models.CharField('variety', max_length=255, blank=True)
+    image = models.ImageField(
+        'crop photo',
+        upload_to='crops/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Photo shown on the crop inventory card.',
+    )
+    estimated_yield = models.DecimalField(
+        'estimated yield (tons per hectare)',
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text='Expected production in tons per hectare.',
+    )
     planting_date = models.DateField('planting date', default=timezone.localdate)
     days_to_maturity = models.PositiveIntegerField(
         'days to maturity',
@@ -189,3 +221,28 @@ class Crop(models.Model):
         if days > 0:
             return f'In {days} days'
         return f'{abs(days)} day{"s" if abs(days) != 1 else ""} overdue'
+
+    @property
+    def display_image_url(self):
+        """The uploaded crop photo, or the matching stock photo/placeholder."""
+        if self.image:
+            try:
+                return self.image.url
+            except ValueError:
+                pass
+        return static(crop_image_path(self.name))
+
+    @property
+    def harvest_progress(self):
+        """Percentage of the planting-to-harvest window that has elapsed."""
+        if self.actual_harvest_date or self.status == self.Status.HARVESTED:
+            return 100
+        if not self.planting_date or not self.expected_harvest_date:
+            return 0
+
+        total_days = (self.expected_harvest_date - self.planting_date).days
+        if total_days <= 0:
+            return 100 if timezone.localdate() >= self.expected_harvest_date else 0
+
+        elapsed_days = (timezone.localdate() - self.planting_date).days
+        return max(0, min(100, round(elapsed_days / total_days * 100)))

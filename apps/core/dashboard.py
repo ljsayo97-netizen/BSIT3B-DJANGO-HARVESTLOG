@@ -710,7 +710,7 @@ def build_dashboard_context(user, year=None):
     total_revenue = float(total_revenue_val)
     total_revenue_display = f'₱{total_revenue:,.2f}'
 
-    # Farm distribution top crops breakdown (for donut chart), including the
+    # Farm distribution top crops breakdown (for the bar chart), including the
     # amount recorded as damaged so produce loss appears in the distribution.
     damaged_rows = list(
         year_harvests.exclude(damaged_quantity=None).values_list('damaged_quantity', 'unit')
@@ -780,11 +780,21 @@ def build_dashboard_context(user, year=None):
         farm_distribution_colors = []
         farm_distribution_items = []
 
+    # Shared unit for the distribution chart labels; blank when the recorded
+    # harvests mix units (each item then carries its own unit).
+    distribution_units = sorted({
+        str(item['unit']).strip()
+        for item in farm_distribution_items
+        if item.get('unit') and str(item['unit']).strip()
+    })
+    distribution_unit = distribution_units[0] if len(distribution_units) == 1 else ''
+
     farm_distribution_data = {
         'labels': farm_distribution_labels,
         'series': farm_distribution_series,
         'colors': farm_distribution_colors,
         'items': farm_distribution_items,
+        'unit': distribution_unit,
         'total_farms': farm_count or 5,
         'has_damage': damaged_amount > 0,
         'damaged_quantity': round(damaged_amount, 2),

@@ -54,7 +54,7 @@
             <span class="dh-nav-label">Harvest Calendar</span>
           </a>
         </li> {% endcomment %}
-                <li>
+                {% comment %} <li>
           <a class="dh-nav-link {% if request.resolver_match.app_name == 'activities' %}is-active{% endif %}"
              href="{% url 'activities:activity_list' %}"
              data-tooltip="Activity Schedule"
@@ -63,7 +63,7 @@
             <i class="fas fa-calendar-days" aria-hidden="true"></i>
             <span class="dh-nav-label">Activity Schedule</span>
           </a>
-        </li>
+        </li> {% endcomment %}
         <li>
           <a class="dh-nav-link {% if request.resolver_match.app_name == 'revenue' and request.resolver_match.url_name != 'revenue_analytics' %}is-active{% endif %}"
              href="{% url 'revenue:revenue_list' %}"
@@ -74,7 +74,7 @@
             <span class="dh-nav-label">Revenue</span>
           </a>
         </li>
-        {% comment %} <li>
+        <li>
           <a class="dh-nav-link {% if request.resolver_match.url_name == 'revenue_analytics' %}is-active{% endif %}"
              href="{% url 'revenue:revenue_analytics' %}"
              data-tooltip="Revenue Analytics"
@@ -84,6 +84,7 @@
             <span class="dh-nav-label">Revenue Analytics</span>
           </a>
         </li>
+        {% comment %} 
         <li>
           <a class="dh-nav-link {% if request.resolver_match.app_name == 'reports' %}is-active{% endif %}"
              href="{% url 'reports:farm_progress' %}"

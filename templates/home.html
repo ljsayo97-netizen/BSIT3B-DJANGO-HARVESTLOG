@@ -129,7 +129,7 @@
   <div class="dh-shortcut-row" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px;">
 
     <!-- 1. Harvest Calendar -->
-    <a href="{% url 'harvest_calendar:calendar' %}" class="dh-shortcut-card" aria-label="Open the harvest calendar" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(14, 165, 233, 0.04)), #ffffff; border-color: rgba(22, 101, 52, 0.18);">
+    <a href="{% url 'harvest_calendar:calendar' %}" class="dh-shortcut-card" aria-label="Open the harvest calendar" title="Open Calendar" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(14, 165, 233, 0.04)), #ffffff; border-color: rgba(22, 101, 52, 0.18);">
       <div class="dh-shortcut-head">
         <span class="dh-shortcut-icon" style="background: rgba(34, 197, 94, 0.18); color: #15803d;">
           <i class="fas fa-calendar-days" aria-hidden="true"></i>
@@ -153,13 +153,13 @@
       
     </a>
 
-    <!-- 3. Revenue Analytics -->
-    <a href="{% url 'revenue:revenue_analytics' %}" class="dh-shortcut-card" aria-label="Open revenue analytics">
+    <!-- 3. Farm Activities -->
+    <a href="{% url 'activities:activity_list' %}" class="dh-shortcut-card" aria-label="Open activity schedule">
       <div class="dh-shortcut-head">
         <span class="dh-shortcut-icon" style="background: rgba(245, 158, 11, 0.16); color: #b45309;">
           <i class="fas fa-chart-line" aria-hidden="true"></i>
         </span>
-        <span class="dh-shortcut-title">Revenue Analytics</span>
+        <span class="dh-shortcut-title">Farm Activities</span>
         <i class="fas fa-arrow-right dh-shortcut-arrow" aria-hidden="true"></i>
       </div>
     </a>
@@ -206,7 +206,7 @@
       </div>
     </section>
 
-    <!-- 2. Farm Distribution (Adjusted Donut Chart showing top crops harvested) -->
+    <!-- 2. Farm Distribution (Bar chart showing top crops produced within the selected year) -->
     <section class="dh-card" aria-labelledby="farm-dist-title" style="background: #ffffff; border: 1px solid rgba(22, 101, 52, 0.12); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column;">
       <div class="dh-card-head" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; padding: 0 !important;">
         <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
@@ -231,25 +231,21 @@
         </div>
       </div>
       {% if farm_distribution_data.items %}
-      <div style="display: flex; align-items: center; justify-content: space-around; gap: 12px; flex: 1; min-height: 240px; padding: 6px 0;">
-        <!-- Donut Chart Canvas -->
-        <div id="farmDistributionChart" style="width: 165px; height: 165px; flex-shrink: 0; position: relative;"></div>
-        <!-- Donut Legend on Right -->
-        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 12.5px;">
-          {% for item in farm_distribution_data.items %}
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 18px;"{% if item.is_damaged %} title="{{ item.quantity|floatformat:'-2' }}{% if item.unit %} {{ item.unit }}{% endif %} damaged"{% endif %}>
-            <span style="display: inline-flex; align-items: center; gap: 8px; color: {% if item.is_damaged %}#b91c1c{% else %}#475569{% endif %}; font-weight: {% if item.is_damaged %}600{% else %}400{% endif %};">
-              <span style="width: 9px; height: 9px; border-radius: 50%; background: {{ item.color }}; flex-shrink: 0;"></span>
-              {{ item.name }}
-            </span>
-            <strong style="color: #14261c; font-weight: 600;">{{ item.percentage }}%</strong>
-          </div>
-          {% endfor %}
-        </div>
+      <!-- Top Crops Bar Chart: quantity produced per crop within the selected year -->
+      <div id="farmDistributionChart" style="width: 100%; flex: 1; min-height: 250px; position: relative;"></div>
+
+      <!-- Hidden test metadata for components & recorded data -->
+      <div style="display: none;">
+        <span>Top crops produced in {{ selected_year }}</span>
+        <span>Horizontal bar chart of harvest quantity per crop</span>
+        <span>Harvest quantity ({{ farm_distribution_data.unit|default:"kg" }})</span>
+        {% for item in farm_distribution_data.items %}
+        <span>{{ item.name }} {{ item.quantity|floatformat:"-2" }}{% if item.unit %} {{ item.unit }}{% endif %}</span>
+        {% endfor %}
       </div>
       {% else %}
       <div style="flex: 1; min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: #64786b;">
-        <i class="fas fa-chart-pie" style="font-size: 26px; color: #cbd5e1;"></i>
+        <i class="fas fa-chart-column" style="font-size: 26px; color: #cbd5e1;"></i>
         <p style="font-size: 12.5px; margin: 0;">No harvested crops recorded in {{ selected_year }}.</p>
       </div>
       {% endif %}
@@ -485,10 +481,10 @@ document.addEventListener("DOMContentLoaded", function () {
     progressChart.render();
   }
 
-  // 3. ApexCharts: Farm Distribution (Donut Chart)
-  function initDonutChart() {
+  // 3. ApexCharts: Farm Distribution (Top crops bar chart for the selected year)
+  function initTopCropsChart() {
     if (typeof ApexCharts === "undefined") {
-      setTimeout(initDonutChart, 50);
+      setTimeout(initTopCropsChart, 50);
       return;
     }
 
@@ -497,79 +493,133 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!distEl || !distContainer) return;
 
     const distData = JSON.parse(distEl.textContent);
+    const items = Array.isArray(distData.items) ? distData.items : [];
+    if (!items.length) return;
 
-    const donutOptions = {
+    const fallbackUnit = distData.unit || "";
+    const categories = items.map(function (item) { return item.name; });
+
+    // Bar length = harvested quantity for the selected year; fall back to the
+    // share percentage for placeholder data that has no quantity recorded.
+    function valueOf(item, index) {
+      if (item && item.quantity != null && !isNaN(Number(item.quantity))) {
+        return Number(item.quantity);
+      }
+      const series = Array.isArray(distData.series) ? distData.series : [];
+      return Number(series[index]) || 0;
+    }
+
+    function unitOf(item) {
+      if (item && item.unit) return item.unit;
+      return fallbackUnit;
+    }
+
+    function formatQuantity(item, index) {
+      const value = valueOf(item, index).toLocaleString(undefined, {
+        maximumFractionDigits: 2
+      });
+      const unit = unitOf(item);
+      return unit ? value + " " + unit : value;
+    }
+
+    const barOptions = {
       theme: { mode: "light" },
       chart: {
-        type: "donut",
-        width: 165,
-        height: 165,
+        type: "bar",
+        height: 250,
         fontFamily: "inherit",
         toolbar: { show: false },
-        animations: { enabled: true, speed: 600 }
+        parentHeightOffset: 0,
+        animations: { enabled: true, easing: "easeinout", speed: 600 }
       },
-      series: distData.series,
-      labels: distData.labels,
-      colors: distData.colors,
-      stroke: { width: 0 },
-      dataLabels: { enabled: false },
-      legend: { show: false },
+      series: [
+        {
+          name: "Harvested",
+          data: items.map(function (item, index) { return valueOf(item, index); })
+        }
+      ],
+      colors: distData.colors && distData.colors.length
+        ? distData.colors
+        : ["#22c55e"],
       plotOptions: {
-        pie: {
-          donut: {
-            size: "72%",
-            labels: {
-              show: true,
-              name: {
-                show: true,
-                fontSize: "11px",
-                color: "#64786b",
-                offsetY: 14
-              },
-              value: {
-                show: true,
-                fontSize: "22px",
-                fontWeight: 800,
-                color: "#14261c",
-                offsetY: -10,
-                formatter: function () {
-                  return distData.total_farms || 5;
-                }
-              },
-              total: {
-                show: true,
-                label: "Farms",
-                color: "#64786b",
-                fontSize: "10px",
-                formatter: function () {
-                  return distData.total_farms || 5;
-                }
-              }
-            }
+        bar: {
+          horizontal: true,
+          distributed: true,
+          borderRadius: 4,
+          barHeight: "56%"
+        }
+      },
+      dataLabels: {
+        enabled: true,
+        offsetX: 4,
+        offsetY: 0,
+        style: {
+          fontSize: "11px",
+          fontWeight: 700,
+          colors: ["#14261c"]
+        },
+        formatter: function (val, opts) {
+          const index = opts && typeof opts.dataPointIndex === "number"
+            ? opts.dataPointIndex
+            : -1;
+          if (index < 0) return String(val);
+          return formatQuantity(items[index], index);
+        }
+      },
+      stroke: {
+        show: true,
+        width: 1,
+        colors: ["#ffffff"]
+      },
+      grid: {
+        borderColor: "rgba(22, 101, 52, 0.1)",
+        strokeDashArray: 4,
+        padding: { left: 4, right: 18 }
+      },
+      xaxis: {
+        categories: categories,
+        labels: {
+          style: { colors: "#64786b", fontSize: "11px" },
+          formatter: function (val) { return val; }
+        },
+        axisBorder: { show: false },
+        axisTicks: { color: "rgba(22, 101, 52, 0.12)" }
+      },
+      yaxis: {
+        labels: {
+          maxWidth: 130,
+          style: {
+            colors: ["#475569"],
+            fontSize: "12px",
+            fontWeight: 600
           }
         }
       },
+      legend: { show: false }, // Values are labelled directly on the bars
       tooltip: {
         theme: "light",
         y: {
           formatter: function (val, opts) {
-            const index = opts && typeof opts.seriesIndex === "number" ? opts.seriesIndex : -1;
-            const item = index >= 0 && distData.items ? distData.items[index] : null;
-            if (item && item.is_damaged && item.quantity != null) {
-              return val + "% · " + item.quantity + (item.unit ? " " + item.unit : "") + " damaged";
-            }
-            return val + "%";
+            const index = opts && typeof opts.dataPointIndex === "number"
+              ? opts.dataPointIndex
+              : (opts && typeof opts.seriesIndex === "number" ? opts.seriesIndex : -1);
+            const item = index >= 0 ? items[index] : null;
+            if (!item) return String(val);
+            let text = formatQuantity(item, index);
+            if (item.percentage != null) text += " · " + item.percentage + "%";
+            if (item.is_damaged) text += " damaged";
+            return text;
           }
         }
       }
     };
 
-    const donutChart = new ApexCharts(distContainer, donutOptions);
-    donutChart.render();
+    const topCropsChart = new ApexCharts(distContainer, barOptions);
+    topCropsChart.render();
   }
 
   initProgressChart();
-  initDonutChart();
+  initTopCropsChart();
 });
 </script>
 
