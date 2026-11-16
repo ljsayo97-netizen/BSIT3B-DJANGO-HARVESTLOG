@@ -15,14 +15,30 @@ from django.views.decorators.http import require_POST
 from apps.farms.models import Farm
 from apps.harvests.models import Harvest
 from apps.harvests.services import evaluate_crop
+from .catalog import (
+    CROP_CATALOG,
+    catalog_group_sort_key,
+    catalog_stats,
+)
 from .categories import CATEGORY_RULES, infer_category
-from .images import CROP_IMAGE_FALLBACK, CROP_IMAGE_RULES, crop_image_path
+from .image_service import get_search_keyword, save_image_from_url, search_crop_images
+from .images import (
+    CROP_IMAGE_FALLBACK,
+    CROP_IMAGE_RULES,
+    crop_image_path,
+    is_verified_local_crop_image,
+)
 from .maturity import (
     CROP_MATURITY_DAYS,
     DEFAULT_MATURITY_DAYS,
     suggest_maturity_days,
 )
-from .models import Crop
+from .models import Crop, CropDefaultImage
+from .variety_service import (
+    HARVEST_DATE_DISCLAIMER,
+    calculate_harvest_date,
+    search_varieties,
+)
 
 
 def _parse_decimal(raw_value):
@@ -32,6 +48,71 @@ def _parse_decimal(raw_value):
     except (TypeError, ValueError):
         return None
     return value
+
+
+def _catalog_entries():
+    """Return the full crop catalog with resolved image URLs for the UI."""
+    entries = []
+    for entry in sorted(CROP_CATALOG, key=catalog_group_sort_key):
+        image = entry.get('image')
+        image_url = (
+            static(f'img/crops/{image}')
+            if image else static(CROP_IMAGE_FALLBACK)
+        )
+        entries.append({
+            **entry,
+            'image_url': image_url,
+        })
+    return entries
+
+
+def _save_default_crop_image(user, crop_name, image_name):
+    """Remember the latest uploaded photo for a crop name."""
+    record = CropDefaultImage.objects.filter(
+        user=user, crop_name__iexact=crop_name
+    ).first()
+    if record:
+        if record.image_path != image_name or record.crop_name != crop_name:
+            record.crop_name = crop_name
+            record.image_path = image_name
+            record.save(update_fields=['crop_name', 'image_path'])
+        return record
+    return CropDefaultImage.objects.create(
+        user=user,
+        crop_name=crop_name,
+        image_path=image_name,
+    )
+
+
+def _user_uploaded_photos(user, crop_name):
+    """Return the user's saved photos for a crop name, newest first."""
+    photos = []
+    records = CropDefaultImage.objects.filter(
+        user=user, crop_name__iexact=crop_name
+    ).order_by('-created_at')
+    for record in records:
+        try:
+            exists = default_storage.exists(record.image_path)
+        except Exception:
+            exists = False
+        if not exists:
+            record.delete()
+            continue
+        url = default_storage.url(record.image_path)
+        photos.append({
+            'id': f'user-{record.pk}',
+            'title': f'{crop_name} (your uploaded photo)',
+            'thumb_url': url,
+            'preview_url': url,
+            'download_url': url,
+            'source': 'Your uploaded photo',
+            'photographer': getattr(user, 'get_username', lambda: 'You')(),
+            'photographer_url': '',
+            'alt': f'Your uploaded photo of {crop_name}',
+            'verified': True,
+            'is_user_upload': True,
+        })
+    return photos
 
 
 MAX_CROP_IMAGE_BYTES = 5 * 1024 * 1024
@@ -82,6 +163,9 @@ def _crop_json(crop):
         'quality': crop.quality,
         'quality_display': crop.get_quality_display(),
         'area_hectares': float(crop.area_hectares),
+        'soil_type': crop.soil_type,
+        'reference_source': crop.reference_source,
+        'reference_url': crop.reference_url,
         'notes': crop.notes,
         'days_since_planting': crop.days_since_planting,
         'days_to_harvest': crop.days_to_harvest,
@@ -202,6 +286,9 @@ def crop_list_page(request):
         'crop_image_rules': crop_image_rules,
         'crop_image_fallback': static(CROP_IMAGE_FALLBACK),
         'category_rules': category_rules,
+        'catalog_entries': _catalog_entries(),
+        'catalog_total': len(CROP_CATALOG),
+        'catalog_stats': catalog_stats(),
     })
 
 
@@ -364,8 +451,10 @@ def crop_detail_ajax(request, pk):
         'growth_stage': crop.maturity_label,
         'harvest_season': crop.harvest_season or '',
         'harvest_progress': crop.harvest_progress,
-        'soil_type': None,
+        'soil_type': crop.soil_type or None,
         'irrigation': None,
+        'reference_source': crop.reference_source or '',
+        'reference_url': crop.reference_url or '',
         'total_harvested': [
             {'quantity': round(quantity, 2), 'unit': unit}
             for unit, quantity in sorted(total_by_unit.items())
@@ -438,10 +527,87 @@ def crop_inventory_ajax(request):
 
 
 @login_required(login_url='login')
+def crop_calculate_harvest_ajax(request):
+    """Return the system-assigned harvest date for the crop form."""
+    planting_date = parse_date(request.GET.get('planting_date', '').strip())
+    try:
+        days_to_maturity = int(request.GET.get('days_to_maturity', '').strip())
+    except (TypeError, ValueError):
+        days_to_maturity = None
+
+    if not planting_date or not days_to_maturity or days_to_maturity < 1:
+        return JsonResponse(
+            {'error': 'Enter a valid planting date and days to maturity.'},
+            status=400,
+        )
+
+    expected = calculate_harvest_date(planting_date, days_to_maturity)
+    return JsonResponse({
+        'expected_harvest_date': expected.isoformat(),
+        'expected_harvest_date_formatted': expected.strftime('%b %d, %Y'),
+        'days_to_maturity': days_to_maturity,
+        'disclaimer': HARVEST_DATE_DISCLAIMER,
+    })
+
+
+@login_required(login_url='login')
+def crop_varieties_ajax(request):
+    """Return verified Philippine varieties for a crop name."""
+    crop_name = request.GET.get('crop_name', '').strip()
+    varieties = search_varieties(crop_name) if crop_name else []
+    return JsonResponse({
+        'crop_name': crop_name.title() if crop_name else '',
+        'varieties': varieties,
+        'disclaimer': HARVEST_DATE_DISCLAIMER,
+    })
+
+
+@login_required(login_url='login')
+def crop_search_images_ajax(request):
+    """Return a crop's saved upload first, then verified catalog photos."""
+    crop_name = request.GET.get('q', '').strip()
+    if not crop_name:
+        return JsonResponse(
+            {'error': 'Enter a crop name to search for photos.'},
+            status=400,
+        )
+
+    user_photos = _user_uploaded_photos(request.user, crop_name)
+    if user_photos:
+        return JsonResponse({
+            'keyword': get_search_keyword(crop_name),
+            'photos': user_photos,
+            'has_user_upload': True,
+            'sources': {},
+        })
+
+    data = search_crop_images(crop_name)
+    data['has_user_upload'] = False
+    return JsonResponse(data)
+
+
+@login_required(login_url='login')
+@require_POST
+def crop_user_prior_image_ajax(request):
+    """Return the user's saved photo for a crop name, if it still exists."""
+    crop_name = request.POST.get('crop_name', '').strip()
+    photos = _user_uploaded_photos(request.user, crop_name) if crop_name else []
+    if photos:
+        return JsonResponse({
+            'has_prior_image': True,
+            'image_url': photos[0]['preview_url'],
+        })
+    return JsonResponse({'has_prior_image': False, 'image_url': ''})
+
+
+@login_required(login_url='login')
 @require_POST
 def crop_save_ajax(request):
     """Validate and create or update a crop, returning its data as JSON."""
-    crop_id = request.POST.get('id', '').strip()
+    crop_id = (
+        request.POST.get('id', '').strip()
+        or request.POST.get('crop_id', '').strip()
+    )
 
     if crop_id:
         crop = get_object_or_404(Crop, pk=crop_id, user=request.user)
@@ -461,6 +627,10 @@ def crop_save_ajax(request):
     area_raw = request.POST.get('area_hectares', '').strip()
     estimated_yield_raw = request.POST.get('estimated_yield', '').strip()
     description = request.POST.get('description', '').strip()
+    soil_type = request.POST.get('soil_type', '').strip()
+    reference_source = request.POST.get('reference_source', '').strip()
+    reference_url = request.POST.get('reference_url', '').strip()
+    selected_image_url = request.POST.get('selected_image_url', '').strip()
     crop_image = request.FILES.get('image')
     remove_image = request.POST.get('remove_image') == '1'
     old_image_name = crop.image.name if crop.image else None
@@ -551,6 +721,20 @@ def crop_save_ajax(request):
         if image_error:
             return JsonResponse({'error': image_error}, status=400)
 
+    image_assigned = False
+    if crop_image:
+        crop.image = crop_image
+        image_assigned = True
+    elif remove_image:
+        crop.image = None
+    elif selected_image_url and is_verified_local_crop_image(selected_image_url, name):
+        current_url = crop.image.url if crop.image else ''
+        if selected_image_url != current_url:
+            saved_path = save_image_from_url(selected_image_url, name)
+            if saved_path:
+                crop.image.name = saved_path
+                image_assigned = True
+
     crop.farm = farm
     crop.name = name
     crop.category = category or crop.category or Crop.Category.OTHER
@@ -561,11 +745,12 @@ def crop_save_ajax(request):
     crop.estimated_yield = estimated_yield
     if 'description' in request.POST:
         crop.notes = description
-
-    if crop_image:
-        crop.image = crop_image
-    elif remove_image:
-        crop.image = None
+    if 'soil_type' in request.POST:
+        crop.soil_type = soil_type
+    if 'reference_source' in request.POST:
+        crop.reference_source = reference_source
+    if 'reference_url' in request.POST:
+        crop.reference_url = reference_url
 
     try:
         crop.save()
@@ -576,8 +761,20 @@ def crop_save_ajax(request):
         )
 
     new_image_name = crop.image.name if crop.image else None
+    if new_image_name and image_assigned:
+        _save_default_crop_image(request.user, name, new_image_name)
+    if remove_image:
+        # Removing the photo is explicit: forget the saved default too, so the
+        # crop falls back to its catalog image.
+        CropDefaultImage.objects.filter(
+            user=request.user, crop_name__iexact=name
+        ).delete()
     if old_image_name and old_image_name != new_image_name:
-        default_storage.delete(old_image_name)
+        still_referenced = CropDefaultImage.objects.filter(
+            image_path=old_image_name
+        ).exists()
+        if not still_referenced:
+            default_storage.delete(old_image_name)
 
     # Evaluate readiness immediately so a crop that is already mature gets a
     # notification the moment it is added or edited.
@@ -627,8 +824,13 @@ def crop_delete_ajax(request, pk):
     crop = get_object_or_404(Crop, pk=pk, user=request.user)
     crop_name = str(crop)
     image_name = crop.image.name if crop.image else None
+    # A saved default image may still be used by a re-added crop, so only
+    # delete the file when nothing else references it.
+    keep_image = bool(image_name) and CropDefaultImage.objects.filter(
+        image_path=image_name
+    ).exists()
     crop.delete()
-    if image_name:
+    if image_name and not keep_image:
         default_storage.delete(image_name)
     messages.success(request, f'Crop "{crop_name}" has been deleted successfully.')
     return JsonResponse({

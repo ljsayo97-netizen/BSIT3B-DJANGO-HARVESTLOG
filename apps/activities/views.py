@@ -16,7 +16,7 @@ from apps.crops.models import Crop
 from apps.farms.models import Farm
 
 from .models import FarmActivity
-from .services import get_activities, get_attention_activities, get_activity_notifications
+from .services import get_activities, get_attention_activities
 
 
 ACTIVITY_SORT_FIELDS = {
@@ -185,9 +185,6 @@ def activity_list_page(request):
         ),
     )
 
-    # Activity notifications data for toast alerts
-    activity_notifications = get_activity_notifications(request.user)
-
     paginator = Paginator(activities_list, 10)
     activities = paginator.get_page(request.GET.get('page', 1))
 
@@ -202,7 +199,6 @@ def activity_list_page(request):
         'location_suggestions': location_suggestions,
         'summary': summary,
         'attention_activities': get_attention_activities(request.user),
-        'activity_notifications': activity_notifications,
         'activity_type_choices': FarmActivity.ActivityType.choices,
         'priority_choices': FarmActivity.Priority.choices,
         'status_choices': FarmActivity.Status.choices,

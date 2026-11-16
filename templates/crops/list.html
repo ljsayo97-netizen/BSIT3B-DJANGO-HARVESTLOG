@@ -191,6 +191,128 @@
     color: #7b8f82;
     font-weight: 500;
   }
+  .crop-card-hit {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    cursor: pointer;
+    text-align: left;
+    outline: none;
+  }
+  .crop-card:focus-within {
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+  }
+
+  /* Full crop catalog ------------------------------------------------------ */
+  .crop-catalog-panel {
+    background: #fff;
+    border: 1px solid var(--crop-line);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 1px 2px rgba(20, 61, 38, .03);
+  }
+  .crop-catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 10px;
+    max-height: 640px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .crop-catalog-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 0;
+    border: 1px solid #e2eee5;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+    text-align: left;
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+  .crop-catalog-card:hover {
+    transform: translateY(-2px);
+    border-color: #bbf7d0;
+    box-shadow: 0 12px 24px -20px rgba(20, 61, 38, .45);
+  }
+  .crop-catalog-img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+    background: #f0fdf4;
+  }
+  .crop-catalog-name {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--crop-ink);
+    padding: 0 8px;
+    line-height: 1.2;
+  }
+  .crop-catalog-meta {
+    font-size: .65rem;
+    color: #7b8f82;
+    padding: 0 8px 8px;
+    line-height: 1.25;
+  }
+  .crop-photo-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .crop-photo-option {
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden;
+    background: #f0fdf4;
+  }
+  .crop-photo-option img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+  }
+  .crop-photo-option.is-selected {
+    border-color: #22c55e;
+  }
+
+  /* Farm details ----------------------------------------------------------- */
+  .crop-farm-panel {
+    background: #fff;
+    border: 1px solid var(--crop-line);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 1px 2px rgba(20, 61, 38, .03);
+  }
+  .crop-farm-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 0;
+    border: 0;
+    border-bottom: 1px solid #eef4ef;
+    background: transparent;
+    text-align: left;
+  }
+  .crop-farm-row:last-child {
+    border-bottom: 0;
+  }
+  .crop-farm-thumb {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #f0fdf4;
+  }
+
   .crop-empty-state {
     background: #fff;
     border: 1px dashed #cfe3d5;
@@ -522,6 +644,174 @@
     </div>
   </div>
 
+  <section class="crop-catalog-panel mb-3" id="cropCatalogBrowser" aria-labelledby="cropCatalogHeading">
+    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+      <div>
+        <div class="page-pretitle">Complete catalog</div>
+        <h2 class="h4 mb-1" id="cropCatalogHeading">Crop Catalog <span class="badge bg-success-lt text-success ms-1">{{ catalog_total }} crops</span></h2>
+        <p class="crop-page-sub mb-0">All {{ catalog_total }} crops with their photos — rice types &amp; grains, vegetables, leafy greens &amp; herbs, legumes, root crops, fruits, nuts, and industrial crops.</p>
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="input-group input-group-sm" style="min-width: 220px;">
+          <span class="input-group-text bg-white"><i class="fas fa-magnifying-glass text-muted"></i></span>
+          <input type="search" class="form-control" id="cropCatalogSearch" placeholder="Find any of the 162 crops..." autocomplete="off">
+        </div>
+        <select class="form-select form-select-sm" id="cropCatalogGroupFilter" style="min-width: 180px;">
+          <option value="">All crop groups</option>
+          <option value="rice types">Rice types</option>
+          <option value="cereals & grains">Cereals &amp; grains</option>
+          <option value="vegetables">Vegetables</option>
+          <option value="leafy greens & herbs">Leafy greens &amp; herbs</option>
+          <option value="legumes">Legumes</option>
+          <option value="root crops">Root crops</option>
+          <option value="fruits">Fruits</option>
+          <option value="nuts">Nuts</option>
+          <option value="industrial & other crops">Industrial &amp; other crops</option>
+        </select>
+      </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+      <div class="small text-muted">Click a crop to add it to your inventory with its photo.</div>
+      <div class="small text-muted" id="cropCatalogVisibleCount">Showing {{ catalog_total }} crops</div>
+    </div>
+    <div class="crop-catalog-grid" id="cropCatalogGrid">
+      {% for entry in catalog_entries %}
+      <div class="crop-catalog-col"
+           data-catalog-name="{{ entry.name|lower }}"
+           data-catalog-aliases="{{ entry.aliases|join:' '|lower }}"
+           data-catalog-group="{{ entry.group|lower }}"
+           data-catalog-category="{{ entry.category }}">
+        <button type="button"
+                class="crop-catalog-card"
+                data-catalog-pick="{{ entry.name }}"
+                data-catalog-category="{{ entry.category }}"
+                data-catalog-days="{{ entry.days_to_maturity }}"
+                data-catalog-image="{{ entry.image_url }}"
+                title="Add {{ entry.name }} to your inventory">
+          <img src="{{ entry.image_url }}" alt="{{ entry.photo_alt }}" class="crop-catalog-img" loading="lazy">
+          <span class="crop-catalog-name">{{ entry.name }}</span>
+          <span class="crop-catalog-meta">{{ entry.group }} · {{ entry.days_to_maturity }} days</span>
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="crop-empty-state d-none mt-3" id="cropCatalogEmpty">
+      <div class="crop-empty-icon"><i class="fas fa-seedling"></i></div>
+      <h3 class="h6 mb-1">No catalog crops match your search</h3>
+      <p class="text-muted mb-0">Try a Filipino name, an English name, or a crop group.</p>
+    </div>
+  </section>
+
+  <section class="crop-farm-panel mb-3" id="cropFarmPanel" aria-labelledby="cropFarmPanelHeading">
+    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+      <div>
+        <div class="page-pretitle">Farm overview</div>
+        <h2 class="h4 mb-1" id="cropFarmPanelHeading">
+          {% if selected_farm %}Farm Details{% else %}Select a farm{% endif %}
+        </h2>
+        {% if selected_farm %}
+        <div class="text-muted small">{{ selected_farm.name }} · {{ selected_farm.location }}</div>
+        {% else %}
+        <div class="text-muted small">Choose a farm to see its details, current crops, and crop history.</div>
+        {% endif %}
+      </div>
+      <form method="get" class="d-flex align-items-center gap-2 flex-wrap">
+        {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+        {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+        {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+        <select name="farm_detail" class="form-select form-select-sm" style="min-width: 210px;" aria-label="Select a farm">
+          <option value="">Choose a farm</option>
+          {% for farm in farms %}
+          <option value="{{ farm.id }}" {% if farm_detail_id == farm.id|stringformat:"s" %}selected{% endif %}>{{ farm.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-secondary">View farm</button>
+      </form>
+    </div>
+
+    {% if selected_farm %}
+    <div class="row g-3 mt-1">
+      <div class="col-6 col-lg-3">
+        <div class="crop-kpi">
+          <span class="crop-kpi-icon"><i class="fas fa-user-tie"></i></span>
+          <div>
+            <div class="crop-kpi-value" style="font-size: .95rem;">{{ selected_farm.owner|default:"—" }}</div>
+            <div class="crop-kpi-label">Owner / manager</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="crop-kpi">
+          <span class="crop-kpi-icon"><i class="fas fa-ruler-combined"></i></span>
+          <div>
+            <div class="crop-kpi-value">{{ selected_farm.size_hectares }} ha</div>
+            <div class="crop-kpi-label">Farm size</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="crop-kpi">
+          <span class="crop-kpi-icon"><i class="fas fa-circle-check"></i></span>
+          <div>
+            <div class="crop-kpi-value" style="font-size: .95rem;">{{ selected_farm.get_status_display }}</div>
+            <div class="crop-kpi-label">Status</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="crop-kpi">
+          <span class="crop-kpi-icon"><i class="fas fa-calendar-days"></i></span>
+          <div>
+            <div class="crop-kpi-value" style="font-size: .95rem;">{{ selected_farm.date_registered|date:"M d, Y" }}</div>
+            <div class="crop-kpi-label">Registered</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-xl-6">
+        <h3 class="h6 mb-2">Current Crops</h3>
+        {% for crop in farm_crops %}
+        <button type="button"
+                class="crop-farm-row"
+                data-open-crop="{{ crop.id }}"
+                title="View details for {{ crop.name }}">
+          <img src="{{ crop.display_image_url }}" alt="{{ crop.name }}" class="crop-farm-thumb" loading="lazy">
+          <span class="flex-grow-1 min-w-0">
+            <span class="fw-semibold">{{ crop.name }}</span>
+            <span class="d-block small text-muted">{{ crop.variety|default:"No variety" }} · {{ crop.area_hectares }} ha · {{ crop.get_status_display }}</span>
+          </span>
+          <i class="fas fa-chevron-right text-muted small"></i>
+        </button>
+        {% empty %}
+        <div class="crop-empty-mini">No active crops on this farm yet.</div>
+        {% endfor %}
+      </div>
+      <div class="col-12 col-xl-6">
+        <h3 class="h6 mb-2">Crop History</h3>
+        {% for crop in farm_history %}
+        <button type="button"
+                class="crop-farm-row"
+                data-open-crop="{{ crop.id }}"
+                title="View details for {{ crop.name }}">
+          <img src="{{ crop.display_image_url }}" alt="{{ crop.name }}" class="crop-farm-thumb" loading="lazy">
+          <span class="flex-grow-1 min-w-0">
+            <span class="fw-semibold">{{ crop.name }}</span>
+            <span class="d-block small text-muted">{{ crop.get_status_display }} · {{ crop.area_hectares }} ha{% if crop.expected_harvest_date %} · {{ crop.expected_harvest_date|date:"M d, Y" }}{% endif %}</span>
+          </span>
+          {% if crop.latest_quality %}
+          <span class="badge bg-success-lt text-success">{{ crop.latest_quality.get_quality_grade_display }}</span>
+          {% endif %}
+        </button>
+        {% empty %}
+        <div class="crop-empty-mini">No harvested or failed crops recorded for this farm yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
   <div class="crop-toolbar mb-3">
     <div class="row g-2 align-items-end">
       <div class="col-12 col-lg-5">
@@ -581,20 +871,19 @@
          data-farm="{{ crop.farm_id }}"
          data-status="{{ crop.status }}"
          data-search="{{ crop.name|lower }} {{ crop.variety|lower }} {{ crop.farm.name|lower }}">
-      <article class="crop-card"
-               data-open-crop="{{ crop.id }}"
-               data-crop-name="{{ crop.name }}"
-               title="View details for {{ crop.name }}"
-               tabindex="0"
-               role="button"
-               aria-label="Open details for {{ crop.name }}">
-        <div class="crop-card-media">
-          <img src="{{ crop.display_image_url }}" alt="{{ crop.name }}" class="crop-card-img" loading="lazy">
-        </div>
-        <div class="crop-card-body">
-          <div>
+      <article class="crop-card">
+        <div class="crop-card-hit"
+             data-open-crop="{{ crop.id }}"
+             data-crop-name="{{ crop.name }}"
+             title="View details for {{ crop.name }}"
+             tabindex="0"
+             role="button"
+             aria-label="Open details for {{ crop.name }}">
+          <div class="crop-card-media">
+            <img src="{{ crop.display_image_url }}" alt="{{ crop.name }}" class="crop-card-img" loading="lazy">
+          </div>
+          <div class="crop-card-body">
             <div class="crop-card-title">{{ crop.name }}</div>
-            {% if crop.variety %}<div class="crop-card-variety">{{ crop.variety }}</div>{% endif %}
           </div>
         </div>
       </article>
@@ -815,12 +1104,19 @@
       <form id="cropForm" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="id" id="crop_id">
+        <input type="hidden" name="selected_image_url" id="crop_selected_image_url">
         <div class="modal-body">
           <div id="cropFormError" class="alert alert-danger d-none" role="alert"></div>
           <div class="row g-3">
             <div class="col-7">
               <label class="form-label" for="crop_name">Crop name <span class="text-danger">*</span></label>
-              <input type="text" name="name" id="crop_name" class="form-control" required maxlength="255" placeholder="e.g. Rice">
+              <input type="text" name="name" id="crop_name" class="form-control" required maxlength="255" placeholder="e.g. Rice" list="cropCatalogOptions" autocomplete="off">
+              <datalist id="cropCatalogOptions">
+                {% for entry in catalog_entries %}
+                <option value="{{ entry.name }}"></option>
+                {% endfor %}
+              </datalist>
+              <div class="form-hint">Start typing to pick from all {{ catalog_total }} catalog crops.</div>
             </div>
             <div class="col-5">
               <label class="form-label" for="crop_category">Category <span class="text-danger">*</span></label>
@@ -833,7 +1129,8 @@
             </div>
             <div class="col-6">
               <label class="form-label" for="crop_variety">Variety</label>
-              <input type="text" name="variety" id="crop_variety" class="form-control" maxlength="255" placeholder="e.g. IR64">
+              <input type="text" name="variety" id="crop_variety" class="form-control" maxlength="255" placeholder="e.g. IR64" list="cropVarietyOptions" autocomplete="off">
+              <datalist id="cropVarietyOptions"></datalist>
             </div>
             <div class="col-6">
               <label class="form-label" for="crop_farm_id">Farm <span class="text-danger">*</span></label>
@@ -853,6 +1150,10 @@
                 <div class="col-8">
                   <input type="file" name="image" id="crop_image_input" class="form-control" accept="image/*">
                   <div class="form-hint" id="crop_image_hint">JPG, PNG, WebP, or GIF up to 5 MB. Leave blank to use the matching stock photo.</div>
+                  <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="cropFindPhotosBtn">
+                    <i class="fas fa-images me-1"></i>Find matching photos
+                  </button>
+                  <div class="crop-photo-results d-none mt-2" id="cropPhotoResults"></div>
                   <div class="form-check mt-2 d-none" id="cropRemoveImageWrap">
                     <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="crop_remove_image">
                     <label class="form-check-label small" for="crop_remove_image">Remove current photo</label>
@@ -903,6 +1204,16 @@
               <label class="form-label" for="crop_description">Description</label>
               <textarea name="description" id="crop_description" class="form-control" rows="2" placeholder="Notes about this crop, its condition, or growing plan..."></textarea>
             </div>
+            <div class="col-6">
+              <label class="form-label" for="crop_soil_type">Soil type</label>
+              <input type="text" name="soil_type" id="crop_soil_type" class="form-control" maxlength="100" placeholder="e.g. Clay loam">
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="crop_reference_display">Agricultural reference</label>
+              <input type="text" id="crop_reference_display" class="form-control" placeholder="Filled from verified crop references" readonly>
+              <input type="hidden" name="reference_source" id="crop_reference_source">
+              <input type="hidden" name="reference_url" id="crop_reference_url">
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -943,6 +1254,7 @@
 {{ crop_image_rules|json_script:"crop-image-rules" }}
 {{ category_rules|json_script:"crop-category-rules" }}
 {{ crop_image_fallback|json_script:"crop-image-fallback" }}
+{{ catalog_entries|json_script:"crop-catalog-data" }}
 <script>
 (function () {
   'use strict';
@@ -951,6 +1263,10 @@
   const GET_URL = '{% url "crops:crop_get_ajax" 0 %}'.replace('/0/', '/');
   const DETAIL_URL = '{% url "crops:crop_detail_ajax" 0 %}'.replace('/0/', '/');
   const DELETE_BASE = '{% url "crops:crop_delete_ajax" 0 %}'.replace('/0/', '/');
+  const CALCULATE_HARVEST_URL = '{% url "crops:crop_calculate_harvest_ajax" %}';
+  const VARIETIES_URL = '{% url "crops:crop_varieties_ajax" %}';
+  const SEARCH_IMAGES_URL = '{% url "crops:crop_search_images_ajax" %}';
+  const USER_PRIOR_IMAGE_URL = '{% url "crops:crop_user_prior_image_ajax" %}';
 
   const DEFAULT_MATURITY_DAYS = {{ default_maturity_days|default:90 }};
   const maturityDataEl = document.getElementById('crop-maturity-suggestions');
@@ -961,6 +1277,8 @@
   const CATEGORY_RULES = categoryRulesEl ? JSON.parse(categoryRulesEl.textContent) : [];
   const fallbackEl = document.getElementById('crop-image-fallback');
   const CROP_IMAGE_FALLBACK = fallbackEl ? JSON.parse(fallbackEl.textContent) : '';
+  const catalogDataEl = document.getElementById('crop-catalog-data');
+  const CROP_CATALOG = catalogDataEl ? JSON.parse(catalogDataEl.textContent) : [];
 
   const modalEl = document.getElementById('cropModal');
   const deleteModal = document.getElementById('deleteCropModal');
@@ -989,6 +1307,20 @@
   const imageHint = document.getElementById('crop_image_hint');
   const removeImageWrap = document.getElementById('cropRemoveImageWrap');
   const removeImageInput = document.getElementById('crop_remove_image');
+  const selectedImageInput = document.getElementById('crop_selected_image_url');
+  const soilInput = document.getElementById('crop_soil_type');
+  const referenceDisplay = document.getElementById('crop_reference_display');
+  const referenceSourceInput = document.getElementById('crop_reference_source');
+  const referenceUrlInput = document.getElementById('crop_reference_url');
+  const findPhotosBtn = document.getElementById('cropFindPhotosBtn');
+  const photoResults = document.getElementById('cropPhotoResults');
+  const varietyOptions = document.getElementById('cropVarietyOptions');
+
+  const catalogSearchInput = document.getElementById('cropCatalogSearch');
+  const catalogGroupFilter = document.getElementById('cropCatalogGroupFilter');
+  const catalogGrid = document.getElementById('cropCatalogGrid');
+  const catalogVisibleCount = document.getElementById('cropCatalogVisibleCount');
+  const catalogEmpty = document.getElementById('cropCatalogEmpty');
 
   const searchInput = document.getElementById('cropSearchInput');
   const farmFilter = document.getElementById('cropFarmFilter');
@@ -1260,6 +1592,52 @@
   }
   applyFilters();
 
+  /* Full catalog browser --------------------------------------------------- */
+  function applyCatalogFilters() {
+    if (!catalogGrid) return;
+    const search = (catalogSearchInput.value || '').toLowerCase().trim();
+    const group = (catalogGroupFilter.value || '').toLowerCase().trim();
+    let visible = 0;
+
+    Array.prototype.forEach.call(catalogGrid.querySelectorAll('.crop-catalog-col'), function (col) {
+      const haystack = [
+        col.getAttribute('data-catalog-name') || '',
+        col.getAttribute('data-catalog-aliases') || '',
+        col.getAttribute('data-catalog-group') || ''
+      ].join(' ');
+      const matches = (!search || haystack.indexOf(search) !== -1) &&
+        (!group || (col.getAttribute('data-catalog-group') || '') === group);
+      col.classList.toggle('d-none', !matches);
+      if (matches) visible += 1;
+    });
+
+    catalogVisibleCount.textContent = 'Showing ' + visible + ' crop' + (visible === 1 ? '' : 's');
+    catalogEmpty.classList.toggle('d-none', visible !== 0);
+  }
+
+  if (catalogSearchInput) catalogSearchInput.addEventListener('input', applyCatalogFilters);
+  if (catalogGroupFilter) catalogGroupFilter.addEventListener('change', applyCatalogFilters);
+  applyCatalogFilters();
+
+  if (catalogGrid) {
+    catalogGrid.addEventListener('click', function (event) {
+      const card = event.target.closest('[data-catalog-pick]');
+      if (!card) return;
+      openCropForm('create');
+      nameInput.value = card.getAttribute('data-catalog-pick') || '';
+      categoryInput.value = card.getAttribute('data-catalog-category') || '';
+      categoryTouched = true;
+      daysInput.value = card.getAttribute('data-catalog-days') || '';
+      selectedImageInput.value = card.getAttribute('data-catalog-image') || '';
+      setImagePreview(selectedImageInput.value || CROP_IMAGE_FALLBACK);
+      imageHint.textContent = 'This catalog photo will be saved with the crop. Upload a file to replace it.';
+      removeImageInput.checked = false;
+      updateHarvestPreview();
+      loadVarieties(nameInput.value);
+      nameInput.focus();
+    });
+  }
+
   /* Crop form ------------------------------------------------------------- */
   function showFormError(message) {
     formAlert.textContent = message;
@@ -1269,6 +1647,138 @@
     formAlert.textContent = '';
     formAlert.classList.add('d-none');
   }
+
+  function loadVarieties(cropName) {
+    if (!cropName) return;
+    fetch(VARIETIES_URL + '?crop_name=' + encodeURIComponent(cropName), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin'
+    })
+      .then(function (response) {
+        return response.ok ? response.json() : null;
+      })
+      .then(function (data) {
+        if (!data) return;
+        const varieties = data.varieties || [];
+        varietyOptions.innerHTML = '';
+        varieties.forEach(function (variety) {
+          const option = document.createElement('option');
+          option.value = variety.variety_name;
+          option.label = variety.source_name || 'Verified variety';
+          varietyOptions.appendChild(option);
+        });
+        if (!varieties.length) return;
+
+        const first = varieties[0];
+        if (!daysInput.value && first.days_to_maturity) {
+          daysInput.value = first.days_to_maturity;
+        }
+        if (!soilInput.value && first.soil_type) {
+          soilInput.value = first.soil_type;
+        }
+        if (!referenceSourceInput.value && first.source_name) {
+          referenceSourceInput.value = first.source_name;
+          referenceUrlInput.value = first.source_url || '';
+          referenceDisplay.value = first.source_name;
+        }
+        updateHarvestPreview();
+      })
+      .catch(function () {
+        /* Reference lookup is optional; the form still saves without it. */
+      });
+  }
+
+  function loadPriorImage(cropName) {
+    if (!cropName || currentImageIsUpload || (imageInput.files && imageInput.files.length)) return;
+    fetch(USER_PRIOR_IMAGE_URL, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin',
+      body: new URLSearchParams({ crop_name: cropName })
+    })
+      .then(function (response) {
+        return response.ok ? response.json() : null;
+      })
+      .then(function (data) {
+        if (!data || !data.has_prior_image || selectedImageInput.value) return;
+        setImagePreview(data.image_url);
+        imageHint.textContent = 'Using the photo you previously saved for this crop. Upload a file to replace it.';
+      })
+      .catch(function () {
+        /* The stock/catalog preview remains when no prior photo exists. */
+      });
+  }
+
+  function loadPhotoOptions() {
+    const cropName = nameInput.value.trim();
+    if (!cropName) {
+      showFormError('Enter a crop name first, then look for matching photos.');
+      return;
+    }
+    clearFormError();
+    findPhotosBtn.disabled = true;
+    findPhotosBtn.textContent = 'Searching...';
+    fetch(SEARCH_IMAGES_URL + '?q=' + encodeURIComponent(cropName), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin'
+    })
+      .then(function (response) {
+        return response.json().then(function (data) {
+          if (!response.ok) throw new Error(data.error || 'Could not search for crop photos.');
+          return data;
+        });
+      })
+      .then(function (data) {
+        const photos = (data.photos || []).slice(0, 12);
+        photoResults.innerHTML = '';
+        photos.forEach(function (photo) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'crop-photo-option';
+          button.title = photo.title || 'Use this photo';
+
+          const image = document.createElement('img');
+          image.src = photo.thumb_url || photo.preview_url || photo.download_url;
+          image.alt = photo.alt || cropName;
+          image.loading = 'lazy';
+          button.appendChild(image);
+
+          button.addEventListener('click', function () {
+            Array.prototype.forEach.call(
+              photoResults.querySelectorAll('.crop-photo-option'),
+              function (item) { item.classList.remove('is-selected'); }
+            );
+            button.classList.add('is-selected');
+            setImagePreview(photo.preview_url || photo.download_url);
+            if (photo.is_user_upload) {
+              selectedImageInput.value = '';
+              imageHint.textContent = 'Using the photo you previously saved for this crop.';
+            } else {
+              selectedImageInput.value = photo.download_url || photo.preview_url || '';
+              imageHint.textContent = 'Selected photo will be saved with this crop.';
+            }
+            removeImageInput.checked = false;
+          });
+
+          photoResults.appendChild(button);
+        });
+        photoResults.classList.toggle('d-none', photos.length === 0);
+        if (!photos.length) showFormError('No matching photos found for this crop name.');
+      })
+      .catch(function (error) {
+        showFormError(error.message || 'Could not search for crop photos.');
+      })
+      .finally(function () {
+        findPhotosBtn.disabled = false;
+        findPhotosBtn.innerHTML = '<i class="fas fa-images me-1"></i>Find matching photos';
+      });
+  }
+
+  if (findPhotosBtn) findPhotosBtn.addEventListener('click', loadPhotoOptions);
 
   function resetForm() {
     form.reset();
@@ -1288,6 +1798,14 @@
     estimatedYieldInput.value = '';
     descriptionInput.value = '';
     imageInput.value = '';
+    selectedImageInput.value = '';
+    soilInput.value = '';
+    referenceDisplay.value = '';
+    referenceSourceInput.value = '';
+    referenceUrlInput.value = '';
+    varietyOptions.innerHTML = '';
+    photoResults.innerHTML = '';
+    photoResults.classList.add('d-none');
     removeImageInput.checked = false;
     removeImageWrap.classList.add('d-none');
     imageHint.textContent = 'JPG, PNG, WebP, or GIF up to 5 MB. Leave blank to use the matching stock photo.';
@@ -1313,6 +1831,13 @@
     statusInput.value = crop.status || 'planting';
     qualityInput.value = crop.quality || '';
     descriptionInput.value = crop.notes || '';
+    soilInput.value = crop.soil_type || '';
+    referenceDisplay.value = crop.reference_source || '';
+    referenceSourceInput.value = crop.reference_source || '';
+    referenceUrlInput.value = crop.reference_url || '';
+    selectedImageInput.value = '';
+    photoResults.innerHTML = '';
+    photoResults.classList.add('d-none');
     imageInput.value = '';
     removeImageInput.checked = false;
     currentImageIsUpload = Boolean(crop.image_is_upload);
@@ -1322,6 +1847,7 @@
       : 'JPG, PNG, WebP, or GIF up to 5 MB. Leave blank to use the matching stock photo.';
     setImagePreview(crop.image || CROP_IMAGE_FALLBACK);
     updateHarvestPreview();
+    loadVarieties(crop.name || '');
   }
 
   function loadCropForm(id) {
@@ -1372,6 +1898,7 @@
   if (clearBtn) clearBtn.addEventListener('click', resetForm);
 
   nameInput.addEventListener('input', function () {
+    if (selectedImageInput.value) selectedImageInput.value = '';
     if (!categoryTouched) {
       const category = suggestedCategory(nameInput.value);
       if (category) categoryInput.value = category;
@@ -1381,10 +1908,20 @@
     }
     updateHarvestPreview();
   });
+  nameInput.addEventListener('change', function () {
+    loadVarieties(nameInput.value);
+    loadPriorImage(nameInput.value);
+  });
   plantingInput.addEventListener('input', updateHarvestPreview);
   daysInput.addEventListener('input', updateHarvestPreview);
   categoryInput.addEventListener('change', function () {
     categoryTouched = true;
+  });
+  removeImageInput.addEventListener('change', function () {
+    if (removeImageInput.checked) {
+      selectedImageInput.value = '';
+      setImagePreview(CROP_IMAGE_FALLBACK);
+    }
   });
 
   imageInput.addEventListener('change', function () {
@@ -1393,10 +1930,12 @@
       setImagePreview(currentImageIsUpload ? imagePreview.src : suggestedImage(nameInput.value));
       return;
     }
+    selectedImageInput.value = '';
+    removeImageInput.checked = false;
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
     previewObjectUrl = URL.createObjectURL(file);
     imagePreview.src = previewObjectUrl;
-    removeImageInput.checked = false;
+    imageHint.textContent = 'This uploaded photo will be saved with the crop.';
   });
 
   form.addEventListener('submit', function (event) {
@@ -1646,16 +2185,16 @@
       });
   }
 
-  grid.addEventListener('click', function (event) {
+  document.addEventListener('click', function (event) {
     const trigger = event.target.closest('[data-open-crop]');
     if (!trigger) return;
     event.preventDefault();
     openCropDrawer(trigger.getAttribute('data-open-crop'));
   });
 
-  grid.addEventListener('keydown', function (event) {
+  document.addEventListener('keydown', function (event) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
-    const card = event.target.closest('.crop-card');
+    const card = event.target.closest('[data-open-crop]');
     if (!card) return;
     event.preventDefault();
     openCropDrawer(card.getAttribute('data-open-crop'));
