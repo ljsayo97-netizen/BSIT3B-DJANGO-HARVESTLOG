@@ -10,7 +10,11 @@ from apps.crops.models import Crop
 from apps.farms.models import Farm
 
 from apps.activities.models import FarmActivity
-from apps.activities.services import get_activities, get_attention_activities
+from apps.activities.services import (
+    get_activities,
+    get_activity_notification_items,
+    get_attention_activities,
+)
 from apps.activities.views import _filter_activities, activity_list_page, activity_status_ajax
 
 
@@ -428,3 +432,106 @@ class FarmActivityViewTests(TestCase):
         self.assertIn('Fertilization', content)
         self.assertIn('Block A', content)
         self.assertNotIn('Irrigation', content)
+
+
+class ActivityNotificationFeedTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='activity-notification-owner', password='secret1234'
+        )
+        self.farm = Farm.objects.create(
+            name='Notification Farm',
+            owner='Nora Cruz',
+            location='Bacolod, Negros Occidental',
+            size_hectares=4.00,
+            date_registered=timezone.now(),
+            status='active',
+            user=self.user,
+        )
+        self.now = timezone.now()
+        self.pending = FarmActivity.objects.create(
+            farm=self.farm,
+            activity_type=FarmActivity.ActivityType.IRRIGATION,
+            location='North Block',
+            scheduled_date=timezone.localdate(),
+            assigned_worker='Pedro',
+            status=FarmActivity.Status.PENDING,
+            user=self.user,
+        )
+        self.in_progress = FarmActivity.objects.create(
+            farm=self.farm,
+            activity_type=FarmActivity.ActivityType.WEEDING,
+            location='South Block',
+            scheduled_date=timezone.localdate(),
+            assigned_worker='Ana',
+            status=FarmActivity.Status.IN_PROGRESS,
+            started_at=self.now,
+            user=self.user,
+        )
+        self.completed = FarmActivity.objects.create(
+            farm=self.farm,
+            activity_type=FarmActivity.ActivityType.FERTILIZATION,
+            location='East Block',
+            scheduled_date=timezone.localdate(),
+            assigned_worker='Luis',
+            status=FarmActivity.Status.COMPLETED,
+            started_at=self.now,
+            completed_at=self.now,
+            user=self.user,
+        )
+
+    def test_notification_items_cover_each_activity_status(self):
+        items = get_activity_notification_items(self.user)
+
+        self.assertEqual(
+            [item['badge'] for item in items],
+            ['Pending', 'In Progress', 'Completed'],
+        )
+        self.assertIn('1 activity pending', items[0]['description'])
+        self.assertIn('Irrigation', items[0]['description'])
+        self.assertIn('1 activity in progress', items[1]['description'])
+        self.assertIn('Weeding', items[1]['description'])
+        self.assertIn('1 activity completed', items[2]['description'])
+        self.assertIn('Fertilization', items[2]['description'])
+        self.assertEqual(items[0]['url'].split('?')[-1], 'status=pending')
+        self.assertEqual(items[1]['url'].split('?')[-1], 'status=in_progress')
+        self.assertEqual(items[2]['url'].split('?')[-1], 'status=completed')
+
+    def test_notification_items_are_scoped_to_the_signed_in_user(self):
+        other_user = get_user_model().objects.create_user(
+            username='activity-notification-other', password='secret1234'
+        )
+        other_farm = Farm.objects.create(
+            name='Hidden Farm',
+            owner='Other',
+            location='Hidden',
+            size_hectares=1.00,
+            date_registered=timezone.now(),
+            status='active',
+            user=other_user,
+        )
+        FarmActivity.objects.create(
+            farm=other_farm,
+            activity_type=FarmActivity.ActivityType.PEST_INSPECTION,
+            location='Secret Block',
+            scheduled_date=timezone.localdate(),
+            assigned_worker='Outsider',
+            user=other_user,
+        )
+
+        items = get_activity_notification_items(self.user)
+
+        self.assertFalse(
+            any('Secret Block' in item['description'] for item in items)
+        )
+        self.assertFalse(any('Pest Inspection' in item['description'] for item in items))
+
+    def test_topbar_feed_includes_activity_status_notifications(self):
+        from apps.harvests.services import get_topbar_notifications
+
+        items = get_topbar_notifications(self.user, limit=6)
+
+        badges = [item['badge'] for item in items]
+        self.assertIn('Pending', badges)
+        self.assertIn('In Progress', badges)
+        self.assertIn('Completed', badges)

@@ -16,10 +16,22 @@ from django.utils import timezone
 from PIL import Image
 
 from apps.activities.models import FarmActivity
+from apps.crops.catalog import (
+    CROP_CATALOG,
+    FRUIT as CATALOG_FRUIT,
+    GRAIN as CATALOG_GRAIN,
+    OTHER as CATALOG_OTHER,
+    VEGETABLE as CATALOG_VEGETABLE,
+    catalog_names,
+    catalog_stats,
+    find_catalog_entry,
+)
 from apps.crops.categories import infer_category
+from apps.crops.image_service import get_verified_local_photos
 from apps.crops.images import CROP_IMAGE_FALLBACK, CROP_IMAGE_RULES, crop_image_path
 from apps.crops.maturity import DEFAULT_MATURITY_DAYS, suggest_maturity_days
-from apps.crops.models import Crop
+from apps.crops.models import Crop, CropDefaultImage, AgriculturalReference
+from apps.crops.variety_service import calculate_harvest_date, search_varieties
 from apps.crops.views import crop_list_page
 from apps.farms.models import Farm
 from apps.harvests.models import Harvest, HarvestNotification
@@ -53,7 +65,11 @@ class CropModelTests(TestCase):
 
     def test_maturity_suggestions(self):
         self.assertEqual(suggest_maturity_days('Rice'), 110)
+        self.assertEqual(suggest_maturity_days('Brown Rice'), 110)
         self.assertEqual(suggest_maturity_days('Sweet corn'), 100)
+        self.assertEqual(suggest_maturity_days('Watermelon'), 80)
+        self.assertEqual(suggest_maturity_days('Dragon Fruit'), 365)
+        self.assertEqual(suggest_maturity_days('Malunggay'), 60)
         self.assertEqual(suggest_maturity_days('Unknown crop'), DEFAULT_MATURITY_DAYS)
 
 
@@ -65,6 +81,8 @@ class CropImageTests(TestCase):
         self.assertEqual(crop_image_path('Tubo'), 'img/crops/sugarcane.jpg')
         self.assertEqual(crop_image_path('Mani'), 'img/crops/peanut.jpg')
         self.assertEqual(crop_image_path('Lansones'), 'img/crops/lanzones.jpg')
+        self.assertEqual(crop_image_path('Grapes'), 'img/crops/grapes.jpg')
+        self.assertEqual(crop_image_path('Ubas'), 'img/crops/grapes.jpg')
         self.assertEqual(crop_image_path('Watermelon'), 'img/crops/watermelon.jpg')
         self.assertEqual(crop_image_path('Kamatis'), 'img/crops/tomato.jpg')
         self.assertEqual(crop_image_path('Talong'), 'img/crops/eggplant.jpg')
@@ -72,15 +90,129 @@ class CropImageTests(TestCase):
         self.assertEqual(crop_image_path('Kamote'), 'img/crops/sweet_potato.jpg')
         self.assertEqual(crop_image_path('Luyang dilaw'), 'img/crops/turmeric.jpg')
         self.assertEqual(crop_image_path('Luya'), 'img/crops/ginger.jpg')
+        self.assertEqual(crop_image_path('Dragon Fruit'), 'img/crops/dragonfruit.jpg')
+        self.assertEqual(crop_image_path('Papaya'), 'img/crops/papaya.jpg')
+        self.assertEqual(crop_image_path('Patola'), 'img/crops/spongegourd.jpg')
+        self.assertEqual(crop_image_path('Adlay'), 'img/crops/adlay.jpg')
 
     def test_unknown_crop_uses_the_placeholder_photo(self):
-        self.assertEqual(crop_image_path('Dragon fruit'), 'img/crops/default.svg')
+        self.assertEqual(crop_image_path('Saffron'), 'img/crops/default.svg')
         self.assertEqual(crop_image_path(''), 'img/crops/default.svg')
 
     def test_every_mapped_photo_exists(self):
         for _keywords, image_path in CROP_IMAGE_RULES:
             self.assertIsNotNone(finders.find(image_path), image_path)
         self.assertIsNotNone(finders.find(CROP_IMAGE_FALLBACK), CROP_IMAGE_FALLBACK)
+
+    def test_local_photo_catalog_matches_the_requested_crop_only(self):
+        grape_photos = get_verified_local_photos('Grapes')
+        self.assertEqual(len(grape_photos), 1)
+        self.assertEqual(grape_photos[0]['download_url'], '/static/img/crops/grapes.jpg')
+
+        watermelon_photos = get_verified_local_photos('Watermelon')
+        self.assertEqual(len(watermelon_photos), 1)
+        self.assertEqual(
+            watermelon_photos[0]['download_url'],
+            '/static/img/crops/watermelon.jpg',
+        )
+
+        # Watermelon and melon are different crops with different photos.
+        melon_photos = get_verified_local_photos('Melon')
+        self.assertEqual(len(melon_photos), 1)
+        self.assertEqual(
+            melon_photos[0]['download_url'],
+            '/static/img/crops/melon.jpg',
+        )
+
+        # Unknown crops must not be given another crop's photo.
+        self.assertEqual(get_verified_local_photos('Saffron'), [])
+
+    def test_rice_types_share_the_verified_rice_photo(self):
+        for rice_name in (
+            'Rice',
+            'Brown Rice',
+            'Black Rice',
+            'Red Rice',
+            'Glutinous Rice',
+            'Jasmine Rice',
+            'Sinandomeng Rice',
+            'Dinorado Rice',
+            'Upland Rice',
+            'Lowland Rice',
+            'Rainfed Rice',
+        ):
+            with self.subTest(rice_name=rice_name):
+                photos = get_verified_local_photos(rice_name)
+                self.assertEqual(len(photos), 1)
+                self.assertEqual(
+                    photos[0]['download_url'],
+                    '/static/img/crops/rice.jpg',
+                )
+
+    def test_comprehensive_catalog_covers_vegetables_fruits_rice_and_grains(self):
+        names = set(catalog_names())
+        expected_crops = {
+            # Vegetables
+            'Ampalaya', 'Eggplant', 'Tomato', 'Okra', 'Onion', 'Garlic',
+            'Cabbage', 'Carrot', 'Pechay', 'Lettuce', 'Cucumber', 'Squash',
+            'Potato', 'Sweet Potato', 'Cassava', 'Radish', 'Broccoli',
+            'Cauliflower', 'Kangkong', 'Moringa', 'String Beans', 'Chili Pepper',
+            # Fruits
+            'Banana', 'Mango', 'Grapes', 'Watermelon', 'Melon', 'Lanzones',
+            'Pineapple', 'Coconut', 'Papaya', 'Avocado', 'Guava', 'Rambutan',
+            'Durian', 'Mangosteen', 'Jackfruit', 'Dragon Fruit', 'Calamansi',
+            # Rice types and grains
+            'Rice', 'Brown Rice', 'Black Rice', 'Glutinous Rice', 'Corn',
+            'Wheat', 'Sorghum', 'Barley', 'Oat', 'Millet', 'Adlay',
+        }
+        self.assertTrue(expected_crops.issubset(names), expected_crops - names)
+
+        stats = catalog_stats()
+        self.assertGreaterEqual(stats[CATALOG_VEGETABLE], 40)
+        self.assertGreaterEqual(stats[CATALOG_FRUIT], 30)
+        self.assertGreaterEqual(stats[CATALOG_GRAIN], 15)
+        self.assertGreaterEqual(stats[CATALOG_OTHER], 10)
+        self.assertEqual(stats['total'], len(CROP_CATALOG))
+
+    def test_catalog_names_are_unique_and_aliases_resolve_to_their_crop(self):
+        names = catalog_names()
+        self.assertEqual(len(names), len(set(names)))
+
+        for entry in CROP_CATALOG:
+            self.assertIn(entry['category'], {
+                CATALOG_VEGETABLE, CATALOG_GRAIN, CATALOG_FRUIT, CATALOG_OTHER,
+            })
+            self.assertGreater(entry['days_to_maturity'], 0)
+            for alias in entry['aliases']:
+                self.assertIs(find_catalog_entry(alias), entry, alias)
+
+    def test_every_catalog_photo_exists_and_no_crop_borrows_another_photo(self):
+        for entry in CROP_CATALOG:
+            if not entry['image']:
+                self.assertEqual(
+                    crop_image_path(entry['name']),
+                    CROP_IMAGE_FALLBACK,
+                    entry['name'],
+                )
+                continue
+            image_path = f"img/crops/{entry['image']}"
+            self.assertIsNotNone(finders.find(image_path), image_path)
+            self.assertEqual(crop_image_path(entry['name']), image_path)
+            self.assertTrue(
+                get_verified_local_photos(entry['name'])[0]['download_url'].endswith(
+                    f"/static/{image_path}"
+                )
+            )
+
+    def test_ambiguous_names_do_not_borrow_a_more_specific_crops_photo(self):
+        # "Melon" must not resolve to the Watermelon photo, and "Potato" must
+        # not resolve to the Sweet Potato photo.
+        self.assertEqual(crop_image_path('Melon'), 'img/crops/melon.jpg')
+        self.assertEqual(crop_image_path('Watermelon'), 'img/crops/watermelon.jpg')
+        self.assertEqual(crop_image_path('Potato'), 'img/crops/potato.jpg')
+        self.assertEqual(crop_image_path('Sweet Potato'), 'img/crops/sweet_potato.jpg')
+        self.assertEqual(crop_image_path('Winter Melon'), 'img/crops/waxgourd.jpg')
+        self.assertEqual(crop_image_path('Saffron'), CROP_IMAGE_FALLBACK)
 
 
 class CropViewTests(TestCase):
@@ -123,7 +255,7 @@ class CropViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'crops/list.html')
 
-    def test_crop_list_shows_system_assigned_date_and_maturity(self):
+    def test_crop_list_cards_show_only_the_crop_name(self):
         Crop.objects.create(
             name='Rice',
             farm=self.farm,
@@ -136,10 +268,21 @@ class CropViewTests(TestCase):
         response = self.client.get(reverse('crops:crop_list'))
         content = response.content.decode()
 
+        card_match = re.search(
+            r'<article class="crop-card">.*?</article>', content, re.S
+        )
+        self.assertIsNotNone(card_match)
+        card_html = card_match.group(0)
+
+        self.assertIn('class="crop-card-title">Rice</div>', card_html)
+        self.assertIn('data-open-crop=', card_html)
+        self.assertNotIn('Apr 21, 2026', card_html)
+        self.assertNotIn('110 days', card_html)
+        self.assertNotIn('2.5 ha', card_html)
+        self.assertNotIn('crop-card-variety', card_html)
+        # Full details still exist inside the drawer opened from the photo.
         self.assertIn('System Harvest Date', content)
         self.assertIn('Days to Maturity', content)
-        self.assertIn('Apr 21, 2026', content)
-        self.assertIn('110 days', content)
         self.assertNotIn('name="expected_harvest_date"', content)
 
     def test_crop_list_shows_a_crop_photo_instead_of_the_name(self):
@@ -403,7 +546,7 @@ class CropViewTests(TestCase):
         )
 
     def test_crop_list_renders_the_visual_inventory_filters_and_drawer(self):
-        Crop.objects.create(
+        crop = Crop.objects.create(
             name='Tomato',
             category=Crop.Category.VEGETABLE,
             farm=self.farm,
@@ -437,8 +580,8 @@ class CropViewTests(TestCase):
         self.assertContains(response, 'name="image"')
         self.assertContains(response, 'name="category"')
         self.assertContains(response, 'name="estimated_yield"')
-        self.assertContains(response, '12.50 t/ha')
-        self.assertContains(response, 'View Details')
+        self.assertContains(response, f'data-open-crop="{crop.id}"')
+        self.assertContains(response, 'class="crop-card-title">Tomato</div>')
 
         # The category filter counts reflect the crops in the inventory.
         counts = dict(re.findall(
@@ -449,6 +592,17 @@ class CropViewTests(TestCase):
         self.assertEqual(counts['grain'], '0')
         self.assertEqual(counts['fruit'], '0')
         self.assertEqual(counts['other'], '0')
+
+    def test_crop_form_offers_the_full_crop_catalog(self):
+        response = self.client.get(reverse('crops:crop_list'))
+        content = response.content.decode()
+
+        self.assertIn('id="cropCatalogOptions"', content)
+        self.assertIn('<option value="Watermelon">', content)
+        self.assertIn('<option value="Dragon Fruit">', content)
+        self.assertIn('<option value="Brown Rice">', content)
+        self.assertIn('<option value="Ampalaya">', content)
+        self.assertIn('rice types &amp; grains', content)
 
     def test_crop_save_persists_category_yield_and_description(self):
         response = self.save_crop(
@@ -765,11 +919,11 @@ class CropPhotoUploadTests(TestCase):
         self.assertFalse(crop.image)
         self.assertFalse(os.path.exists(old_path))
 
-    def test_deleting_a_crop_removes_its_uploaded_photo(self):
+    def test_deleting_a_crop_keeps_the_default_photo_for_readding(self):
         response = self.post_crop(image=self.make_upload())
         crop = Crop.objects.get(pk=response.json()['id'])
         image_path = crop.image.path
-        self.assertTrue(os.path.exists(image_path))
+        image_name = crop.image.name
 
         response = self.client.post(
             reverse('crops:crop_delete_ajax', args=[crop.pk])
@@ -777,7 +931,105 @@ class CropPhotoUploadTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Crop.objects.filter(pk=crop.pk).exists())
-        self.assertFalse(os.path.exists(image_path))
+        # The saved default record still owns the file, so re-adding the crop
+        # shows the uploaded photo again instead of a broken image.
+        self.assertTrue(
+            CropDefaultImage.objects.filter(
+                user=self.user, crop_name='Cabbage'
+            ).exists()
+        )
+        self.assertTrue(os.path.exists(image_path))
+
+        response = self.post_crop()
+        re_added = Crop.objects.get(pk=response.json()['id'])
+        self.assertFalse(re_added.image)
+        self.assertEqual(re_added.display_image_url, f'/media/{image_name}')
+
+    def test_uploaded_photo_is_the_default_for_crops_with_the_same_name(self):
+        response = self.post_crop(
+            name='Eggplant', image=self.make_upload('eggplant.png')
+        )
+        self.assertEqual(response.status_code, 200)
+        original = Crop.objects.get(pk=response.json()['id'])
+
+        default_record = CropDefaultImage.objects.get(
+            user=self.user, crop_name='Eggplant'
+        )
+        self.assertEqual(default_record.image_path, original.image.name)
+
+        response = self.post_crop(name='Eggplant', variety='Long Purple')
+        self.assertEqual(response.status_code, 200)
+        second = Crop.objects.get(pk=response.json()['id'])
+        self.assertFalse(second.image)
+        self.assertEqual(second.display_image_url, original.image.url)
+
+        list_response = self.client.get(reverse('crops:crop_list_ajax'))
+        listed = {
+            item['id']: item for item in list_response.json()['data']
+        }
+        self.assertEqual(listed[second.pk]['image'], original.image.url)
+        self.assertFalse(listed[second.pk]['image_is_upload'])
+
+    def test_stale_default_record_does_not_break_the_image(self):
+        response = self.post_crop(
+            name='Eggplant', image=self.make_upload('eggplant.png')
+        )
+        original = Crop.objects.get(pk=response.json()['id'])
+
+        # Simulate a default record left behind after its file was removed.
+        default_record = CropDefaultImage.objects.get(
+            user=self.user, crop_name='Eggplant'
+        )
+        default_record.image_path = 'crops/2026/11/missing_eggplant.jpg'
+        default_record.save(update_fields=['image_path'])
+
+        response = self.post_crop(name='Eggplant', variety='Long Purple')
+        second = Crop.objects.get(pk=response.json()['id'])
+        # The broken default is discarded and the still-existing photo of
+        # the original crop is used instead.
+        self.assertEqual(second.display_image_url, original.image.url)
+        self.assertFalse(
+            CropDefaultImage.objects.filter(pk=default_record.pk).exists()
+        )
+
+    def test_user_prior_image_endpoint_returns_the_saved_default(self):
+        response = self.post_crop(
+            name='Eggplant', image=self.make_upload('eggplant.png')
+        )
+        original = Crop.objects.get(pk=response.json()['id'])
+
+        prior = self.client.post(
+            reverse('crops:crop_user_prior_image_ajax'),
+            {'crop_name': 'eggplant'},
+        )
+
+        self.assertEqual(prior.status_code, 200)
+        self.assertTrue(prior.json()['has_prior_image'])
+        self.assertEqual(prior.json()['image_url'], original.image.url)
+
+    def test_image_picker_prefers_the_uploaded_photo_over_the_catalog(self):
+        response = self.post_crop(
+            name='Eggplant', image=self.make_upload('eggplant.png')
+        )
+        original = Crop.objects.get(pk=response.json()['id'])
+
+        gallery = self.client.get(
+            reverse('crops:crop_search_images_ajax'), {'q': 'Eggplant'}
+        )
+
+        self.assertEqual(gallery.status_code, 200)
+        data = gallery.json()
+        self.assertTrue(data.get('has_user_upload'))
+        self.assertTrue(data['photos'])
+        first = data['photos'][0]
+        self.assertTrue(first['is_user_upload'])
+        self.assertEqual(first['preview_url'], original.image.url)
+        self.assertFalse(
+            any(
+                photo.get('source') == 'Verified Agricultural Photo'
+                for photo in data['photos']
+            )
+        )
 
     def test_non_image_upload_is_rejected(self):
         response = self.post_crop(
@@ -822,7 +1074,10 @@ class CropCategoryTests(TestCase):
         self.assertEqual(infer_category('Cabbage'), Crop.Category.VEGETABLE)
         self.assertEqual(infer_category('Lansones'), Crop.Category.FRUIT)
         self.assertEqual(infer_category('Watermelon'), Crop.Category.FRUIT)
-        self.assertEqual(infer_category('Dragon fruit'), Crop.Category.OTHER)
+        self.assertEqual(infer_category('Dragon fruit'), Crop.Category.FRUIT)
+        self.assertEqual(infer_category('Papaya'), Crop.Category.FRUIT)
+        self.assertEqual(infer_category('Malunggay'), Crop.Category.VEGETABLE)
+        self.assertEqual(infer_category('Adlay'), Crop.Category.GRAIN)
         self.assertEqual(infer_category(''), Crop.Category.OTHER)
 
     def test_category_inference_for_filipino_names(self):
@@ -831,3 +1086,258 @@ class CropCategoryTests(TestCase):
         self.assertEqual(infer_category('Talong'), Crop.Category.VEGETABLE)
         self.assertEqual(infer_category('Saging'), Crop.Category.FRUIT)
         self.assertEqual(infer_category('Mangga'), Crop.Category.FRUIT)
+
+
+class AgriculturalReferenceServiceTests(TestCase):
+    def test_calculate_harvest_date_formula(self):
+        # Formula: Expected Harvest Date = Planting Date + Days to Maturity
+        # User example: Rice NSIC Rc 402, Planting Date: Nov 1, 2026, 114 days -> Feb 23, 2027
+        expected_date = calculate_harvest_date(date(2026, 11, 1), 114)
+        self.assertIsNotNone(expected_date)
+        self.assertEqual(expected_date, date(2027, 2, 23))
+        self.assertEqual(expected_date.isoformat(), '2027-02-23')
+
+    def test_search_varieties_for_rice(self):
+        varieties = search_varieties('Rice')
+        self.assertGreater(len(varieties), 0)
+        variety_names = [v['variety_name'] for v in varieties]
+        # Should include authentic Philippine rice varieties like NSIC Rc 402, NSIC Rc 222
+        self.assertTrue(any('402' in name or '222' in name for name in variety_names))
+        # Sources should be Binhing Palay or PhilRice
+        sources = [v['source_name'] for v in varieties]
+        self.assertTrue(any('Binhing Palay' in s or 'PhilRice' in s for s in sources))
+
+    def test_search_varieties_for_vegetables_and_others(self):
+        varieties = search_varieties('Tomato')
+        self.assertGreater(len(varieties), 0)
+        self.assertTrue(any('Diamante' in v['variety_name'] or 'Apollo' in v['variety_name'] for v in varieties))
+
+
+class AgriculturalReferenceAjaxTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='farmtester', password='secretpassword'
+        )
+        self.farm = Farm.objects.create(
+            name='Aurora Farm',
+            owner='Maria Clara',
+            location='Baler, Aurora',
+            size_hectares=4.0,
+            date_registered='2026-01-01',
+            status='active',
+            user=self.user,
+        )
+        self.client.force_login(self.user)
+
+    def test_varieties_ajax_unauthenticated(self):
+        self.client.logout()
+        res = self.client.get(reverse('crops:crop_varieties_ajax'), {'crop_name': 'Rice'})
+        self.assertEqual(res.status_code, 302)
+
+    def test_varieties_ajax_authenticated(self):
+        res = self.client.get(reverse('crops:crop_varieties_ajax'), {'crop_name': 'Rice'})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertGreater(len(data['varieties']), 0)
+        self.assertEqual(data['crop_name'], 'Rice')
+        self.assertIn('Expected harvest dates are estimates', data['disclaimer'])
+
+    def test_calculate_harvest_ajax(self):
+        res = self.client.get(reverse('crops:crop_calculate_harvest_ajax'), {
+            'planting_date': '2026-11-01',
+            'days_to_maturity': '114',
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data['expected_harvest_date'], '2027-02-23')
+        self.assertIn('Feb 23, 2027', data['expected_harvest_date_formatted'])
+        self.assertIn('Expected harvest dates are estimates', data['disclaimer'])
+
+    def test_calculate_harvest_ajax_invalid_input(self):
+        res = self.client.get(reverse('crops:crop_calculate_harvest_ajax'), {
+            'planting_date': 'not-a-date',
+            'days_to_maturity': 'abc',
+        })
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        self.assertIn('error', data)
+
+
+class CropImageIntegrationTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='phototester', password='secretpassword'
+        )
+        self.client.force_login(self.user)
+
+    def test_search_images_ajax_returns_photos_and_keywords(self):
+        res = self.client.get(reverse('crops:crop_search_images_ajax'), {'q': 'Rice'})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data['keyword'], 'Rice plants growing in a field')
+        self.assertGreater(len(data['photos']), 0)
+        first = data['photos'][0]
+        self.assertIn('thumb_url', first)
+        self.assertIn('source', first)
+        self.assertIn('title', first)
+
+    def test_search_images_ajax_empty_query_returns_bad_request(self):
+        res = self.client.get(reverse('crops:crop_search_images_ajax'), {'q': ''})
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        self.assertIn('error', data)
+
+    def test_search_images_ajax_returns_watermelon_not_sweet_potato(self):
+        res = self.client.get(
+            reverse('crops:crop_search_images_ajax'), {'q': 'Watermelon'}
+        )
+        self.assertEqual(res.status_code, 200)
+        photos = res.json()['photos']
+        self.assertGreater(len(photos), 0)
+        self.assertEqual(
+            photos[0]['download_url'], '/static/img/crops/watermelon.jpg'
+        )
+        self.assertTrue(photos[0]['verified'])
+        self.assertNotIn(
+            '/static/img/crops/sweet_potato.jpg',
+            [photo['download_url'] for photo in photos],
+        )
+
+    def test_search_images_ajax_does_not_mix_watermelon_and_melon(self):
+        melon = self.client.get(
+            reverse('crops:crop_search_images_ajax'), {'q': 'Melon'}
+        ).json()['photos']
+        watermelon = self.client.get(
+            reverse('crops:crop_search_images_ajax'), {'q': 'Watermelon'}
+        ).json()['photos']
+
+        self.assertEqual(melon[0]['download_url'], '/static/img/crops/melon.jpg')
+        self.assertEqual(
+            watermelon[0]['download_url'], '/static/img/crops/watermelon.jpg'
+        )
+
+
+class CropSaveAndHarvestDateTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='croptester', password='secretpassword'
+        )
+        self.farm = Farm.objects.create(
+            name='Verdant Acres',
+            owner='Juan Dela Cruz',
+            location='Muñoz, Nueva Ecija',
+            size_hectares=10.0,
+            date_registered='2026-01-01',
+            status='active',
+            user=self.user,
+        )
+        self.client.force_login(self.user)
+
+    def test_save_crop_persists_soil_type_and_reference(self):
+        res = self.client.post(reverse('crops:crop_save_ajax'), {
+            'farm_id': self.farm.id,
+            'name': 'Rice',
+            'variety': 'NSIC Rc 402',
+            'planting_date': '2026-11-01',
+            'days_to_maturity': '114',
+            'area_hectares': '3.0',
+            'soil_type': 'Clay loam',
+            'reference_source': 'Binhing Palay (PhilRice)',
+            'reference_url': 'https://binhingpalay.philrice.gov.ph/',
+            'status': Crop.Status.PLANTING,
+        })
+        self.assertEqual(res.status_code, 200)
+        crop = Crop.objects.get(name='Rice', variety='NSIC Rc 402')
+        self.assertEqual(crop.soil_type, 'Clay loam')
+        self.assertEqual(crop.reference_source, 'Binhing Palay (PhilRice)')
+        self.assertEqual(crop.reference_url, 'https://binhingpalay.philrice.gov.ph/')
+        self.assertEqual(crop.expected_harvest_date, date(2027, 2, 23))
+        self.assertIsNone(crop.actual_harvest_date)
+
+    def test_actual_harvest_date_is_independent_of_expected_harvest_date(self):
+        crop = Crop.objects.create(
+            name='Corn',
+            variety='IPB Var 6',
+            farm=self.farm,
+            user=self.user,
+            planting_date=date(2026, 1, 1),
+            days_to_maturity=105,
+            expected_harvest_date=date(2026, 4, 16),
+            actual_harvest_date=date(2026, 4, 20),
+            area_hectares=1.5,
+            status=Crop.Status.HARVESTED,
+        )
+        res = self.client.post(reverse('crops:crop_save_ajax'), {
+            'crop_id': crop.id,
+            'farm_id': self.farm.id,
+            'name': 'Corn',
+            'variety': 'IPB Var 6',
+            'planting_date': '2026-01-01',
+            'days_to_maturity': '105',
+            'area_hectares': '1.5',
+            'status': Crop.Status.HARVESTED,
+        })
+        self.assertEqual(res.status_code, 200)
+        crop.refresh_from_db()
+        self.assertEqual(crop.expected_harvest_date, date(2026, 4, 16))
+        self.assertEqual(crop.actual_harvest_date, date(2026, 4, 20))
+
+    def test_save_crop_with_selected_image_url(self):
+        res = self.client.post(reverse('crops:crop_save_ajax'), {
+            'farm_id': self.farm.id,
+            'name': 'Rice',
+            'variety': 'NSIC Rc 222',
+            'planting_date': '2026-11-01',
+            'days_to_maturity': '110',
+            'area_hectares': '2.0',
+            'selected_image_url': '/static/img/crops/rice.jpg',
+            'status': Crop.Status.PLANTING,
+        })
+        self.assertEqual(res.status_code, 200)
+        crop = Crop.objects.get(name='Rice', variety='NSIC Rc 222')
+        self.assertTrue(bool(crop.image))
+        self.assertTrue(crop.image.name.startswith('crops/'))
+        if crop.image:
+            crop.image.delete(save=False)
+
+    def test_mismatched_local_photo_is_not_saved(self):
+        res = self.client.post(reverse('crops:crop_save_ajax'), {
+            'farm_id': self.farm.id,
+            'name': 'Watermelon',
+            'variety': '',
+            'planting_date': '2026-11-01',
+            'days_to_maturity': '80',
+            'area_hectares': '1.0',
+            'selected_image_url': '/static/img/crops/sweet_potato.jpg',
+            'status': Crop.Status.PLANTING,
+        })
+        self.assertEqual(res.status_code, 200)
+        crop = Crop.objects.get(name='Watermelon')
+        self.assertFalse(crop.image)
+        self.assertTrue(
+            crop.display_image_url.endswith('/static/img/crops/watermelon.jpg')
+        )
+
+    def test_matching_local_watermelon_photo_is_saved(self):
+        res = self.client.post(reverse('crops:crop_save_ajax'), {
+            'farm_id': self.farm.id,
+            'name': 'Watermelon',
+            'variety': '',
+            'planting_date': '2026-11-01',
+            'days_to_maturity': '80',
+            'area_hectares': '1.0',
+            'selected_image_url': '/static/img/crops/watermelon.jpg',
+            'status': Crop.Status.PLANTING,
+        })
+        self.assertEqual(res.status_code, 200)
+        crop = Crop.objects.get(name='Watermelon')
+        self.assertTrue(bool(crop.image))
+        self.assertTrue(crop.image.name.startswith('crops/'))
+        if crop.image:
+            crop.image.delete(save=False)
+
+    def test_agricultural_reference_admin_registered(self):
+        from django.contrib import admin
+        self.assertIn(AgriculturalReference, admin.site._registry)
+
+

@@ -39,6 +39,44 @@
       </div>
     </div>
     {% endfor %}
+
+    {% if activity_notifications %}
+    {% if activity_notifications.pending_count > 0 %}
+    <div class="toast bg-secondary-lt text-secondary" role="status" aria-atomic="true" data-bs-delay="6000" style="--tblr-toast-color: #000;">
+      <div class="d-flex">
+        <div class="toast-body">
+          <strong>{{ activity_notifications.pending_count }} activity{{ activity_notifications.pending_count|pluralize:"y,ies" }} pending</strong>
+          {% if activity_notifications.recent_pending %}<br><small class="text-muted">Recent: {{ activity_notifications.recent_pending|length }} pending activity{{ activity_notifications.recent_pending|pluralize:"y,ies" }}</small>{% endif %}
+        </div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if activity_notifications.in_progress_count > 0 %}
+    <div class="toast bg-primary-lt text-primary" role="status" aria-atomic="true" data-bs-delay="6000" style="--tblr-toast-color: #000;">
+      <div class="d-flex">
+        <div class="toast-body">
+          <strong>{{ activity_notifications.in_progress_count }} activity{{ activity_notifications.in_progress_count|pluralize:"y,ies" }} in progress</strong>
+          {% if activity_notifications.recent_in_progress %}<br><small class="text-muted">Recent: {{ activity_notifications.recent_in_progress|length }} in progress activity{{ activity_notifications.recent_in_progress|pluralize:"y,ies" }}</small>{% endif %}
+        </div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if activity_notifications.completed_count > 0 %}
+    <div class="toast bg-success-lt text-success" role="status" aria-atomic="true" data-bs-delay="6000" style="--tblr-toast-color: #000;">
+      <div class="d-flex">
+        <div class="toast-body">
+          <strong>{{ activity_notifications.completed_count }} activity{{ activity_notifications.completed_count|pluralize:"y,ies" }} completed</strong>
+          {% if activity_notifications.recent_completed %}<br><small class="text-muted">Recent: {{ activity_notifications.recent_completed|length }} completed activity{{ activity_notifications.recent_completed|pluralize:"y,ies" }}</small>{% endif %}
+        </div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
   </div>
 
   <div id="activityAlert" class="alert alert-danger d-none" role="alert"></div>

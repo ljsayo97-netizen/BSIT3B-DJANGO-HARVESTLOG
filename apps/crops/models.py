@@ -12,6 +12,33 @@ from .images import crop_image_path
 from .maturity import DEFAULT_MATURITY_DAYS, suggest_maturity_days
 
 
+class CropDefaultImage(models.Model):
+    """Tracks a user's default uploaded image per crop name, surviving
+    deletion/reenactment of individual crop instances.
+
+    When a crop image is uploaded via the form, this record is created/updated
+    so that ``display_image_url`` can return it even after the crop instance's
+    ``image`` field is cleared.
+    """
+
+    class Meta:
+        verbose_name = "crop default image"
+        verbose_name_plural = "crop default images"
+        unique_together = ("user", "crop_name")
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="crop_default_images",
+    )
+    crop_name = models.CharField("crop name", max_length=255)
+    image_path = models.CharField("image path", max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} / {self.crop_name} / {self.image_path}"
+
+
 HARVEST_APPROACHING_DAYS = 14
 HARVEST_UPCOMING_WINDOW_DAYS = 30
 
@@ -100,6 +127,27 @@ class Crop(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(0)],
         help_text='Area planted in hectares.',
+    )
+    soil_type = models.CharField(
+        'soil type',
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='Type of soil used for planting (e.g. Clay Loam, Sandy Loam).',
+    )
+    reference_source = models.CharField(
+        'agricultural reference source',
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Official Philippine reference used for crop maturity information.',
+    )
+    reference_url = models.URLField(
+        'agricultural reference URL',
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Direct link to official variety publication or catalog.',
     )
     notes = models.TextField(blank=True)
     quality = models.CharField(
@@ -224,12 +272,65 @@ class Crop(models.Model):
 
     @property
     def display_image_url(self):
-        """The uploaded crop photo, or the matching stock photo/placeholder."""
+        """The uploaded crop photo, or the matching stock photo/placeholder.
+
+        Priority order:
+        1. This crop's own uploaded image (if any).
+        2. The user's saved default image for this crop name (survives deletion
+           and re-adding the same crop).
+        3. Another crop by the same user with the same name that has an image.
+        4. The catalog/placeholder image.
+
+        A saved default is only used while its file still exists. Stale
+        records (for example after an image was deleted) are removed and the
+        property falls through to the next source, so the page never renders
+        a broken image.
+        """
+        from django.core.files.storage import default_storage
+
+        # 1. This crop's own uploaded image.
         if self.image:
             try:
-                return self.image.url
-            except ValueError:
+                if default_storage.exists(self.image.name):
+                    return self.image.url
+            except Exception:
                 pass
+
+        # 2. The user's saved default image for this crop name. The record
+        #    stores a storage-relative path, so it must be converted to a URL
+        #    (e.g. ``/media/crops/...``) before it is used in templates.
+        if self.user_id:
+            default_images = CropDefaultImage.objects.filter(
+                user_id=self.user_id,
+                crop_name__iexact=self.name,
+            ).exclude(image_path='')
+            for default_img in default_images:
+                try:
+                    if default_storage.exists(default_img.image_path):
+                        return default_storage.url(default_img.image_path)
+                except Exception:
+                    pass
+                # The pointed-at file is gone; remove the stale record.
+                default_img.delete()
+
+        # 3. Another crop by the same user with the same name that has an image.
+        if self.user_id:
+            same_name_crop = (
+                Crop.objects.filter(user_id=self.user_id, name__iexact=self.name)
+                .exclude(pk=self.pk)
+                .exclude(image='')
+                .exclude(image__isnull=True)
+                .order_by('-created_at')
+                .first()
+            )
+            if same_name_crop and same_name_crop.image:
+                try:
+                    if default_storage.exists(same_name_crop.image.name):
+                        return same_name_crop.image.url
+                except Exception:
+                    pass
+
+        # 4. Local catalog/placeholder image.
         return static(crop_image_path(self.name))
 
     @property
@@ -246,3 +347,58 @@ class Crop(models.Model):
 
         elapsed_days = (timezone.localdate() - self.planting_date).days
         return max(0, min(100, round(elapsed_days / total_days * 100)))
+
+
+class AgriculturalReference(models.Model):
+    """Verified Philippine agricultural crop variety and maturity reference."""
+
+    class Source(models.TextChoices):
+        BINHING_PALAY = 'Binhing Palay', 'Binhing Palay (PhilRice)'
+        PHILRICE = 'PhilRice', 'Philippine Rice Research Institute (PhilRice)'
+        ATI = 'Agricultural Training Institute (ATI)', 'Agricultural Training Institute (ATI)'
+        AMTEC = 'UPLB AMTEC', 'UPLB Agricultural Machinery Testing and Evaluation Center (AMTEC)'
+        ANEE = 'Anee Crop Varieties', 'Anee Crop Varieties'
+
+    crop_name = models.CharField('crop name', max_length=100, db_index=True)
+    category = models.CharField(
+        'category',
+        max_length=20,
+        choices=Crop.Category.choices,
+        default=Crop.Category.OTHER,
+        db_index=True,
+    )
+    variety_name = models.CharField('variety name', max_length=255, db_index=True)
+    days_to_maturity = models.PositiveIntegerField(
+        'days to maturity',
+        validators=[MinValueValidator(1)],
+        help_text='Official days to maturity according to published agricultural reference.',
+    )
+    days_to_maturity_min = models.PositiveIntegerField(
+        'minimum days to maturity',
+        null=True,
+        blank=True,
+    )
+    days_to_maturity_max = models.PositiveIntegerField(
+        'maximum days to maturity',
+        null=True,
+        blank=True,
+    )
+    source_name = models.CharField('reference source', max_length=150, choices=Source.choices)
+    source_url = models.URLField('official reference URL', max_length=500)
+    description = models.TextField('characteristics and recommendations', blank=True, default='')
+    soil_type = models.CharField('recommended soil type', max_length=100, blank=True, default='')
+    irrigation_info = models.CharField('ecosystem / irrigation', max_length=150, blank=True, default='')
+    verified_date = models.DateField('verification date', default=timezone.localdate)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'tblcropagriculturalreferences'
+        ordering = ['crop_name', 'variety_name']
+        verbose_name = 'agricultural crop reference'
+        verbose_name_plural = 'agricultural crop references'
+
+    def __str__(self):
+        return f'{self.crop_name} - {self.variety_name} ({self.days_to_maturity} days, {self.source_name})'
+

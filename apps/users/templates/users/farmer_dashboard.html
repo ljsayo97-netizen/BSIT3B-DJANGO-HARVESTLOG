@@ -1,0 +1,282 @@
+{% extends "theme/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/farmer_dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="dh-page-layout">
+
+  <!-- Topbar -->
+  <include src="theme/topbar.html" />
+
+  <div class="dh-main">
+    <div class="dh-header">
+      <div class="dh-header-left">
+        <h1>{% blocktrans with name=user_name %}Good morning, {{ name }}!{% endblocktrans %}</h1>
+        <p class="dh-subtitle">{% trans "Here's what's happening on your farms today." %}</p>
+      </div>
+
+      <div class="dh-header-right">
+        {% include "theme/nav_search.html" with placeholder="Search farms, crops, harvests..." %}
+      </div>
+    </div>
+
+    <div class="dh-header-spacer"></div>
+
+    <!-- Summary Cards Row 1 -->
+    <div class="dh-grid-md-2 dh-grid-lg-4">
+      <div class="dh-card dh-card-summary">
+        <div class="dh-card-icon bg-primary">
+          <i class="fas fa-tractor"></i>
+        </div>
+        <div class="dh-card-info">
+          <strong>{% trans "My Farms" %}</strong>
+          <div class="dh-card-value">{{ farms_count }}</div>
+        </div>
+      </div>
+
+      <div class="dh-card dh-card-summary">
+        <div class="dh-card-icon bg-success">
+          <i class="fas fa-leaf"></i>
+        </div>
+        <div class="dh-card-info">
+          <strong>{% trans "Active Crops" %}</strong>
+          <div class="dh-card-value">{{ active_crops_count }}</div>
+        </div>
+      </div>
+
+      <div class="dh-card dh-card-summary">
+        <div class="dh-card-icon bg-info">
+          <i class="fas fa-weight-hanging"></i>
+        </div>
+        <div class="dh-card-info">
+          <strong>{% trans "Total Harvest" %}</strong>
+          <div class="dh-card-value">{{ total_harvest|default:"0" }} {% trans "kg" %}</div>
+        </div>
+      </div>
+
+      <div class="dh-card dh-card-summary">
+        <div class="dh-card-icon bg-warning">
+          <i class="fas fa-dollar-sign"></i>
+        </div>
+        <div class="dh-card-info">
+          <strong>{% trans "Estimated Revenue" %}</strong>
+          <div class="dh-card-value">{{ total_revenue|default:"0" }} {% trans "PHP" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Farms Section -->
+    <section class="dh-section mt-4">
+      <div class="dh-section-header">
+        <h2>{% trans "My Farms" %}</h2>
+      </div>
+      <div class="dh-grid-md-3">
+        {% for farm in farms|slice:":6" %}
+        <div class="dh-card hoverable">
+          <div class="dh-card-image" style="background: {% if farm.status %}#e8f5e9{% else %}#fff3e0{% endif %}; height: 180px; display: flex; align-items: center; justify-content: center; color: {% if farm.status %}#2e7d32{% else %}#bf360c{% endif %};">
+            {% if farm.thumbnail %}
+              <img src="{{ farm.thumbnail.url }}" alt="{{ farm.name }}" style="max-width: 100%; max-height: 100%; object-fit: cover;">
+            {% else %}
+              <div style="width: 80px; height: 80px; background: #c5e1a5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">🚜</div>
+            {% endif %}
+            <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; font-size: 12px; border-radius: 4px; {% if farm.status %}white{% else %}white{% endif %};">
+              {% if farm.status %}{% trans "Active" %}{% else %}{% trans "Inactive" %}{% endif %}
+            </div>
+          </div>
+          <div class="dh-card-body p-3">
+            <h6 class="dh-card-title">{{ farm.name }}</h6>
+            <p class="dh-card-text small">{{ farm.location }}, {{ farm.size_hectares }} {% trans "hectares" %}</p>
+            <button class="btn btn-sm btn-primary w-100">
+              {% trans "View Details" %}
+            </button>
+          </div>
+        </div>
+        {% empty %}
+        <div class="dh-text-center py-8">
+          <i class="fas fa-farm fa-3x text-muted mb-3"></i>
+          <h6>{% trans "No farms yet" %}</h6>
+          <p>{% trans "Add your first farm to get started." %}</p>
+          <button class="btn btn-primary mt-3">
+            {% trans "Add Farm" %}
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- My Crops Section -->
+    <section class="dh-section mt-4">
+      <div class="dh-section-header">
+        <h2>{% trans "My Crops" %}</h2>
+      </div>
+      <div class="dh-grid-md-3">
+        {% for crop in active_crops|slice:":12" %}
+        <div class="dh-card crop-card hoverable" style="min-height: 140px;">
+          <div class="dh-card-image" style="height: 100px; background: {% if crop.status == crop.Status.PLANTING %}#fff3e0{% elif crop.status == crop.Status.GROWING %}#e3f2fd{% elif crop.status == crop.Status.MATURING %}#f3e5f5{% elif crop.status == crop.Status.READY_FOR_HARVEST %}#e8f5e9{% else %}#fff5e5{% endif %}; display: flex; align-items: center; justify-content: center; color: {% if crop.status == crop.Status.READY_FOR_HARVEST %}#2e7d32{% else %}#3f51b5{% endif %};">
+            <img src="{{ crop.display_image_url }}" alt="{{ crop.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+            <span class="status-badge{% if crop.status == crop.Status.READY_FOR_HARVEST %} badg-success{% elif crop.status == crop.Status.MATURING %} badg-info{% else %} badg-warning{% endif %}" style="position: absolute; top: 8px; right: 8px;">
+              {% if crop.status == crop.Status.READY_FOR_HARVEST %}{% trans "Ready" %}{% elif crop.status == crop.Status.MATURING %}{% trans "Maturing" %}{% else %}{% trans "Growing" %}{% endif %}
+            </span>
+          </div>
+          <div class="dh-card-body p-3">
+            <h6 class="dh-card-title" style="font-size: 14px;">{{ crop.name }}</h6>
+            <p class="dh-card-text small" style="font-size: 12px;">
+              {% trans "Farm" %}: {{ crop.farm.name }}{% if crop.variety %} {{ crop.variety }}{% endif %}<br>
+              {% trans "Planted" %}: {{ crop.planting_date|date:"M d" }}{% if crop.expected_harvest_date %}<br>{% trans "Harvest" %}: {{ crop.expected_harvest_date|date:"M d" }}{% endif %}
+            </p>
+            <button class="btn btn-sm btn-outline-primary w-100">
+              {% trans "View Details" %}
+            </button>
+          </div>
+        </div>
+        {% empty %}
+        <div class="dh-text-center py-8">
+          <i class="fas fa-leaf fa-3x text-muted mb-3"></i>
+          <h6>{% trans "No active crops" %}</h6>
+          <p>{% trans "Your crops will appear here as they grow." %}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Recent Harvest Records -->
+    <section class="dh-section mt-4">
+      <div class="dh-section-header">
+        <h2>{% trans "Recent Harvest Records" %}</h2>
+      </div>
+      <div class="dh-table-responsive">
+        <table class="dh-table">
+          <thead>
+            <tr>
+              <th>{% trans "Crop" %}</th>
+              <th>{% trans "Farm" %}</th>
+              <th>{% trans "Date" %}</th>
+              <th>{% trans "Quantity" %}</th>
+              <th>{% trans "Condition" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for harvest in recent_harvests %}
+            <tr>
+              <td>{{ harvest.crop.name|default:"–" }}</td>
+              <td>{{ harvest.farm.name|default:"–" }}</td>
+              <td>{{ harvest.created_at|date:"M d, Y" }}</td>
+              <td>{{ harvest.quantity_harvested|default:"0" }} {{ harvest.unit|default:"kg" }}</td>
+              <td>
+                {% if harvest.condition %}
+                  <span class="badge {% if harvest.condition == 'Good' %}bg-success{% elif harvest.condition == 'Fair' %}bg-warning{% else %}bg-danger{% endif %}">{{ harvest.condition }}</span>
+                {% else %}
+                  <span class="badge bg-secondary">–</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="dh-text-center">{% trans "No harvest records yet" %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button class="btn btn-link text-primary mt-2">{% trans "View All Harvests" %}</button>
+    </section>
+
+    <!-- Harvest Summary Chart -->
+    <section class="dh-section mt-4">
+      <div class="dh-section-header">
+        <h2>{% trans "Harvest Summary Chart" %}</h2>
+      </div>
+      <div class="dh-chart-container">
+        <canvas id="harvestChart" height="120"></canvas>
+      </div>
+      <div class="dh-filter-bar">
+        <select id="yearFilter" class="dh-select">
+          {% for year in years|default:current_year %}
+            <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{% trans "Year" %} {{ year }}</option>
+          {% endfor %}
+        </select>
+        <span class="dh-text-primary ml-3">{% trans "Total:" %} {{ total_harvest|default:"0" }} {% trans "kg" %}</span>
+      </div>
+    </section>
+
+    <!-- Upcoming Farm Activities -->
+    <section class="dh-section mt-4">
+      <div class="dh-section-header">
+        <h2>{% trans "Upcoming Farm Activities" %}</h2>
+      </div>
+      {% if latest_activity %}
+      <div class="dh-grid-md-3">
+        <div class="dh-card activity-card">
+          <div class="dh-card-icon bg-schedule">
+            <i class="{{ latest_activity.get_activity_type_icon }}"></i>
+          </div>
+          <div class="dh-card-body">
+            <h6 class="dh-card-title">{{ latest_activity.get_activity_type_display }}</h6>
+            <p class="dh-card-text small">
+              {% if latest_activity.farm %}{% trans "Farm" %}: {{ latest_activity.farm.name }}{% endif %}<br>
+              {% trans "Scheduled" %}: {{ latest_activity.scheduled_date|date:"F j, Y" }}{% if latest_activity.activity_type == latest.ActivityType.CROP_INSPECTION %}{% trans " (Inspection)" %}{% endif %}
+            </p>
+            <span class="badge {% if latest_activity.status == 'completed' %}bg-success{% elif latest_activity.status == 'in_progress' %}bg-info{% else %}bg-warning{% endif %}">
+              {{ latest_activity.get_status_display }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="dh-text-center py-8">
+        <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
+        <h6>{% trans "No upcoming activities" %}</h6>
+        <p>{% trans "All activities are up to date." %}</p>
+      </div>
+      {% endif %}
+    </section>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'users/js/farmer_dashboard.js' %}"></script>
+<script>
+// Initialize chart when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('harvestChart').getContext('2d');
+    const harvestChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: {{ chart_data|safe }},
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed + ' ' + {% trans "kg" %};
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, display: false }
+            }
+        }
+    });
+});
+</script>
+<script src="{% static 'users/js/activity_toggle.js' %}"></script>
+{% endblock %}

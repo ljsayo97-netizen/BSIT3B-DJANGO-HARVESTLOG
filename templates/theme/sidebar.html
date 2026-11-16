@@ -21,7 +21,7 @@
              title="Farm Field"
              {% if request.resolver_match.app_name == 'farms' %}aria-current="page"{% endif %}>
             <i class="fas fa-location-dot" aria-hidden="true"></i>
-            <span class="dh-nav-label">Farm Field</span>
+            <span class="dh-nav-label">Farm Management</span>
           </a>
         </li>
         <li>
@@ -112,7 +112,7 @@
     </nav>
 
     <nav class="dh-nav-group dh-nav-admin" aria-label="Admin">
-      <div class="dh-nav-section">ADMINISTRATION</div>
+      <div class="dh-nav-section">Account Management</div>
       <ul class="dh-nav-list">
         <li>
           <a class="dh-nav-link {% if request.resolver_match.app_name == 'users' %}is-active{% endif %}"
@@ -121,7 +121,7 @@
              title="Users"
              {% if request.resolver_match.app_name == 'users' %}aria-current="page"{% endif %}>
             <i class="fas fa-users" aria-hidden="true"></i>
-            <span class="dh-nav-label">Users</span>
+            <span class="dh-nav-label">Admin Account</span>
           </a>
         </li>
       </ul>

@@ -1,0 +1,21 @@
+{% load i18n %}
+<form class="dh-topbar-search"
+      role="search"
+      action="{% url 'global_search' %}"
+      method="get"
+      aria-label="{% trans 'Search' %}">
+  <button type="submit"
+          class="dh-search-icon dh-search-submit"
+          aria-label="{% trans 'Search' %}"
+          title="{% trans 'Search' %}">
+    <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+  </button>
+  <input class="dh-search-input"
+         type="search"
+         name="q"
+         value="{{ global_search_query|default:'' }}"
+         placeholder="{{ placeholder|default:'Search...' }}"
+         aria-label="{{ placeholder|default:'Search...' }}"
+         enterkeyhint="search"
+         autocomplete="off">
+</form>

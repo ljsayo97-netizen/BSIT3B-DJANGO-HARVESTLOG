@@ -13,4 +13,5 @@ urlpatterns = [
     path('ajax/inventory/', views.crop_inventory_ajax, name='crop_inventory_ajax'),
     path('ajax/save/', views.crop_save_ajax, name='crop_save_ajax'),
     path('ajax/delete/<int:pk>/', views.crop_delete_ajax, name='crop_delete_ajax'),
+    
 ]

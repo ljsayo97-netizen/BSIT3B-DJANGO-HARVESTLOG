@@ -614,6 +614,53 @@ class NotificationCenterPageTests(TestCase):
             )
         )
 
+    def test_notification_center_lists_pending_in_progress_and_completed_activities(self):
+        farm = Farm.objects.create(
+            user=self.user,
+            name='Activity Farm',
+            owner='Mia Santos',
+            location='South Field',
+            size_hectares=Decimal('3.00'),
+            date_registered=timezone.now(),
+        )
+        activity_defaults = {
+            'farm': farm,
+            'scheduled_date': self.today,
+            'assigned_worker': 'Pedro',
+            'user': self.user,
+        }
+        FarmActivity.objects.create(
+            activity_type=FarmActivity.ActivityType.IRRIGATION,
+            location='North Block',
+            status=FarmActivity.Status.PENDING,
+            **activity_defaults,
+        )
+        FarmActivity.objects.create(
+            activity_type=FarmActivity.ActivityType.WEEDING,
+            location='South Block',
+            status=FarmActivity.Status.IN_PROGRESS,
+            started_at=timezone.now(),
+            **activity_defaults,
+        )
+        FarmActivity.objects.create(
+            activity_type=FarmActivity.ActivityType.FERTILIZATION,
+            location='East Block',
+            status=FarmActivity.Status.COMPLETED,
+            started_at=timezone.now(),
+            completed_at=timezone.now(),
+            **activity_defaults,
+        )
+
+        response = self.client.get(reverse('notification_center'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Farm activity pending')
+        self.assertContains(response, 'Farm activity in progress')
+        self.assertContains(response, 'Farm activity completed')
+        self.assertContains(response, '1 activity pending')
+        self.assertContains(response, '1 activity in progress')
+        self.assertContains(response, '1 activity completed')
+
     def test_notification_center_unread_filter_hides_read_items(self):
         self._create_ready_crop()
         # The first load runs readiness sync, which files the crop alert.

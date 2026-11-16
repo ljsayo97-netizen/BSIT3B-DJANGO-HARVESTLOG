@@ -12,4 +12,8 @@ urlpatterns = [
     path('ajax/save/', views.user_save_ajax, name='user_save_ajax'),
     path('ajax/delete/<int:pk>/', views.user_delete_ajax, name='user_delete_ajax'),
     path('ajax/toggle-active/<int:pk>/', views.user_toggle_active_ajax, name='user_toggle_active_ajax'),
+    # Farmer dashboard
+    path('dashboard/', views.farmer_dashboard, name='farmer_dashboard'),
+    # Connected users
+    path('connected/', views.connected_users, name='connected_users'),
 ]

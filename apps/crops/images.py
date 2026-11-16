@@ -1,64 +1,73 @@
 """Crop photos used in the crop management interface."""
 
-CROP_IMAGE_FALLBACK = 'img/crops/default.svg'
+from .catalog import CROP_CATALOG, find_catalog_entry
+
+CROP_IMAGE_FALLBACK = "img/crops/default.svg"
+
+
+def _build_crop_image_rules():
+    """Build keyword-to-photo rules from the verified crop catalog.
+
+    Multiple catalog crops can share the same verified photo (for example all
+    rice types share ``rice.jpg``). Keywords from those entries are merged so
+    a rule always points at the photo of the same crop, never at another
+    crop's picture.
+
+    Rules are sorted by their longest keyword so that more specific names
+    such as "sweet potato" win over "potato" and "watermelon" wins over
+    "melon" in the browser-side substring matcher.
+    """
+
+    grouped = {}
+    for entry in CROP_CATALOG:
+        image = entry.get("image")
+        if not image:
+            continue
+        keywords = grouped.setdefault(image, [])
+        for name in (entry["name"], *entry["aliases"]):
+            lowered = name.casefold()
+            if lowered not in keywords:
+                keywords.append(lowered)
+
+    rules = [
+        (tuple(keywords), f"img/crops/{image}")
+        for image, keywords in grouped.items()
+    ]
+    rules.sort(key=lambda rule: max(len(keyword) for keyword in rule[0]), reverse=True)
+    return tuple(rules)
+
 
 # Each rule maps a crop and its common names (English and Filipino) to the
-# photo shown in the crop list. More specific crops must come before broader
-# ones (e.g. sweet potato before potato, turmeric before ginger) because crop
-# names are matched by keyword.
-CROP_IMAGE_RULES = (
-    (('rice', 'palay'), 'img/crops/rice.jpg'),
-    (('corn', 'mais', 'maize'), 'img/crops/corn.jpg'),
-    (('sugarcane', 'sugar cane', 'tubo'), 'img/crops/sugarcane.jpg'),
-    (('peanut', 'groundnut', 'mani'), 'img/crops/peanut.jpg'),
-    (('watermelon', 'pakwan'), 'img/crops/watermelon.jpg'),
-    (('melon', 'cantaloupe'), 'img/crops/melon.jpg'),
-    (('lanzones', 'lansones', 'lanzon'), 'img/crops/lanzones.jpg'),
-    (('banana', 'saging'), 'img/crops/banana.jpg'),
-    (('mango', 'mangga'), 'img/crops/mango.jpg'),
-    (('coconut', 'niyog'), 'img/crops/coconut.jpg'),
-    (('pineapple', 'pinya'), 'img/crops/pineapple.jpg'),
-    (('tomato', 'kamatis'), 'img/crops/tomato.jpg'),
-    (('eggplant', 'aubergine', 'talong'), 'img/crops/eggplant.jpg'),
-    (('okra',), 'img/crops/okra.jpg'),
-    (('onion', 'sibuyas'), 'img/crops/onion.jpg'),
-    (('garlic', 'bawang'), 'img/crops/garlic.jpg'),
-    (('cabbage', 'repolyo'), 'img/crops/cabbage.jpg'),
-    (('carrot', 'karots'), 'img/crops/carrot.jpg'),
-    # Cassava before sweet potato so "kamoteng kahoy" is not read as "kamote".
-    (('cassava', 'kamoteng kahoy', 'manioc'), 'img/crops/cassava.jpg'),
-    (('sweet potato', 'kamote'), 'img/crops/sweet_potato.jpg'),
-    (('potato', 'patatas'), 'img/crops/potato.jpg'),
-    (('coffee', 'kape'), 'img/crops/coffee.jpg'),
-    (('cacao', 'cocoa', 'kakaw'), 'img/crops/cacao.jpg'),
-    (('mung bean', 'mungbean', 'munggo', 'mongo', 'green gram'), 'img/crops/mungbean.jpg'),
-    (('soybean', 'soya'), 'img/crops/soybean.jpg'),
-    (('cucumber', 'pipino'), 'img/crops/cucumber.jpg'),
-    (('squash', 'kalabasa', 'pumpkin'), 'img/crops/squash.jpg'),
-    ((
-        'bitter gourd', 'bitter melon', 'bittermelon', 'ampalaya',
-    ), 'img/crops/bittergourd.jpg'),
-    (('pechay', 'pak choi', 'pak choy', 'bok choy'), 'img/crops/pechay.jpg'),
-    (('lettuce', 'letsugas'), 'img/crops/lettuce.jpg'),
-    # Turmeric before ginger so "luyang dilaw" is not read as "luya".
-    (('turmeric', 'luyang dilaw'), 'img/crops/turmeric.jpg'),
-    (('ginger', 'luya'), 'img/crops/ginger.jpg'),
-    (('tobacco', 'tabako'), 'img/crops/tobacco.jpg'),
-    (
-        (
-            'vegetable', 'spinach', 'kangkong', 'radish', 'labanos', 'beet',
-            'broccoli', 'cauliflower', 'pepper', 'chili', 'sili', 'bean',
-            'mustard', 'mustasa',
-        ),
-        'img/crops/vegetables.jpg',
-    ),
-)
+# photo shown in the crop list. Only existing, verified crop photos are
+# included; a crop without a specific photo uses the neutral placeholder.
+CROP_IMAGE_RULES = _build_crop_image_rules()
 
 
 def crop_image_path(crop_name):
     """Return the static path of the image that represents ``crop_name``."""
-    normalized = ' '.join((crop_name or '').lower().split())
-    for keywords, image_path in CROP_IMAGE_RULES:
-        if any(keyword in normalized for keyword in keywords):
-            return image_path
+
+    entry = find_catalog_entry(crop_name)
+    if entry and entry.get("image"):
+        return f"img/crops/{entry['image']}"
     return CROP_IMAGE_FALLBACK
+
+
+def is_verified_local_crop_image(image_url, crop_name):
+    """Check whether a local crop photo belongs to ``crop_name``.
+
+    The crop form can keep a previously selected photo in the browser when
+    the grower changes the crop name. This server-side guard ensures a local
+    static photo from a different crop (for example a sweet potato photo
+    saved on a watermelon crop) is never persisted.
+    """
+
+    if not image_url:
+        return True
+
+    prefix = "/static/img/crops/"
+    if not image_url.startswith(prefix):
+        # Remote search results and uploaded media cannot be compared by path.
+        return True
+
+    expected = f"/static/{crop_image_path(crop_name)}"
+    return image_url.split("?", 1)[0] == expected

@@ -290,21 +290,27 @@ def reopen_crop_notifications(crop):
 def get_topbar_notifications(user, limit=6):
     """Return unified notifications for the topbar dropdown.
 
-    Includes readiness alerts from HarvestNotification, recent harvests,
-    and upcoming activity checks.
+    Includes readiness alerts from HarvestNotification, live pending /
+    in-progress / completed farm activity summaries, and recent harvests.
     """
     from django.urls import reverse
-    from apps.activities.models import FarmActivity
+    from apps.activities.services import get_activity_notification_items
     from .models import Harvest
 
     sync_harvest_readiness(user)
 
     items = []
+    # Reserve space for one activity notification per workflow status
+    # (pending, in progress, completed) so they are always visible in the
+    # topbar even when there are several harvest alerts.
+    activity_items = get_activity_notification_items(user)[:limit]
+    harvest_limit = max(limit - len(activity_items), 0)
+
     # 1. Harvest notifications (unread first, then recent read)
     h_notes = list(
         HarvestNotification.objects.filter(user=user)
         .select_related('crop', 'crop__farm')
-        .order_by('is_read', '-created_at')[:limit]
+        .order_by('is_read', '-created_at')[:harvest_limit]
     )
 
     for note in h_notes:
@@ -332,8 +338,12 @@ def get_topbar_notifications(user, limit=6):
             'can_mark_read': not note.is_read,
         })
 
-    # 2. Add recent harvest record if space remains
+    # 2. Add one notification per activity workflow status. These are live
+    #    summaries, so they are informational rather than unread alerts.
+    items.extend(activity_items)
     remaining = limit - len(items)
+
+    # 3. Add recent harvest record if space remains
     if remaining > 0:
         latest_harvest = (
             Harvest.objects.filter(user=user)
@@ -353,38 +363,6 @@ def get_topbar_notifications(user, limit=6):
                 'icon': 'fas fa-calendar-days',
                 'tone': 'info',
                 'url': reverse('harvests:harvest_history'),
-                'is_unread': False,
-                'can_mark_read': False,
-            })
-            remaining -= 1
-
-    # 3. Add scheduled activity if space remains
-    if remaining > 0:
-        latest_activity = (
-            FarmActivity.objects.filter(user=user)
-            .select_related('farm', 'crop')
-            .order_by('-created_at')
-            .first()
-        )
-        if latest_activity:
-            activity_label = latest_activity.get_activity_type_display()
-            is_inspection = (
-                latest_activity.activity_type == FarmActivity.ActivityType.CROP_INSPECTION
-            )
-            items.append({
-                'id': None,
-                'title': 'Field Check' if is_inspection else activity_label,
-                'badge': '',
-                'description': (
-                    'Field inspection scheduled.'
-                    if is_inspection
-                    else f'{activity_label} scheduled.'
-                ),
-                'meta': latest_activity.farm.name if latest_activity.farm else '',
-                'timestamp': latest_activity.created_at,
-                'icon': 'fas fa-calendar-check',
-                'tone': 'schedule',
-                'url': reverse('activities:activity_list'),
                 'is_unread': False,
                 'can_mark_read': False,
             })

@@ -578,15 +578,7 @@
             <div class="col-md-4">
               <label class="form-label">Quantity <span class="text-danger">*</span></label>
               <input type="number" name="quantity_harvested" id="harvest_quantity_harvested" class="form-control" step="0.01" min="0" required placeholder="0.00">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Unit</label>
-              <select name="unit" id="harvest_unit" class="form-select">
-                <option value="kg">kg</option>
-                <option value="tons">tons</option>
-                <option value="baskets">baskets</option>
-                <option value="sacks">sacks</option>
-              </select>
+              <span class="form-text text-muted small">kg</span>
             </div>
             <div class="col-md-5">
               <label class="form-label">Harvest ID</label>
@@ -800,7 +792,7 @@
     harvestDateDisplay.textContent = 'Today, assigned on save';
     document.getElementById('harvest_quality_grade').value = 'standard';
     document.getElementById('harvest_quality_condition').value = '';
-    document.getElementById('harvest_unit').value = 'kg';
+    
     document.getElementById('harvest_workers_count').value = '0';
     harvestForm.querySelectorAll('input, select, textarea').forEach(function (el) {
       el.disabled = false;
@@ -839,7 +831,7 @@
 
     document.getElementById('harvest_quantity_harvested').value =
       data.quantity_harvested !== undefined && data.quantity_harvested !== null ? data.quantity_harvested : '';
-    document.getElementById('harvest_unit').value = data.unit || 'kg';
+    
     document.getElementById('harvest_quality_grade').value = data.quality_grade || 'standard';
     document.getElementById('harvest_quality_condition').value = data.quality_condition || '';
     document.getElementById('harvest_moisture_level').value =
