@@ -84,6 +84,31 @@ def _save_default_crop_image(user, crop_name, image_name):
     )
 
 
+def _ensure_default_crop_image(user, crop_name, image_name, replace=False):
+    """Make sure ``image_name`` is remembered as the default photo.
+
+    A freshly uploaded/selected photo (``replace=True``) always becomes the
+    new default. When the crop already carried a photo from a previous save
+    (for example an older crop created before defaults were tracked), the
+    photo is only promoted to default if no usable default exists yet, so a
+    newer photo saved for the same crop name is never overwritten.
+    """
+    if not image_name:
+        return None
+
+    existing = CropDefaultImage.objects.filter(
+        user=user, crop_name__iexact=crop_name
+    ).first()
+    if existing and not replace:
+        try:
+            if existing.image_path and default_storage.exists(existing.image_path):
+                return existing
+        except Exception:
+            pass
+
+    return _save_default_crop_image(user, crop_name, image_name)
+
+
 def _user_uploaded_photos(user, crop_name):
     """Return the user's saved photos for a crop name, newest first."""
     photos = []
@@ -761,8 +786,14 @@ def crop_save_ajax(request):
         )
 
     new_image_name = crop.image.name if crop.image else None
-    if new_image_name and image_assigned:
-        _save_default_crop_image(request.user, name, new_image_name)
+    if new_image_name:
+        # Remember the crop's own uploaded photo as the default for this crop
+        # name. A freshly uploaded photo always replaces the default; a photo
+        # carried over from an earlier save only fills in a missing one, so
+        # re-adding the same crop still finds the image the grower uploaded.
+        _ensure_default_crop_image(
+            request.user, name, new_image_name, replace=image_assigned
+        )
     if remove_image:
         # Removing the photo is explicit: forget the saved default too, so the
         # crop falls back to its catalog image.

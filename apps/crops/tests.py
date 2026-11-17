@@ -593,16 +593,14 @@ class CropViewTests(TestCase):
         self.assertEqual(counts['fruit'], '0')
         self.assertEqual(counts['other'], '0')
 
-    def test_crop_form_offers_the_full_crop_catalog(self):
+    def test_crop_form_uses_a_plain_crop_name_input(self):
         response = self.client.get(reverse('crops:crop_list'))
         content = response.content.decode()
 
-        self.assertIn('id="cropCatalogOptions"', content)
-        self.assertIn('<option value="Watermelon">', content)
-        self.assertIn('<option value="Dragon Fruit">', content)
-        self.assertIn('<option value="Brown Rice">', content)
-        self.assertIn('<option value="Ampalaya">', content)
-        self.assertIn('rice types &amp; grains', content)
+        # The crop name field no longer pulls up catalog suggestions, so the
+        # Add Crop form stays clean.
+        self.assertNotIn('id="cropCatalogOptions"', content)
+        self.assertNotIn('list="cropCatalogOptions"', content)
 
     def test_crop_save_persists_category_yield_and_description(self):
         response = self.save_crop(
@@ -1064,6 +1062,47 @@ class CropPhotoUploadTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('5 MB', response.json()['error'])
         self.assertFalse(Crop.objects.exists())
+
+    def test_editing_a_crop_registers_its_photo_as_the_default(self):
+        response = self.post_crop(
+            name='Eggplant', image=self.make_upload('eggplant.png')
+        )
+        crop = Crop.objects.get(pk=response.json()['id'])
+
+        # Simulate a crop that carried a photo but was never tracked as a
+        # default (for example a crop saved before defaults existed).
+        CropDefaultImage.objects.filter(
+            user=self.user, crop_name='Eggplant'
+        ).delete()
+
+        response = self.post_crop(id=crop.pk, name='Eggplant')
+        self.assertEqual(response.status_code, 200)
+
+        default_record = CropDefaultImage.objects.get(
+            user=self.user, crop_name='Eggplant'
+        )
+        self.assertEqual(default_record.image_path, crop.image.name)
+
+    def test_editing_does_not_overwrite_a_newer_default(self):
+        first = self.post_crop(
+            name='Eggplant', image=self.make_upload('first.png')
+        )
+        first_crop = Crop.objects.get(pk=first.json()['id'])
+
+        second = self.post_crop(
+            name='Eggplant', image=self.make_upload('second.png')
+        )
+        second_crop = Crop.objects.get(pk=second.json()['id'])
+        default_record = CropDefaultImage.objects.get(
+            user=self.user, crop_name='Eggplant'
+        )
+        self.assertEqual(default_record.image_path, second_crop.image.name)
+
+        # Editing the older crop without a new upload keeps the newer default.
+        response = self.post_crop(id=first_crop.pk, name='Eggplant')
+        self.assertEqual(response.status_code, 200)
+        default_record.refresh_from_db()
+        self.assertEqual(default_record.image_path, second_crop.image.name)
 
 
 class CropCategoryTests(TestCase):

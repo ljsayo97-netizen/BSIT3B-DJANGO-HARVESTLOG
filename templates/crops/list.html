@@ -942,13 +942,7 @@
           <div class="row g-3">
             <div class="col-7">
               <label class="form-label" for="crop_name">Crop name <span class="text-danger">*</span></label>
-              <input type="text" name="name" id="crop_name" class="form-control" required maxlength="255" placeholder="e.g. Rice" list="cropCatalogOptions" autocomplete="off">
-              <datalist id="cropCatalogOptions">
-                {% for entry in catalog_entries %}
-                <option value="{{ entry.name }}"></option>
-                {% endfor %}
-              </datalist>
-              <div class="form-hint">Start typing to pick from all {{ catalog_total }} catalog crops.</div>
+              <input type="text" name="name" id="crop_name" class="form-control" required maxlength="255" placeholder="e.g. Rice" autocomplete="off">
             </div>
             <div class="col-5">
               <label class="form-label" for="crop_category">Category <span class="text-danger">*</span></label>
@@ -981,6 +975,7 @@
                 </div>
                 <div class="col-8">
                   <input type="file" name="image" id="crop_image_input" class="form-control" accept="image/*">
+                  <div class="form-hint" id="crop_image_hint">JPG, PNG, WebP, or GIF up to 5 MB. Leave blank to use the matching stock photo.</div>
                   <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="cropFindPhotosBtn">
                     <i class="fas fa-images me-1"></i>Find matching photos
                   </button>
@@ -1085,7 +1080,6 @@
 {{ crop_image_rules|json_script:"crop-image-rules" }}
 {{ category_rules|json_script:"crop-category-rules" }}
 {{ crop_image_fallback|json_script:"crop-image-fallback" }}
-{{ catalog_entries|json_script:"crop-catalog-data" }}
 <script>
 (function () {
   'use strict';
@@ -1108,8 +1102,6 @@
   const CATEGORY_RULES = categoryRulesEl ? JSON.parse(categoryRulesEl.textContent) : [];
   const fallbackEl = document.getElementById('crop-image-fallback');
   const CROP_IMAGE_FALLBACK = fallbackEl ? JSON.parse(fallbackEl.textContent) : '';
-  const catalogDataEl = document.getElementById('crop-catalog-data');
-  const CROP_CATALOG = catalogDataEl ? JSON.parse(catalogDataEl.textContent) : [];
 
   const modalEl = document.getElementById('cropModal');
   const deleteModal = document.getElementById('deleteCropModal');
@@ -1146,12 +1138,6 @@
   const findPhotosBtn = document.getElementById('cropFindPhotosBtn');
   const photoResults = document.getElementById('cropPhotoResults');
   const varietyOptions = document.getElementById('cropVarietyOptions');
-
-  const catalogSearchInput = document.getElementById('cropCatalogSearch');
-  const catalogGroupFilter = document.getElementById('cropCatalogGroupFilter');
-  const catalogGrid = document.getElementById('cropCatalogGrid');
-  const catalogVisibleCount = document.getElementById('cropCatalogVisibleCount');
-  const catalogEmpty = document.getElementById('cropCatalogEmpty');
 
   const searchInput = document.getElementById('cropSearchInput');
   const farmFilter = document.getElementById('cropFarmFilter');
@@ -1207,6 +1193,8 @@
   let currentImageIsUpload = false;
   let categoryTouched = false;
   let previewObjectUrl = null;
+  let priorImageTimer = null;
+  const priorImageCache = {};
 
   const STATUS_BADGES = {
     planting: 'crop-status-planting',
@@ -1423,52 +1411,6 @@
   }
   applyFilters();
 
-  /* Full catalog browser --------------------------------------------------- */
-  function applyCatalogFilters() {
-    if (!catalogGrid) return;
-    const search = (catalogSearchInput.value || '').toLowerCase().trim();
-    const group = (catalogGroupFilter.value || '').toLowerCase().trim();
-    let visible = 0;
-
-    Array.prototype.forEach.call(catalogGrid.querySelectorAll('.crop-catalog-col'), function (col) {
-      const haystack = [
-        col.getAttribute('data-catalog-name') || '',
-        col.getAttribute('data-catalog-aliases') || '',
-        col.getAttribute('data-catalog-group') || ''
-      ].join(' ');
-      const matches = (!search || haystack.indexOf(search) !== -1) &&
-        (!group || (col.getAttribute('data-catalog-group') || '') === group);
-      col.classList.toggle('d-none', !matches);
-      if (matches) visible += 1;
-    });
-
-    catalogVisibleCount.textContent = 'Showing ' + visible + ' crop' + (visible === 1 ? '' : 's');
-    catalogEmpty.classList.toggle('d-none', visible !== 0);
-  }
-
-  if (catalogSearchInput) catalogSearchInput.addEventListener('input', applyCatalogFilters);
-  if (catalogGroupFilter) catalogGroupFilter.addEventListener('change', applyCatalogFilters);
-  applyCatalogFilters();
-
-  if (catalogGrid) {
-    catalogGrid.addEventListener('click', function (event) {
-      const card = event.target.closest('[data-catalog-pick]');
-      if (!card) return;
-      openCropForm('create');
-      nameInput.value = card.getAttribute('data-catalog-pick') || '';
-      categoryInput.value = card.getAttribute('data-catalog-category') || '';
-      categoryTouched = true;
-      daysInput.value = card.getAttribute('data-catalog-days') || '';
-      selectedImageInput.value = card.getAttribute('data-catalog-image') || '';
-      setImagePreview(selectedImageInput.value || CROP_IMAGE_FALLBACK);
-      imageHint.textContent = 'This catalog photo will be saved with the crop. Upload a file to replace it.';
-      removeImageInput.checked = false;
-      updateHarvestPreview();
-      loadVarieties(nameInput.value);
-      nameInput.focus();
-    });
-  }
-
   /* Crop form ------------------------------------------------------------- */
   function showFormError(message) {
     formAlert.textContent = message;
@@ -1519,9 +1461,26 @@
       });
   }
 
+  function previewForName() {
+    if (currentImageIsUpload || (imageInput.files && imageInput.files.length) || selectedImageInput.value) return;
+    const key = nameInput.value.trim().toLowerCase();
+    const saved = priorImageCache[key];
+    if (saved) {
+      // Reuse the photo the grower already saved for this crop name so
+      // re-adding the same crop shows it instead of the generic catalog photo.
+      setImagePreview(saved);
+      imageHint.textContent = 'Using the photo you previously saved for this crop. Upload a file to replace it.';
+      return;
+    }
+    setImagePreview(suggestedImage(nameInput.value));
+  }
+
   function loadPriorImage(cropName) {
-    if (!cropName || currentImageIsUpload || (imageInput.files && imageInput.files.length)) return;
-    fetch(USER_PRIOR_IMAGE_URL, {
+    const key = (cropName || '').trim().toLowerCase();
+    if (!key || currentImageIsUpload || (imageInput.files && imageInput.files.length)) {
+      return Promise.resolve(false);
+    }
+    return fetch(USER_PRIOR_IMAGE_URL, {
       method: 'POST',
       headers: {
         'X-CSRFToken': csrftoken,
@@ -1535,13 +1494,28 @@
         return response.ok ? response.json() : null;
       })
       .then(function (data) {
-        if (!data || !data.has_prior_image || selectedImageInput.value) return;
+        if (!data || !data.has_prior_image || selectedImageInput.value) {
+          priorImageCache[key] = '';
+          return false;
+        }
+        priorImageCache[key] = data.image_url;
         setImagePreview(data.image_url);
         imageHint.textContent = 'Using the photo you previously saved for this crop. Upload a file to replace it.';
+        return true;
       })
       .catch(function () {
         /* The stock/catalog preview remains when no prior photo exists. */
+        return false;
       });
+  }
+
+  function schedulePriorImage() {
+    if (priorImageTimer) clearTimeout(priorImageTimer);
+    priorImageTimer = setTimeout(function () {
+      loadPriorImage(nameInput.value.trim()).then(function (found) {
+        if (!found) previewForName();
+      });
+    }, 350);
   }
 
   function loadPhotoOptions() {
@@ -1617,6 +1591,7 @@
     currentMode = 'create';
     currentImageIsUpload = false;
     categoryTouched = false;
+    if (priorImageTimer) clearTimeout(priorImageTimer);
     title.textContent = 'Add New Crop';
     submitBtn.textContent = 'Save Crop';
     submitBtn.disabled = false;
@@ -1734,10 +1709,9 @@
       const category = suggestedCategory(nameInput.value);
       if (category) categoryInput.value = category;
     }
-    if (!imageInput.files.length && !currentImageIsUpload) {
-      setImagePreview(suggestedImage(nameInput.value));
-    }
+    previewForName();
     updateHarvestPreview();
+    schedulePriorImage();
   });
   nameInput.addEventListener('change', function () {
     loadVarieties(nameInput.value);
