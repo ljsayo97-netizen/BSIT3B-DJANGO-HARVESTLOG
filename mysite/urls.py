@@ -31,6 +31,7 @@ urlpatterns = [
     path('revenue/', include('apps.revenue.urls')),
     path('activities/', include('apps.activities.urls')),
     path('reports/', include('apps.reports.urls')),
+    path('hectares/', include('apps.hectares.urls')),
 ]
 
 if settings.DEBUG:

@@ -108,6 +108,16 @@
             {% endif %}
           </a>
         </li>
+        <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'hectares' %}is-active{% endif %}"
+             href="{% url 'hectares:hectare_monitoring' %}"
+             data-tooltip="Hectare Monitoring"
+             title="Hectare Monitoring"
+             {% if request.resolver_match.app_name == 'hectares' %}aria-current="page"{% endif %}>
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span class="dh-nav-label">Hectare Monitoring</span>
+          </a>
+        </li>
       </ul>
     </nav>
 

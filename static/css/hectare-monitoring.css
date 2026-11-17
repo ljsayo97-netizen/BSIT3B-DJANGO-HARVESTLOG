@@ -1,0 +1,1011 @@
+/* ==========================================================================
+   HarvestPH — Hectare Monitoring
+   Clean, light land-usage dashboard built on the existing harvest theme.
+   ========================================================================== */
+
+.hm-page {
+  --hm-green: #16a34a;
+  --hm-green-dark: #15803d;
+  --hm-green-deep: #166534;
+  --hm-green-soft: #eaf8ee;
+  --hm-blue: #0284c7;
+  --hm-blue-soft: #eff8ff;
+  --hm-amber: #d97706;
+  --hm-amber-soft: #fff7e6;
+  --hm-red: #dc2626;
+  --hm-red-soft: #fef2f2;
+  --hm-text: #14261c;
+  --hm-body: #1f3328;
+  --hm-muted: #64786b;
+  --hm-muted-soft: #84968a;
+  --hm-border: #dfeae1;
+  --hm-border-soft: #edf4ee;
+  --hm-surface: #ffffff;
+  --hm-surface-soft: #f8fbf8;
+  --hm-radius: 14px;
+  padding-bottom: 1.5rem;
+}
+
+/* 1. Page header --------------------------------------------------------- */
+.hm-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.hm-head-copy {
+  min-width: 0;
+}
+
+.hm-pretitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--hm-green-dark);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.hm-pretitle-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hm-green);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+}
+
+.hm-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0;
+  color: var(--hm-text);
+  font-size: 1.75rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.hm-title i {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--hm-green-soft);
+  color: var(--hm-green-dark);
+  font-size: 1.02rem;
+  flex-shrink: 0;
+}
+
+.hm-subtitle {
+  margin: 7px 0 0;
+  color: var(--hm-muted);
+  font-size: 0.88rem;
+}
+
+.hm-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* 2. Shared buttons and links -------------------------------------------- */
+.hm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.16s ease, border-color 0.16s ease,
+    color 0.16s ease, transform 0.16s ease;
+}
+
+.hm-btn:hover {
+  transform: translateY(-1px);
+}
+
+.hm-btn--outline {
+  background: var(--hm-surface);
+  border-color: #cfe6d5;
+  color: var(--hm-green-dark);
+}
+
+.hm-btn--outline:hover {
+  background: var(--hm-green-soft);
+  border-color: #a9d5b5;
+  color: var(--hm-green-deep);
+}
+
+.hm-btn--primary {
+  background: var(--hm-green);
+  border-color: var(--hm-green);
+  color: #ffffff;
+}
+
+.hm-btn--primary:hover {
+  background: var(--hm-green-dark);
+  border-color: var(--hm-green-dark);
+  color: #ffffff;
+}
+
+.hm-btn--sm {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.75rem;
+  margin-top: 10px;
+}
+
+.hm-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--hm-green-dark);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.hm-link i {
+  font-size: 0.62rem;
+  transition: transform 0.16s ease;
+}
+
+.hm-link:hover {
+  color: var(--hm-green-deep);
+}
+
+.hm-link:hover i {
+  transform: translateX(2px);
+}
+
+.hm-btn:focus-visible,
+.hm-btn-view:focus-visible,
+.hm-link:focus-visible {
+  outline: 2px solid var(--hm-green);
+  outline-offset: 2px;
+}
+
+/* 3. Summary cards ------------------------------------------------------- */
+.hm-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(250px, 1.12fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.hm-stat {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 108px;
+  padding: 17px 19px;
+  background: var(--hm-surface);
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius);
+  box-shadow: 0 1px 2px rgba(20, 61, 38, 0.03),
+    0 14px 30px -26px rgba(20, 61, 38, 0.28);
+}
+
+.hm-stat--green {
+  background: linear-gradient(160deg, #f2fbf4 0%, #ffffff 78%);
+  border-color: #cfe8d5;
+}
+
+.hm-stat--blue {
+  background: linear-gradient(160deg, #f1f9ff 0%, #ffffff 78%);
+  border-color: #d5e9f7;
+}
+
+.hm-stat-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--hm-green-soft);
+  color: var(--hm-green-dark);
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.hm-stat-icon--green {
+  background: #e9f7ed;
+  color: var(--hm-green);
+}
+
+.hm-stat-icon--blue {
+  background: #e5f4ff;
+  color: var(--hm-blue);
+}
+
+.hm-stat-body {
+  min-width: 0;
+}
+
+.hm-stat-label {
+  color: var(--hm-muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.hm-stat-value {
+  color: var(--hm-text);
+  font-size: 1.62rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  white-space: nowrap;
+}
+
+.hm-stat-unit {
+  color: var(--hm-muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  margin-left: 2px;
+}
+
+.hm-stat-sub {
+  color: var(--hm-muted);
+  font-size: 0.72rem;
+  margin-top: 5px;
+  white-space: nowrap;
+}
+
+.hm-stat--utilization {
+  justify-content: flex-start;
+  gap: 17px;
+}
+
+.hm-donut {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--hm-donut-color, var(--hm-green)) var(--hm-donut-value, 0%),
+    #e9f1eb 0
+  );
+  flex-shrink: 0;
+}
+
+.hm-donut::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.hm-donut span {
+  position: relative;
+  z-index: 1;
+  color: var(--hm-text);
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.hm-stat--utilization .hm-badge {
+  margin-top: 6px;
+}
+
+/* 4. Layout grids -------------------------------------------------------- */
+.hm-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hm-grid--main {
+  grid-template-columns: minmax(0, 1.95fr) minmax(285px, 1fr);
+  align-items: start;
+}
+
+.hm-grid--bottom {
+  grid-template-columns: minmax(0, 1.95fr) minmax(285px, 1fr);
+  align-items: stretch;
+}
+
+.hm-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 5. Cards --------------------------------------------------------------- */
+.hm-card {
+  min-width: 0;
+  background: var(--hm-surface);
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius);
+  box-shadow: 0 1px 2px rgba(20, 61, 38, 0.03),
+    0 14px 32px -28px rgba(20, 61, 38, 0.3);
+  overflow: hidden;
+}
+
+.hm-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 17px 20px 12px;
+}
+
+.hm-card-head--stack {
+  padding-bottom: 8px;
+}
+
+.hm-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--hm-text);
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.hm-card-title i {
+  color: var(--hm-green);
+  font-size: 0.82rem;
+}
+
+.hm-card-sub {
+  margin: 4px 0 0;
+  color: var(--hm-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+/* 6. Tables -------------------------------------------------------------- */
+.hm-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cfe3d4 transparent;
+}
+
+/* Keep long farm/crop lists contained instead of stretching the card. */
+.hm-table-wrap--scroll {
+  max-height: 356px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.hm-table-wrap--scroll .hm-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--hm-border-soft);
+}
+
+.hm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.hm-table thead th {
+  padding: 9px 20px;
+  background: var(--hm-surface-soft);
+  border-top: 1px solid var(--hm-border-soft);
+  border-bottom: 1px solid var(--hm-border-soft);
+  color: #7b8f82;
+  font-size: 0.63rem;
+  font-weight: 750;
+  letter-spacing: 0.075em;
+  line-height: 1.3;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hm-table tbody td {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hm-border-soft);
+  color: var(--hm-body);
+  vertical-align: middle;
+}
+
+.hm-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.hm-table tbody tr {
+  transition: background-color 0.14s ease;
+}
+
+.hm-table tbody tr:hover {
+  background: #fbfdfb;
+}
+
+.hm-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  text-align: right;
+  white-space: nowrap;
+}
+
+th.hm-num {
+  text-align: right;
+}
+
+.hm-unit {
+  color: var(--hm-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.hm-util-col {
+  width: 145px;
+}
+
+.hm-share-col {
+  width: 210px;
+}
+
+.hm-actions-col {
+  text-align: right;
+  width: 92px;
+}
+
+.hm-util {
+  min-width: 104px;
+}
+
+.hm-util-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+  color: #334155;
+  font-size: 0.71rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Farm utilization table: percentage sits below the progress bar. */
+.hm-util--below .hm-util-top {
+  margin-top: 5px;
+  margin-bottom: 0;
+}
+
+.hm-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #eaf1ec;
+  overflow: hidden;
+}
+
+.hm-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.hm-farm-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hm-farm-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--hm-green-soft);
+  color: var(--hm-green-dark);
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.hm-farm-name {
+  color: var(--hm-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.hm-farm-code {
+  color: var(--hm-muted-soft);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-top: 1px;
+}
+
+.hm-crop-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--hm-text);
+  font-weight: 650;
+}
+
+.hm-crop-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.08);
+}
+
+/* 7. Badges -------------------------------------------------------------- */
+.hm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.67rem;
+  font-weight: 750;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.hm-badge i {
+  font-size: 0.5rem;
+}
+
+.hm-badge--green {
+  background: #eaf8ee;
+  color: #15803d;
+}
+
+.hm-badge--amber {
+  background: #fff5df;
+  color: #b45309;
+}
+
+.hm-badge--red {
+  background: var(--hm-red-soft);
+  color: #b91c1c;
+}
+
+.hm-btn-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  background: #ffffff;
+  border: 1px solid #cfe6d5;
+  border-radius: 8px;
+  color: var(--hm-green-dark);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.16s ease, border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.hm-btn-view:hover {
+  background: var(--hm-green);
+  border-color: var(--hm-green);
+  color: #ffffff;
+}
+
+.hm-btn-view i {
+  font-size: 0.62rem;
+}
+
+/* 8. Capacity alerts ----------------------------------------------------- */
+.hm-alerts {
+  display: flex;
+  flex-direction: column;
+}
+
+.hm-alert-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hm-alert-heading-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--hm-amber-soft);
+  color: var(--hm-amber);
+  font-size: 0.76rem;
+  flex-shrink: 0;
+}
+
+.hm-alert-list {
+  padding: 6px 12px 12px;
+  max-height: 356px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d6e6da transparent;
+}
+
+.hm-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 11px;
+  margin-bottom: 7px;
+  border: 1px solid #e3f1e6;
+  border-radius: 11px;
+  background: #f7fcf8;
+}
+
+.hm-alert:last-child {
+  margin-bottom: 0;
+}
+
+.hm-alert--approaching {
+  background: #fffbef;
+  border-color: #fbe9bf;
+}
+
+.hm-alert--critical {
+  background: #fff7f7;
+  border-color: #f9dada;
+}
+
+.hm-alert-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e6f7ea;
+  color: var(--hm-green-dark);
+  font-size: 0.68rem;
+  flex-shrink: 0;
+}
+
+.hm-alert--approaching .hm-alert-icon {
+  background: #fef0c7;
+  color: #b45309;
+}
+
+.hm-alert--critical .hm-alert-icon {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.hm-alert-body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.hm-alert-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hm-alert-top h3 {
+  margin: 0;
+  color: var(--hm-text);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.hm-alert-body p {
+  margin: 4px 0 0;
+  color: var(--hm-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.hm-alert .hm-badge {
+  padding: 3px 7px;
+  font-size: 0.6rem;
+}
+
+/* 9. Quick statistics ---------------------------------------------------- */
+.hm-quick-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.hm-quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 2px 18px 0;
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hm-quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 17px 10px 14px;
+  text-align: center;
+  border-right: 1px solid var(--hm-border-soft);
+  border-bottom: 1px solid var(--hm-border-soft);
+  background: #fdfefd;
+}
+
+.hm-quick:nth-child(2n) {
+  border-right: 0;
+}
+
+.hm-quick:nth-child(n + 3) {
+  border-bottom: 0;
+}
+
+.hm-quick-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+
+.hm-quick-icon--green {
+  background: #e9f7ed;
+  color: var(--hm-green-dark);
+}
+
+.hm-quick-icon--lime {
+  background: #f1f9df;
+  color: #4d7c0f;
+}
+
+.hm-quick-icon--amber {
+  background: #fdf2e2;
+  color: #b45309;
+}
+
+.hm-quick-icon--blue {
+  background: #e8f4fd;
+  color: var(--hm-blue);
+}
+
+.hm-quick strong {
+  color: var(--hm-text);
+  font-size: 1.32rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-quick > span:last-child {
+  color: var(--hm-muted);
+  font-size: 0.67rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.hm-quick-note {
+  margin: auto 18px 16px;
+  padding-top: 12px;
+  color: var(--hm-muted-soft);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+
+.hm-quick-note i {
+  color: var(--hm-green);
+  margin-right: 4px;
+}
+
+/* Full-width quick statistics strip: four tiles across. */
+.hm-quick-card--wide .hm-quick-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.hm-quick-card--wide .hm-quick {
+  border-right: 1px solid var(--hm-border-soft);
+  border-bottom: 0;
+}
+
+.hm-quick-card--wide .hm-quick:nth-child(2n) {
+  border-right: 1px solid var(--hm-border-soft);
+}
+
+.hm-quick-card--wide .hm-quick:last-child {
+  border-right: 0;
+}
+
+/* 10. Empty states ------------------------------------------------------- */
+.hm-table-empty,
+.hm-alert-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 16px;
+  text-align: center;
+}
+
+.hm-alert-empty {
+  padding: 30px 16px;
+}
+
+.hm-empty-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 9px;
+  border-radius: 50%;
+  background: #f0f7f2;
+  color: var(--hm-green);
+  font-size: 1.05rem;
+}
+
+.hm-empty-title {
+  margin: 0;
+  color: var(--hm-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.hm-empty-text {
+  margin: 3px 0 0;
+  color: var(--hm-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.hm-empty-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 18px;
+  margin-bottom: 16px;
+  background: linear-gradient(120deg, #effaf2 0%, #ffffff 80%);
+  border: 1px solid #cfe8d5;
+  border-radius: var(--hm-radius);
+}
+
+.hm-empty-banner-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #dff3e4;
+  color: var(--hm-green-dark);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.hm-empty-banner-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hm-empty-banner-copy h2 {
+  margin: 0;
+  color: var(--hm-text);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.hm-empty-banner-copy p {
+  margin: 3px 0 0;
+  color: var(--hm-muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+/* 11. Responsive --------------------------------------------------------- */
+@media (max-width: 1199.98px) {
+  .hm-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hm-grid--main,
+  .hm-grid--bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hm-alert-list {
+    max-height: none;
+  }
+
+  .hm-quick-note {
+    margin-top: 14px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .hm-page-head {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .hm-head-actions {
+    width: 100%;
+  }
+
+  .hm-head-actions .hm-btn {
+    width: 100%;
+  }
+
+  .hm-title {
+    font-size: 1.45rem;
+  }
+
+  .hm-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hm-stat {
+    min-height: 96px;
+  }
+
+  .hm-card-head {
+    flex-wrap: wrap;
+    padding: 15px 16px 11px;
+  }
+
+  .hm-table thead th,
+  .hm-table tbody td {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .hm-table {
+    min-width: 760px;
+  }
+
+  .hm-table--allocation {
+    min-width: 560px;
+  }
+
+  .hm-empty-banner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .hm-empty-banner .hm-btn {
+    width: 100%;
+  }
+
+  .hm-quick-card--wide .hm-quick-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hm-quick-card--wide .hm-quick:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .hm-quick-card--wide .hm-quick:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--hm-border-soft);
+  }
+}

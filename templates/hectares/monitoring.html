@@ -1,0 +1,321 @@
+{% extends "theme/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/hectare-monitoring.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-xl hm-page">
+
+  <header class="hm-page-head">
+    <div class="hm-head-copy">
+      <div class="hm-pretitle"><span class="hm-pretitle-dot"></span> Farm operations &middot; Land management</div>
+      <h1 class="hm-title">
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        Hectare Monitoring
+      </h1>
+      <p class="hm-subtitle">Monitor and manage the land usage of your farms.</p>
+    </div>
+    <div class="hm-head-actions">
+      <a href="{% url 'reports:farm_progress' %}" class="hm-btn hm-btn--outline">
+        <i class="fas fa-chart-column" aria-hidden="true"></i> View Reports
+      </a>
+    </div>
+  </header>
+
+  {% if not farms %}
+  <div class="hm-empty-banner" role="status">
+    <span class="hm-empty-banner-icon"><i class="fas fa-map-location-dot" aria-hidden="true"></i></span>
+    <div class="hm-empty-banner-copy">
+      <h2>No farms registered yet</h2>
+      <p>Register your first farm to start tracking total area, planted hectares, and land capacity.</p>
+    </div>
+    <a href="{% url 'farms:farm_list' %}?new=farm" class="hm-btn hm-btn--primary">
+      <i class="fas fa-plus" aria-hidden="true"></i> Register Farm
+    </a>
+  </div>
+  {% endif %}
+
+  <section class="hm-summary" aria-label="Hectare summary">
+    <article class="hm-stat hm-stat--green">
+      <span class="hm-stat-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
+      <div class="hm-stat-body">
+        <div class="hm-stat-label">Total Farm Area</div>
+        <div class="hm-stat-value">{{ total_area }} <span class="hm-stat-unit">ha</span></div>
+        <div class="hm-stat-sub">Across {{ farm_count }} farm{{ farm_count|pluralize }}</div>
+      </div>
+    </article>
+
+    <article class="hm-stat hm-stat--plain">
+      <span class="hm-stat-icon hm-stat-icon--green" aria-hidden="true"><i class="fas fa-tractor"></i></span>
+      <div class="hm-stat-body">
+        <div class="hm-stat-label">Used Hectares</div>
+        <div class="hm-stat-value">{{ used_area }} <span class="hm-stat-unit">ha</span></div>
+        <div class="hm-stat-sub">{{ land_utilization }}% of Total</div>
+      </div>
+    </article>
+
+    <article class="hm-stat hm-stat--blue">
+      <span class="hm-stat-icon hm-stat-icon--blue" aria-hidden="true"><i class="fas fa-droplet"></i></span>
+      <div class="hm-stat-body">
+        <div class="hm-stat-label">Available Hectares</div>
+        <div class="hm-stat-value">{{ available_area }} <span class="hm-stat-unit">ha</span></div>
+        <div class="hm-stat-sub">{{ remaining_percentage }}% Remaining</div>
+      </div>
+    </article>
+
+    <article class="hm-stat hm-stat--utilization">
+      <div class="hm-donut"
+           style="--hm-donut-value: {{ land_utilization_width }}%; --hm-donut-color: {{ utilization_color }};"
+           role="img"
+           aria-label="Land utilization {{ land_utilization }} percent, {{ utilization_status_label }}">
+        <span>{{ land_utilization }}%</span>
+      </div>
+      <div class="hm-stat-body">
+        <div class="hm-stat-label">Land Utilization</div>
+        <span class="hm-badge {{ utilization_status_class }}">
+          <i class="fas {{ land_utilization_status.icon }}" aria-hidden="true"></i>
+          {{ utilization_status_label }}
+        </span>
+      </div>
+    </article>
+
+    
+  </section>
+
+    <div class="hm-grid hm-grid--single">
+    <section class="hm-card" aria-labelledby="hm-farm-utilization-title">
+      <header class="hm-card-head">
+        <div>
+          <h2 class="hm-card-title" id="hm-farm-utilization-title">
+            <i class="fas fa-table-cells-large" aria-hidden="true"></i>
+            Farm Utilization Overview
+          </h2>
+          <p class="hm-card-sub">Land allocated across each registered farm.</p>
+        </div>
+        <a href="{% url 'farms:farm_list' %}" class="hm-link">
+          View All Farms <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </a>
+      </header>
+
+      <div class="hm-table-wrap hm-table-wrap--scroll">
+        <table class="hm-table">
+          <thead>
+            <tr>
+              <th scope="col">Farm Name</th>
+              <th scope="col" class="hm-num">Total Area</th>
+              <th scope="col" class="hm-num">Used Area</th>
+              <th scope="col" class="hm-num">Available</th>
+              <th scope="col" class="hm-util-col">Utilization</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="hm-actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in farm_rows %}
+            <tr>
+              <td>
+                <div class="hm-farm-cell">
+                  <span class="hm-farm-icon" aria-hidden="true"><i class="fas fa-location-dot"></i></span>
+                  <div>
+                    <div class="hm-farm-name">{{ row.name }}</div>
+                    {% if row.farm_code %}<div class="hm-farm-code">{{ row.farm_code }}</div>{% endif %}
+                  </div>
+                </div>
+              </td>
+              <td class="hm-num">{{ row.total_area }} <span class="hm-unit">ha</span></td>
+              <td class="hm-num">{{ row.used_area }} <span class="hm-unit">ha</span></td>
+              <td class="hm-num">{{ row.available_area }} <span class="hm-unit">ha</span></td>
+              <td>
+                <div class="hm-util hm-util--below">
+                  <div class="hm-bar" role="presentation">
+                    <span style="width: {{ row.utilization_width }}%; background: {{ row.status_color }};"></span>
+                  </div>
+                  <div class="hm-util-top">
+                    <span>{{ row.utilization_display }}%</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="hm-badge {{ row.status_badge_class }}">
+                  <i class="fas {{ row.status_icon }}" aria-hidden="true"></i>
+                  {{ row.status_label }}
+                </span>
+              </td>
+              <td class="hm-actions-col">
+                <a href="{% url 'crops:crop_list' %}?farm_detail={{ row.id }}"
+                   class="hm-btn-view"
+                   title="View crops and details for {{ row.name }}">
+                  <i class="fas fa-eye" aria-hidden="true"></i> View
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7">
+                <div class="hm-table-empty">
+                  <span class="hm-empty-icon"><i class="fas fa-location-dot" aria-hidden="true"></i></span>
+                  <p class="hm-empty-title">No farms to monitor</p>
+                  <p class="hm-empty-text">Register a farm to see its land usage here.</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+   <div class="hm-grid hm-grid--bottom">
+    <section class="hm-card" aria-labelledby="hm-allocation-title">
+      <header class="hm-card-head">
+        <div>
+          <h2 class="hm-card-title" id="hm-allocation-title">
+            <i class="fas fa-seedling" aria-hidden="true"></i>
+            Crop Land Allocation
+          </h2>
+          <p class="hm-card-sub">Current crop area distribution across planted land.</p>
+        </div>
+        <a href="{% url 'crops:crop_list' %}" class="hm-link">
+          View Details <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </a>
+      </header>
+
+      <div class="hm-table-wrap hm-table-wrap--scroll">
+        <table class="hm-table hm-table--allocation">
+          <thead>
+            <tr>
+              <th scope="col">Crop</th>
+              <th scope="col" class="hm-num">Total Allocated Area</th>
+              <th scope="col" class="hm-share-col">Percentage</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for crop in crop_allocation %}
+            <tr>
+              <td>
+                <div class="hm-crop-cell" title="{{ crop.title }}">
+                  <span class="hm-crop-dot" style="background: {{ crop.color }};" aria-hidden="true"></span>
+                  <span>{{ crop.name }}</span>
+                </div>
+              </td>
+              <td class="hm-num">{{ crop.area }} <span class="hm-unit">ha</span></td>
+              <td>
+                <div class="hm-util">
+                  <div class="hm-util-top">
+                    <span>{{ crop.percentage }}%</span>
+                  </div>
+                  <div class="hm-bar" role="presentation">
+                    <span style="width: {{ crop.width }}%; background: {{ crop.color }};"></span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="hm-badge {{ crop.badge_class }}">
+                  <i class="fas fa-circle" aria-hidden="true"></i>
+                  {{ crop.status_label }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4">
+                <div class="hm-table-empty">
+                  <span class="hm-empty-icon"><i class="fas fa-seedling" aria-hidden="true"></i></span>
+                  <p class="hm-empty-title">No active crop allocation</p>
+                  <p class="hm-empty-text">Add a crop to see how planted hectares are distributed.</p>
+                  <a href="{% url 'crops:crop_list' %}?new=crop" class="hm-btn hm-btn--primary hm-btn--sm">
+                    <i class="fas fa-plus" aria-hidden="true"></i> Add Crop
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+        <aside class="hm-card hm-alerts" aria-labelledby="hm-alerts-title">
+      <header class="hm-card-head hm-card-head--stack">
+        <div class="hm-alert-heading">
+          <span class="hm-alert-heading-icon" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></span>
+          <div>
+            <h2 class="hm-card-title" id="hm-alerts-title">Land Capacity Alerts</h2>
+            <p class="hm-card-sub">{{ alert_count }} farm{{ alert_count|pluralize }} monitored</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="hm-alert-list">
+        {% for alert in land_capacity_alerts %}
+        <div class="hm-alert hm-alert--{{ alert.status.key }}">
+          <span class="hm-alert-icon" aria-hidden="true"><i class="fas {{ alert.icon }}"></i></span>
+          <div class="hm-alert-body">
+            <div class="hm-alert-top">
+              <h3>{{ alert.farm_name }}</h3>
+              <span class="hm-badge {{ alert.badge_class }}">{{ alert.status_label }}</span>
+            </div>
+            <p>{{ alert.message }}</p>
+          </div>
+        </div>
+        {% empty %}
+        <div class="hm-alert-empty">
+          <span class="hm-empty-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>
+          <p class="hm-empty-title">No capacity alerts</p>
+          <p class="hm-empty-text">Capacity alerts appear once you register a farm.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </aside>
+   
+  </div>
+
+
+  {% comment %} <div class="hm-grid hm-grid--single">
+    <section class="hm-card hm-quick-card hm-quick-card--wide" aria-labelledby="hm-quick-title">
+      <header class="hm-card-head">
+        <div>
+          <h2 class="hm-card-title" id="hm-quick-title">
+            <i class="fas fa-chart-pie" aria-hidden="true"></i>
+            Quick Statistics
+          </h2>
+          <p class="hm-card-sub">Your farm records at a glance.</p>
+        </div>
+      </header>
+
+      <div class="hm-quick-grid">
+        <div class="hm-quick">
+          <span class="hm-quick-icon hm-quick-icon--green" aria-hidden="true"><i class="fas fa-seedling"></i></span>
+          <strong>{{ quick_stats.total_crops }}</strong>
+          <span>Total Crops</span>
+        </div>
+        <div class="hm-quick">
+          <span class="hm-quick-icon hm-quick-icon--lime" aria-hidden="true"><i class="fas fa-leaf"></i></span>
+          <strong>{{ quick_stats.varieties }}</strong>
+          <span>Varieties</span>
+        </div>
+        <div class="hm-quick">
+          <span class="hm-quick-icon hm-quick-icon--amber" aria-hidden="true"><i class="fas fa-house"></i></span>
+          <strong>{{ quick_stats.farms }}</strong>
+          <span>Farms</span>
+        </div>
+        <div class="hm-quick">
+          <span class="hm-quick-icon hm-quick-icon--blue" aria-hidden="true"><i class="fas fa-calendar-check"></i></span>
+          <strong>{{ quick_stats.upcoming_harvests }}</strong>
+          <span>Upcoming Harvests</span>
+        </div>
+      </div>
+
+      <p class="hm-quick-note">
+        <i class="fas fa-circle-info" aria-hidden="true"></i>
+        Upcoming harvests are crops due within the next {{ upcoming_window_days }} days.
+      </p>
+    </section>
+  </div> {% endcomment %}
+
+</div>
+{% endblock %}
