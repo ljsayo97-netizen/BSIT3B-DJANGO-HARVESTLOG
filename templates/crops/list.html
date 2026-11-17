@@ -560,6 +560,35 @@
     border-color: #86efac;
     box-shadow: 0 0 0 3px rgba(34, 197, 94, .12);
   }
+  .crop-form-section {
+    padding: 14px 14px 4px;
+    border: 1px solid #e6f0e8;
+    border-radius: 12px;
+    background: #fbfefb;
+  }
+  .crop-form-section + .crop-form-section {
+    margin-top: 14px;
+  }
+  .crop-form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #2f6b45;
+    margin-bottom: 10px;
+  }
+  .crop-form-section-title i {
+    color: #4caf72;
+  }
+  .crop-form-section-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e6f0e8;
+  }
 
   @media (max-width: 575.98px) {
     .crop-page-title { font-size: 1.35rem; }
@@ -939,108 +968,131 @@
         <input type="hidden" name="selected_image_url" id="crop_selected_image_url">
         <div class="modal-body">
           <div id="cropFormError" class="alert alert-danger d-none" role="alert"></div>
-          <div class="row g-3">
-            <div class="col-7">
-              <label class="form-label" for="crop_name">Crop name <span class="text-danger">*</span></label>
-              <input type="text" name="name" id="crop_name" class="form-control" required maxlength="255" placeholder="e.g. Rice" autocomplete="off">
+
+          <!-- 1. Crop details -->
+          <section class="crop-form-section">
+            <div class="crop-form-section-title"><i class="fas fa-seedling"></i>Crop details</div>
+            <div class="row g-3">
+              <div class="col-7">
+                <label class="form-label" for="crop_name">Crop name <span class="text-danger">*</span></label>
+                <input type="text" name="name" id="crop_name" class="form-control" required maxlength="255" placeholder="" autocomplete="off">
+              </div>
+              <div class="col-5">
+                <label class="form-label" for="crop_category">Category <span class="text-danger">*</span></label>
+                <select name="category" id="crop_category" class="form-select" required>
+                  <option value="">Select category</option>
+                  {% for value, label in category_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_variety">Variety</label>
+                <input type="text" name="variety" id="crop_variety" class="form-control" maxlength="255" placeholder="" list="cropVarietyOptions" autocomplete="off">
+                <datalist id="cropVarietyOptions"></datalist>
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_farm_id">Farm <span class="text-danger">*</span></label>
+                <select name="farm_id" id="crop_farm_id" class="form-select" required>
+                  <option value="">Select a farm</option>
+                  {% for farm in farms %}
+                  <option value="{{ farm.id }}">{{ farm.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_status">Status <span class="text-danger">*</span></label>
+                <select name="status" id="crop_status" class="form-select" required>
+                  {% for value, label in status_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_quality">Quality</label>
+                <select name="quality" id="crop_quality" class="form-select">
+                  {% for value, label in quality_choices %}
+                  <option value="{{ value }}" {% if value == 'standard' %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
-            <div class="col-5">
-              <label class="form-label" for="crop_category">Category <span class="text-danger">*</span></label>
-              <select name="category" id="crop_category" class="form-select" required>
-                <option value="">Select category</option>
-                {% for value, label in category_choices %}
-                <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_variety">Variety</label>
-              <input type="text" name="variety" id="crop_variety" class="form-control" maxlength="255" placeholder="e.g. IR64" list="cropVarietyOptions" autocomplete="off">
-              <datalist id="cropVarietyOptions"></datalist>
-            </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_farm_id">Farm <span class="text-danger">*</span></label>
-              <select name="farm_id" id="crop_farm_id" class="form-select" required>
-                <option value="">Select a farm</option>
-                {% for farm in farms %}
-                <option value="{{ farm.id }}">{{ farm.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-12">
-              <label class="form-label" for="crop_image_input">Crop photo</label>
-              <div class="row g-2 align-items-center">
-                <div class="col-4">
-                  <img src="{{ crop_image_fallback }}" alt="Crop photo preview" class="crop-form-preview" id="cropImagePreview">
+          </section>
+
+          <!-- 2. Planting & harvest -->
+          <section class="crop-form-section">
+            <div class="crop-form-section-title"><i class="fas fa-calendar-days"></i>Planting &amp; harvest</div>
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label" for="crop_planting_date">Planting date <span class="text-danger">*</span></label>
+                <input type="date" name="planting_date" id="crop_planting_date" class="form-control" required>
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_days_to_maturity">Days to maturity</label>
+                <input type="number" name="days_to_maturity" id="crop_days_to_maturity" class="form-control" min="1" step="1" placeholder="">
+              </div>
+              <div class="col-12">
+                <div class="alert alert-info mb-0 py-2" id="crop_harvest_preview" role="status">
+                  The system assigns the expected harvest date from the planting date and days to maturity.
                 </div>
-                <div class="col-8">
-                  <input type="file" name="image" id="crop_image_input" class="form-control" accept="image/*">
-                  <div class="form-hint" id="crop_image_hint">JPG, PNG, WebP, or GIF up to 5 MB. Leave blank to use the matching stock photo.</div>
-                  <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="cropFindPhotosBtn">
-                    <i class="fas fa-images me-1"></i>Find matching photos
-                  </button>
-                  <div class="crop-photo-results d-none mt-2" id="cropPhotoResults"></div>
-                  <div class="form-check mt-2 d-none" id="cropRemoveImageWrap">
-                    <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="crop_remove_image">
-                    <label class="form-check-label small" for="crop_remove_image">Remove current photo</label>
+              </div>
+            </div>
+          </section>
+
+          <!-- 3. Area & yield -->
+          <section class="crop-form-section">
+            <div class="crop-form-section-title"><i class="fas fa-wheat-awn"></i>Area &amp; yield</div>
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label" for="crop_area_hectares">Area planted (hectares) <span class="text-danger">*</span></label>
+                <input type="number" name="area_hectares" id="crop_area_hectares" class="form-control" step="0.01" min="0" required placeholder="0.00">
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_estimated_yield">Estimated yield (tons/hectare)</label>
+                <input type="number" name="estimated_yield" id="crop_estimated_yield" class="form-control" step="0.01" min="0" placeholder="e.g. 4.5">
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. Crop photo -->
+          <section class="crop-form-section">
+            <div class="crop-form-section-title"><i class="fas fa-camera"></i>Crop photo</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="row g-2 align-items-center">
+                  <div class="col-4">
+                    <img src="{{ crop_image_fallback }}" alt="Crop photo preview" class="crop-form-preview" id="cropImagePreview">
+                  </div>
+                  <div class="col-8">
+                    <input type="file" name="image" id="crop_image_input" class="form-control" accept="image/*">
+                    <div class="crop-photo-results d-none mt-2" id="cropPhotoResults"></div>
+                    <div class="form-check mt-2 d-none" id="cropRemoveImageWrap">
+                      <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="crop_remove_image">
+                      <label class="form-check-label small" for="crop_remove_image">Remove current photo</label>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_planting_date">Planting date <span class="text-danger">*</span></label>
-              <input type="date" name="planting_date" id="crop_planting_date" class="form-control" required>
-            </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_days_to_maturity">Days to maturity</label>
-              <input type="number" name="days_to_maturity" id="crop_days_to_maturity" class="form-control" min="1" step="1" placeholder="e.g. 110">
-              <div class="form-hint">Leave blank to use the typical estimate for the crop.</div>
-            </div>
-            <div class="col-12">
-              <div class="alert alert-info mb-0 py-2" id="crop_harvest_preview" role="status">
-                The system assigns the expected harvest date from the planting date and days to maturity.
+          </section>
+
+          <!-- 5. Notes & reference -->
+          <section class="crop-form-section">
+            <div class="crop-form-section-title"><i class="fas fa-note-sticky"></i>Notes &amp; reference</div>
+            <div class="row g-3">
+              
+              <div class="col-6">
+                <label class="form-label" for="crop_soil_type">Soil type</label>
+                <input type="text" name="soil_type" id="crop_soil_type" class="form-control" maxlength="100" placeholder="">
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_reference_display">Agricultural reference</label>
+                <input type="text" id="crop_reference_display" class="form-control" placeholder="Filled from verified crop references" readonly>
+                <input type="hidden" name="reference_source" id="crop_reference_source">
+                <input type="hidden" name="reference_url" id="crop_reference_url">
               </div>
             </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_area_hectares">Area planted (hectares) <span class="text-danger">*</span></label>
-              <input type="number" name="area_hectares" id="crop_area_hectares" class="form-control" step="0.01" min="0" required placeholder="0.00">
-            </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_estimated_yield">Estimated yield (tons/hectare)</label>
-              <input type="number" name="estimated_yield" id="crop_estimated_yield" class="form-control" step="0.01" min="0" placeholder="e.g. 4.5">
-            </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_status">Status <span class="text-danger">*</span></label>
-              <select name="status" id="crop_status" class="form-select" required>
-                {% for value, label in status_choices %}
-                <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_quality">Quality / grade</label>
-              <select name="quality" id="crop_quality" class="form-select">
-                <option value="">Not set</option>
-                {% for value, label in quality_choices %}
-                <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-12">
-              <label class="form-label" for="crop_description">Description</label>
-              <textarea name="description" id="crop_description" class="form-control" rows="2" placeholder="Notes about this crop, its condition, or growing plan..."></textarea>
-            </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_soil_type">Soil type</label>
-              <input type="text" name="soil_type" id="crop_soil_type" class="form-control" maxlength="100" placeholder="e.g. Clay loam">
-            </div>
-            <div class="col-6">
-              <label class="form-label" for="crop_reference_display">Agricultural reference</label>
-              <input type="text" id="crop_reference_display" class="form-control" placeholder="Filled from verified crop references" readonly>
-              <input type="hidden" name="reference_source" id="crop_reference_source">
-              <input type="hidden" name="reference_url" id="crop_reference_url">
-            </div>
-          </div>
+          </section>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-ghost-secondary me-auto" id="cropClearBtn" title="Clear all fields">

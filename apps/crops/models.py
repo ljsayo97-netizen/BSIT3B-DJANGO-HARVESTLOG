@@ -58,10 +58,8 @@ class Crop(models.Model):
         """Quality grades, mirroring the harvest quality scale."""
         PREMIUM = 'premium', 'Premium'
         GRADE_A = 'grade_a', 'Grade A'
-        GRADE_B = 'grade_b', 'Grade B'
-        GRADE_C = 'grade_c', 'Grade C'
         STANDARD = 'standard', 'Standard'
-        FAIR = 'fair', 'Fair'
+        
 
     class Category(models.TextChoices):
         """Broad crop groups used by the crop inventory filters."""
@@ -356,8 +354,7 @@ class AgriculturalReference(models.Model):
         BINHING_PALAY = 'Binhing Palay', 'Binhing Palay (PhilRice)'
         PHILRICE = 'PhilRice', 'Philippine Rice Research Institute (PhilRice)'
         ATI = 'Agricultural Training Institute (ATI)', 'Agricultural Training Institute (ATI)'
-        AMTEC = 'UPLB AMTEC', 'UPLB Agricultural Machinery Testing and Evaluation Center (AMTEC)'
-        ANEE = 'Anee Crop Varieties', 'Anee Crop Varieties'
+        BPI = 'Bureau of Plant Industry (BPI)', 'Bureau of Plant Industry (BPI)'
 
     crop_name = models.CharField('crop name', max_length=100, db_index=True)
     category = models.CharField(

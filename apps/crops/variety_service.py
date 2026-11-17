@@ -4,8 +4,7 @@ Integrates Philippine agricultural references:
 - Binhing Palay (https://binhingpalay.philrice.gov.ph/)
 - PhilRice (https://www.philrice.gov.ph/)
 - Agricultural Training Institute (ATI) (https://ati.da.gov.ph/)
-- UPLB Agricultural Machinery Testing and Evaluation Center (AMTEC)
-- Anee Crop Varieties
+- Bureau of Plant Industry (BPI) (https://library.buplant.da.gov.ph/)
 """
 
 from datetime import timedelta

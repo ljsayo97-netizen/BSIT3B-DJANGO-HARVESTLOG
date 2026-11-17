@@ -4,12 +4,6 @@
 {% elif grade == 'grade_a' %}
 <span class="badge bg-primary-lt text-primary">{{ label|default:"Grade A" }}</span>
 {% elif grade == 'grade_b' %}
-<span class="badge bg-info-lt text-info">{{ label|default:"Grade B" }}</span>
-{% elif grade == 'grade_c' %}
-<span class="badge bg-warning-lt text-warning">{{ label|default:"Grade C" }}</span>
-{% elif grade == 'fair' %}
-<span class="badge bg-secondary-lt text-secondary">{{ label|default:"Fair" }}</span>
-{% else %}
 <span class="badge bg-dark-lt text-dark">{{ label|default:"Standard" }}</span>
 {% endif %}
 {% else %}
