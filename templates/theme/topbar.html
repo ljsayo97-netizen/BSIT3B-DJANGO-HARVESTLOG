@@ -49,7 +49,7 @@
   <div class="dh-topbar-right">
     <span class="dh-date-chip">
       <i class="far fa-calendar" aria-hidden="true"></i>
-      {% now "M j, Y" %}
+      <span id="dhTopbarDate">{% now "M j, Y" %}</span>
     </span>
 
     <!-- Notification Bell Dropdown -->
@@ -195,3 +195,18 @@
     </div>
   </div>
 </header>
+<script>
+(function () {
+  // Render the topbar date from the browser's local clock. The server clock
+  // can be offset from the grower's timezone, which showed a date a day ahead.
+  var el = document.getElementById('dhTopbarDate');
+  if (!el) return;
+  try {
+    el.textContent = new Date().toLocaleDateString(undefined, {
+      month: 'short', day: 'numeric', year: 'numeric'
+    });
+  } catch (error) {
+    /* Keep the server-rendered date as a fallback. */
+  }
+})();
+</script>

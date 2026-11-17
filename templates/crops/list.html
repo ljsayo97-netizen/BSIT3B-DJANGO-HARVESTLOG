@@ -1065,6 +1065,10 @@
                   </div>
                   <div class="col-8">
                     <input type="file" name="image" id="crop_image_input" class="form-control" accept="image/*">
+                    <div class="form-hint" id="crop_image_hint">JPG, PNG, WebP, or GIF up to 5 MB. Leave blank to use the matching stock photo.</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="cropFindPhotosBtn">
+                      <i class="fas fa-images me-1"></i>Find matching photos
+                    </button>
                     <div class="crop-photo-results d-none mt-2" id="cropPhotoResults"></div>
                     <div class="form-check mt-2 d-none" id="cropRemoveImageWrap">
                       <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="crop_remove_image">
@@ -1072,6 +1076,27 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 5. Notes & reference -->
+          <section class="crop-form-section">
+            <div class="crop-form-section-title"><i class="fas fa-book"></i>Notes &amp; reference</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label" for="crop_description">Description</label>
+                <textarea name="description" id="crop_description" class="form-control" rows="2" placeholder="Notes about this crop, its condition, or growing plan..."></textarea>
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_soil_type">Soil type</label>
+                <input type="text" name="soil_type" id="crop_soil_type" class="form-control" maxlength="100" placeholder="e.g. Clay loam">
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="crop_reference_display">Agricultural reference</label>
+                <input type="text" id="crop_reference_display" class="form-control" placeholder="Filled from verified crop references" readonly>
+                <input type="hidden" name="reference_source" id="crop_reference_source">
+                <input type="hidden" name="reference_url" id="crop_reference_url">
               </div>
             </div>
           </section>
@@ -1348,6 +1373,15 @@
     });
   }
 
+  function todayLocalIso() {
+    // Use the browser's local calendar date instead of toISOString(), which
+    // is UTC and can point at the wrong day in the evening.
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return now.getFullYear() + '-' + month + '-' + day;
+  }
+
   function updateHarvestPreview() {
     if (!previewBox) return;
     const planting = parseIsoDate(plantingInput.value);
@@ -1496,13 +1530,20 @@
       });
   }
 
+  function priorImageKey(cropName, variety) {
+    // The saved photo is keyed by both name and variety so the same crop
+    // grown as different varieties keeps its own photo.
+    return (cropName || '').trim().toLowerCase() + '|' + (variety || '').trim().toLowerCase();
+  }
+
   function previewForName() {
     if (currentImageIsUpload || (imageInput.files && imageInput.files.length) || selectedImageInput.value) return;
-    const key = nameInput.value.trim().toLowerCase();
+    const key = priorImageKey(nameInput.value, varietyInput.value);
     const saved = priorImageCache[key];
     if (saved) {
-      // Reuse the photo the grower already saved for this crop name so
-      // re-adding the same crop shows it instead of the generic catalog photo.
+      // Reuse the photo the grower already saved for this crop name and
+      // variety so re-adding the same crop shows it instead of the generic
+      // catalog photo.
       setImagePreview(saved);
       imageHint.textContent = 'Using the photo you previously saved for this crop. Upload a file to replace it.';
       return;
@@ -1510,9 +1551,9 @@
     setImagePreview(suggestedImage(nameInput.value));
   }
 
-  function loadPriorImage(cropName) {
-    const key = (cropName || '').trim().toLowerCase();
-    if (!key || currentImageIsUpload || (imageInput.files && imageInput.files.length)) {
+  function loadPriorImage(cropName, variety) {
+    const key = priorImageKey(cropName, variety);
+    if (!(cropName || '').trim() || currentImageIsUpload || (imageInput.files && imageInput.files.length)) {
       return Promise.resolve(false);
     }
     return fetch(USER_PRIOR_IMAGE_URL, {
@@ -1523,7 +1564,7 @@
         'X-Requested-With': 'XMLHttpRequest'
       },
       credentials: 'same-origin',
-      body: new URLSearchParams({ crop_name: cropName })
+      body: new URLSearchParams({ crop_name: cropName, variety: variety || '' })
     })
       .then(function (response) {
         return response.ok ? response.json() : null;
@@ -1547,7 +1588,7 @@
   function schedulePriorImage() {
     if (priorImageTimer) clearTimeout(priorImageTimer);
     priorImageTimer = setTimeout(function () {
-      loadPriorImage(nameInput.value.trim()).then(function (found) {
+      loadPriorImage(nameInput.value.trim(), varietyInput.value.trim()).then(function (found) {
         if (!found) previewForName();
       });
     }, 350);
@@ -1555,6 +1596,7 @@
 
   function loadPhotoOptions() {
     const cropName = nameInput.value.trim();
+    const variety = varietyInput.value.trim();
     if (!cropName) {
       showFormError('Enter a crop name first, then look for matching photos.');
       return;
@@ -1562,7 +1604,7 @@
     clearFormError();
     findPhotosBtn.disabled = true;
     findPhotosBtn.textContent = 'Searching...';
-    fetch(SEARCH_IMAGES_URL + '?q=' + encodeURIComponent(cropName), {
+    fetch(SEARCH_IMAGES_URL + '?q=' + encodeURIComponent(cropName) + '&variety=' + encodeURIComponent(variety), {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin'
     })
@@ -1634,7 +1676,7 @@
     document.getElementById('crop_id').value = '';
     categoryInput.value = '';
     statusInput.value = 'planting';
-    plantingInput.value = new Date().toISOString().split('T')[0];
+    plantingInput.value = todayLocalIso();
     daysInput.value = '';
     estimatedYieldInput.value = '';
     descriptionInput.value = '';
@@ -1750,8 +1792,9 @@
   });
   nameInput.addEventListener('change', function () {
     loadVarieties(nameInput.value);
-    loadPriorImage(nameInput.value);
+    loadPriorImage(nameInput.value, varietyInput.value);
   });
+  varietyInput.addEventListener('input', schedulePriorImage);
   plantingInput.addEventListener('input', updateHarvestPreview);
   daysInput.addEventListener('input', updateHarvestPreview);
   categoryInput.addEventListener('change', function () {

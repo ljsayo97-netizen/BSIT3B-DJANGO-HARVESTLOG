@@ -13,18 +13,19 @@ from .maturity import DEFAULT_MATURITY_DAYS, suggest_maturity_days
 
 
 class CropDefaultImage(models.Model):
-    """Tracks a user's default uploaded image per crop name, surviving
-    deletion/reenactment of individual crop instances.
+    """Tracks a user's default uploaded image per crop name and variety,
+    surviving deletion/reenactment of individual crop instances.
 
     When a crop image is uploaded via the form, this record is created/updated
     so that ``display_image_url`` can return it even after the crop instance's
-    ``image`` field is cleared.
+    ``image`` field is cleared. The variety is part of the key so the same crop
+    grown as different varieties keeps its own photo instead of sharing one.
     """
 
     class Meta:
         verbose_name = "crop default image"
         verbose_name_plural = "crop default images"
-        unique_together = ("user", "crop_name")
+        unique_together = ("user", "crop_name", "variety")
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -32,11 +33,15 @@ class CropDefaultImage(models.Model):
         related_name="crop_default_images",
     )
     crop_name = models.CharField("crop name", max_length=255)
+    variety = models.CharField("variety", max_length=255, blank=True, default="")
     image_path = models.CharField("image path", max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username} / {self.crop_name} / {self.image_path}"
+        return (
+            f"{self.user.username} / {self.crop_name} / "
+            f"{self.variety} / {self.image_path}"
+        )
 
 
 HARVEST_APPROACHING_DAYS = 14
@@ -274,9 +279,11 @@ class Crop(models.Model):
 
         Priority order:
         1. This crop's own uploaded image (if any).
-        2. The user's saved default image for this crop name (survives deletion
-           and re-adding the same crop).
-        3. Another crop by the same user with the same name that has an image.
+        2. The user's saved default image for this crop name and variety
+           (survives deletion and re-adding the same crop). Crops of the same
+           name but a different variety never share a photo.
+        3. Another crop by the same user with the same name and variety that
+           has an image.
         4. The catalog/placeholder image.
 
         A saved default is only used while its file still exists. Stale
@@ -294,13 +301,15 @@ class Crop(models.Model):
             except Exception:
                 pass
 
-        # 2. The user's saved default image for this crop name. The record
-        #    stores a storage-relative path, so it must be converted to a URL
-        #    (e.g. ``/media/crops/...``) before it is used in templates.
+        # 2. The user's saved default image for this crop name and variety.
+        #    The record stores a storage-relative path, so it must be
+        #    converted to a URL (e.g. ``/media/crops/...``) before it is used
+        #    in templates.
         if self.user_id:
             default_images = CropDefaultImage.objects.filter(
                 user_id=self.user_id,
                 crop_name__iexact=self.name,
+                variety__iexact=self.variety,
             ).exclude(image_path='')
             for default_img in default_images:
                 try:
@@ -311,10 +320,15 @@ class Crop(models.Model):
                 # The pointed-at file is gone; remove the stale record.
                 default_img.delete()
 
-        # 3. Another crop by the same user with the same name that has an image.
+        # 3. Another crop by the same user with the same name and variety
+        #    that has an image.
         if self.user_id:
             same_name_crop = (
-                Crop.objects.filter(user_id=self.user_id, name__iexact=self.name)
+                Crop.objects.filter(
+                    user_id=self.user_id,
+                    name__iexact=self.name,
+                    variety__iexact=self.variety,
+                )
                 .exclude(pk=self.pk)
                 .exclude(image='')
                 .exclude(image__isnull=True)

@@ -943,7 +943,7 @@ class CropPhotoUploadTests(TestCase):
         self.assertFalse(re_added.image)
         self.assertEqual(re_added.display_image_url, f'/media/{image_name}')
 
-    def test_uploaded_photo_is_the_default_for_crops_with_the_same_name(self):
+    def test_uploaded_photo_is_the_default_for_crops_with_the_same_name_and_variety(self):
         response = self.post_crop(
             name='Eggplant', image=self.make_upload('eggplant.png')
         )
@@ -955,7 +955,8 @@ class CropPhotoUploadTests(TestCase):
         )
         self.assertEqual(default_record.image_path, original.image.name)
 
-        response = self.post_crop(name='Eggplant', variety='Long Purple')
+        # The same crop name and variety reuses the saved photo.
+        response = self.post_crop(name='Eggplant')
         self.assertEqual(response.status_code, 200)
         second = Crop.objects.get(pk=response.json()['id'])
         self.assertFalse(second.image)
@@ -967,6 +968,24 @@ class CropPhotoUploadTests(TestCase):
         }
         self.assertEqual(listed[second.pk]['image'], original.image.url)
         self.assertFalse(listed[second.pk]['image_is_upload'])
+
+    def test_photo_is_not_shared_across_different_varieties(self):
+        response = self.post_crop(
+            name='Eggplant',
+            variety='Long Purple',
+            image=self.make_upload('eggplant.png'),
+        )
+        original = Crop.objects.get(pk=response.json()['id'])
+
+        # A different variety of the same crop must not inherit the photo.
+        response = self.post_crop(name='Eggplant', variety='Black Beauty')
+        self.assertEqual(response.status_code, 200)
+        other = Crop.objects.get(pk=response.json()['id'])
+        self.assertFalse(other.image)
+        self.assertNotEqual(other.display_image_url, original.image.url)
+        self.assertEqual(
+            other.display_image_url, static('img/crops/eggplant.jpg')
+        )
 
     def test_stale_default_record_does_not_break_the_image(self):
         response = self.post_crop(
@@ -981,7 +1000,7 @@ class CropPhotoUploadTests(TestCase):
         default_record.image_path = 'crops/2026/11/missing_eggplant.jpg'
         default_record.save(update_fields=['image_path'])
 
-        response = self.post_crop(name='Eggplant', variety='Long Purple')
+        response = self.post_crop(name='Eggplant')
         second = Crop.objects.get(pk=response.json()['id'])
         # The broken default is discarded and the still-existing photo of
         # the original crop is used instead.
@@ -998,12 +1017,27 @@ class CropPhotoUploadTests(TestCase):
 
         prior = self.client.post(
             reverse('crops:crop_user_prior_image_ajax'),
-            {'crop_name': 'eggplant'},
+            {'crop_name': 'eggplant', 'variety': 'Scorpio'},
         )
 
         self.assertEqual(prior.status_code, 200)
         self.assertTrue(prior.json()['has_prior_image'])
         self.assertEqual(prior.json()['image_url'], original.image.url)
+
+    def test_user_prior_image_is_empty_for_a_different_variety(self):
+        self.post_crop(
+            name='Eggplant',
+            variety='Long Purple',
+            image=self.make_upload('eggplant.png'),
+        )
+
+        prior = self.client.post(
+            reverse('crops:crop_user_prior_image_ajax'),
+            {'crop_name': 'eggplant', 'variety': 'Black Beauty'},
+        )
+
+        self.assertEqual(prior.status_code, 200)
+        self.assertFalse(prior.json()['has_prior_image'])
 
     def test_image_picker_prefers_the_uploaded_photo_over_the_catalog(self):
         response = self.post_crop(
@@ -1012,7 +1046,8 @@ class CropPhotoUploadTests(TestCase):
         original = Crop.objects.get(pk=response.json()['id'])
 
         gallery = self.client.get(
-            reverse('crops:crop_search_images_ajax'), {'q': 'Eggplant'}
+            reverse('crops:crop_search_images_ajax'),
+            {'q': 'Eggplant', 'variety': 'Scorpio'},
         )
 
         self.assertEqual(gallery.status_code, 200)
@@ -1103,6 +1138,44 @@ class CropPhotoUploadTests(TestCase):
         self.assertEqual(response.status_code, 200)
         default_record.refresh_from_db()
         self.assertEqual(default_record.image_path, second_crop.image.name)
+
+    def test_editing_a_crop_keeps_variety_defaults_separate(self):
+        response = self.post_crop(
+            name='Eggplant',
+            variety='Long Purple',
+            image=self.make_upload('long-purple.png'),
+        )
+        long_purple = Crop.objects.get(pk=response.json()['id'])
+
+        # Editing without changing the variety keeps that variety's default.
+        response = self.post_crop(
+            id=long_purple.pk, name='Eggplant', variety='Long Purple'
+        )
+        self.assertEqual(response.status_code, 200)
+        default_record = CropDefaultImage.objects.get(
+            user=self.user, crop_name='Eggplant', variety='Long Purple'
+        )
+        self.assertEqual(default_record.image_path, long_purple.image.name)
+
+        # A second variety is tracked as its own default record.
+        response = self.post_crop(
+            name='Eggplant',
+            variety='Black Beauty',
+            image=self.make_upload('black-beauty.png'),
+        )
+        black_beauty = Crop.objects.get(pk=response.json()['id'])
+        self.assertEqual(
+            CropDefaultImage.objects.filter(
+                user=self.user, crop_name='Eggplant'
+            ).count(),
+            2,
+        )
+        self.assertEqual(
+            CropDefaultImage.objects.get(
+                user=self.user, crop_name='Eggplant', variety='Black Beauty'
+            ).image_path,
+            black_beauty.image.name,
+        )
 
 
 class CropCategoryTests(TestCase):

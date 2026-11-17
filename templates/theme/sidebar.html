@@ -74,6 +74,7 @@
             <span class="dh-nav-label">Revenue Analytics</span>
           </a>
         </li>
+        <br>
         <li>
           <a class="dh-nav-link {% if request.resolver_match.app_name == 'harvests' and request.resolver_match.url_name == 'harvest_history' %}is-active{% endif %}"
              href="{% url 'harvests:harvest_history' %}"
@@ -99,7 +100,7 @@
         </li>
       </ul>
     </nav>
-   <nav class="dh-nav-group dh-nav-admin" aria-label="Admin">
+   {% comment %} <nav class="dh-nav-group dh-nav-admin" aria-label="Admin">
       <div class="dh-nav-section">Account Management</div>
       <ul class="dh-nav-list">
         <li>
@@ -113,6 +114,6 @@
           </a>
         </li>
       </ul>
-    </nav>
+    </nav> {% endcomment %}
   </div>
 </aside>

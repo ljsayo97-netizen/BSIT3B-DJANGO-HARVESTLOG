@@ -21,7 +21,7 @@
   <br>
 
   <div class="row row-cards">
-    <!-- LEFT COLUMN: Calendar & Next Activities -->
+    <!-- LEFT COLUMN: Calendar -->
     <div class="col-lg-8">
       <div class="card mb-3">
         <div class="card-header">
@@ -65,49 +65,9 @@
           </div>
         </div>
       </div>
-
-      <!-- NEXT ACTIVITIES MOVED HERE -->
-      {% if source != 'harvests' %}
-      <section class="card mb-3" aria-labelledby="next-activities-title">
-        <header class="card-header">
-          <div>
-            <h3 id="next-activities-title" class="card-title mb-1">Next activities</h3>
-            <p class="text-muted small mb-0">Open work from the activity schedule.</p>
-          </div>
-        </header>
-        <div class="list-group list-group-flush">
-          {% for activity in upcoming_activities %}
-          <a href="{% url 'activities:activity_list' %}" class="list-group-item list-group-item-action">
-            <div class="d-flex align-items-start gap-2">
-              <div class="hc-date-chip">{{ activity.scheduled_date|date:"M j" }}</div>
-              <div class="flex-grow-1 min-w-0">
-                <div class="fw-semibold text-truncate">
-                  <i class="{{ activity.icon }} me-1" aria-hidden="true"></i>{{ activity.get_activity_type_display }}
-                </div>
-                <div class="text-muted small text-truncate">{{ activity.farm.name }} &middot; {{ activity.location }}</div>
-                <div class="text-muted small text-truncate">{{ activity.assigned_worker }}</div>
-              </div>
-              <span class="badge {{ activity.status_badge }}">{{ activity.get_status_display }}</span>
-            </div>
-          </a>
-          {% empty %}
-          <div class="list-group-item">
-            <div class="empty py-4">
-              <div class="empty-icon"><i class="fas fa-list-check fa-2x text-muted" aria-hidden="true"></i></div>
-              <p class="empty-title">No open activities</p>
-              <p class="empty-subtitle text-muted">Scheduled work will appear here and on the calendar.</p>
-              <div class="empty-action">
-                <a href="{% url 'activities:activity_list' %}" class="btn btn-outline-primary btn-sm">Schedule Activity</a>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </section>
-      {% endif %}
     </div>
 
-    <!-- RIGHT COLUMN: Upcoming Harvests & Info -->
+    <!-- RIGHT COLUMN: Upcoming Harvests, Next Activities & Info -->
     <div class="col-lg-4">
       {% if source != 'activities' %}
       <div class="card mb-3">
@@ -117,7 +77,8 @@
             <div class="text-muted small">Automatically generated from your crops.</div>
           </div>
         </div>
-        <div class="list-group list-group-flush">
+        <!-- Adjusted max-height to exactly 260px to show exactly 3 items -->
+        <div class="list-group list-group-flush" style="max-height: 260px; overflow-y: auto;">
           {% for crop in upcoming_harvests %}
           <a href="{% url 'crops:crop_list' %}" class="list-group-item list-group-item-action">
             <div class="d-flex align-items-start gap-2">
@@ -152,6 +113,47 @@
           {% endfor %}
         </div>
       </div>
+      {% endif %}
+
+      {% if source != 'harvests' %}
+      <section class="card mb-3" aria-labelledby="next-activities-title">
+        <header class="card-header">
+          <div>
+            <h3 id="next-activities-title" class="card-title mb-1">Next activities</h3>
+            <p class="text-muted small mb-0">Open work from the activity schedule.</p>
+          </div>
+        </header>
+        <!-- Adjusted max-height to exactly 260px to show exactly 3 items -->
+        <div class="list-group list-group-flush" style="max-height: 260px; overflow-y: auto;">
+          {% for activity in upcoming_activities %}
+          <a href="{% url 'activities:activity_list' %}" class="list-group-item list-group-item-action">
+            <div class="d-flex align-items-start gap-2">
+              <div class="hc-date-chip">{{ activity.scheduled_date|date:"M j" }}</div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate">
+                  <i class="{{ activity.icon }} me-1" aria-hidden="true"></i>{{ activity.get_activity_type_display }}
+                </div>
+                <!-- Location removed, leaving only the farm name -->
+                <div class="text-muted small text-truncate">{{ activity.farm.name }}</div>
+                <div class="text-muted small text-truncate">{{ activity.assigned_worker }}</div>
+              </div>
+              <span class="badge {{ activity.status_badge }}">{{ activity.get_status_display }}</span>
+            </div>
+          </a>
+          {% empty %}
+          <div class="list-group-item">
+            <div class="empty py-4">
+              <div class="empty-icon"><i class="fas fa-list-check fa-2x text-muted" aria-hidden="true"></i></div>
+              <p class="empty-title">No open activities</p>
+              <p class="empty-subtitle text-muted">Scheduled work will appear here and on the calendar.</p>
+              <div class="empty-action">
+                <a href="{% url 'activities:activity_list' %}" class="btn btn-outline-primary btn-sm">Schedule Activity</a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
       {% endif %}
 
       <div class="card">

@@ -66,38 +66,44 @@ def _catalog_entries():
     return entries
 
 
-def _save_default_crop_image(user, crop_name, image_name):
-    """Remember the latest uploaded photo for a crop name."""
+def _save_default_crop_image(user, crop_name, variety, image_name):
+    """Remember the latest uploaded photo for a crop name and variety."""
     record = CropDefaultImage.objects.filter(
-        user=user, crop_name__iexact=crop_name
+        user=user, crop_name__iexact=crop_name, variety__iexact=variety
     ).first()
     if record:
-        if record.image_path != image_name or record.crop_name != crop_name:
+        if (
+            record.image_path != image_name
+            or record.crop_name != crop_name
+            or record.variety != variety
+        ):
             record.crop_name = crop_name
+            record.variety = variety
             record.image_path = image_name
-            record.save(update_fields=['crop_name', 'image_path'])
+            record.save(update_fields=['crop_name', 'variety', 'image_path'])
         return record
     return CropDefaultImage.objects.create(
         user=user,
         crop_name=crop_name,
+        variety=variety,
         image_path=image_name,
     )
 
 
-def _ensure_default_crop_image(user, crop_name, image_name, replace=False):
+def _ensure_default_crop_image(user, crop_name, variety, image_name, replace=False):
     """Make sure ``image_name`` is remembered as the default photo.
 
     A freshly uploaded/selected photo (``replace=True``) always becomes the
     new default. When the crop already carried a photo from a previous save
     (for example an older crop created before defaults were tracked), the
     photo is only promoted to default if no usable default exists yet, so a
-    newer photo saved for the same crop name is never overwritten.
+    newer photo saved for the same crop name and variety is never overwritten.
     """
     if not image_name:
         return None
 
     existing = CropDefaultImage.objects.filter(
-        user=user, crop_name__iexact=crop_name
+        user=user, crop_name__iexact=crop_name, variety__iexact=variety
     ).first()
     if existing and not replace:
         try:
@@ -106,15 +112,16 @@ def _ensure_default_crop_image(user, crop_name, image_name, replace=False):
         except Exception:
             pass
 
-    return _save_default_crop_image(user, crop_name, image_name)
+    return _save_default_crop_image(user, crop_name, variety, image_name)
 
 
-def _user_uploaded_photos(user, crop_name):
-    """Return the user's saved photos for a crop name, newest first."""
+def _user_uploaded_photos(user, crop_name, variety):
+    """Return the user's saved photos for a crop name and variety, newest first."""
     photos = []
     records = CropDefaultImage.objects.filter(
-        user=user, crop_name__iexact=crop_name
+        user=user, crop_name__iexact=crop_name, variety__iexact=variety
     ).order_by('-created_at')
+    label = f'{crop_name} {variety}'.strip()
     for record in records:
         try:
             exists = default_storage.exists(record.image_path)
@@ -126,14 +133,14 @@ def _user_uploaded_photos(user, crop_name):
         url = default_storage.url(record.image_path)
         photos.append({
             'id': f'user-{record.pk}',
-            'title': f'{crop_name} (your uploaded photo)',
+            'title': f'{label} (your uploaded photo)',
             'thumb_url': url,
             'preview_url': url,
             'download_url': url,
             'source': 'Your uploaded photo',
             'photographer': getattr(user, 'get_username', lambda: 'You')(),
             'photographer_url': '',
-            'alt': f'Your uploaded photo of {crop_name}',
+            'alt': f'Your uploaded photo of {label}',
             'verified': True,
             'is_user_upload': True,
         })
@@ -591,13 +598,14 @@ def crop_varieties_ajax(request):
 def crop_search_images_ajax(request):
     """Return a crop's saved upload first, then verified catalog photos."""
     crop_name = request.GET.get('q', '').strip()
+    variety = request.GET.get('variety', '').strip()
     if not crop_name:
         return JsonResponse(
             {'error': 'Enter a crop name to search for photos.'},
             status=400,
         )
 
-    user_photos = _user_uploaded_photos(request.user, crop_name)
+    user_photos = _user_uploaded_photos(request.user, crop_name, variety)
     if user_photos:
         return JsonResponse({
             'keyword': get_search_keyword(crop_name),
@@ -614,9 +622,13 @@ def crop_search_images_ajax(request):
 @login_required(login_url='login')
 @require_POST
 def crop_user_prior_image_ajax(request):
-    """Return the user's saved photo for a crop name, if it still exists."""
+    """Return the user's saved photo for a crop name and variety, if it exists."""
     crop_name = request.POST.get('crop_name', '').strip()
-    photos = _user_uploaded_photos(request.user, crop_name) if crop_name else []
+    variety = request.POST.get('variety', '').strip()
+    photos = (
+        _user_uploaded_photos(request.user, crop_name, variety)
+        if crop_name else []
+    )
     if photos:
         return JsonResponse({
             'has_prior_image': True,
@@ -792,13 +804,13 @@ def crop_save_ajax(request):
         # carried over from an earlier save only fills in a missing one, so
         # re-adding the same crop still finds the image the grower uploaded.
         _ensure_default_crop_image(
-            request.user, name, new_image_name, replace=image_assigned
+            request.user, name, variety, new_image_name, replace=image_assigned
         )
     if remove_image:
         # Removing the photo is explicit: forget the saved default too, so the
         # crop falls back to its catalog image.
         CropDefaultImage.objects.filter(
-            user=request.user, crop_name__iexact=name
+            user=request.user, crop_name__iexact=name, variety__iexact=variety
         ).delete()
     if old_image_name and old_image_name != new_image_name:
         still_referenced = CropDefaultImage.objects.filter(
