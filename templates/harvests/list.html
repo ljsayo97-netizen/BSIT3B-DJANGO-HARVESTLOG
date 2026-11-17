@@ -27,9 +27,7 @@
                {% if not ready_count %}disabled title="No crop is ready for harvest yet. Check readiness or wait for the assigned harvest date."{% endif %}>
               <i class="fas fa-plus-circle me-2"></i> Record Harvest
             </button>
-            <a href="{% url 'harvests:harvest_history' %}" class="btn btn-outline-secondary">
-              <i class="fas fa-history me-2"></i> Harvest History
-            </a>
+            <!-- Harvest History button removed from here -->
           </div>
         </div>
       </div>
@@ -364,9 +362,7 @@
         {% endif %}
       </div>
       <div class="card-actions">
-        <a href="{% url 'harvests:harvest_history' %}" class="btn btn-sm btn-outline-primary">
-          <i class="fas fa-history me-1"></i> View Full History
-        </a>
+        <!-- Harvest History button removed from here -->
       </div>
     </div>
 

@@ -13,9 +13,7 @@
         </div>
         <div class="col-auto">
           <div class="btn-list">
-            <a href="{% url 'harvests:harvest_list' %}" class="btn btn-outline-secondary">
-              <i class="fas fa-arrow-left me-2"></i> Back to Harvests
-            </a>
+            
             <a href="{% url 'harvests:harvest_history_export' %}{% if query_string %}?{{ query_string }}{% endif %}"
                class="btn btn-primary">
               <i class="fas fa-file-csv me-2"></i> Export CSV

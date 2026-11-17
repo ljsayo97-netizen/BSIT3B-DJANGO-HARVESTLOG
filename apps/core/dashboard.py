@@ -78,8 +78,6 @@ def _top_crops_data(harvests, limit=TOP_CROPS_LIMIT):
     rows = list(rows)  # evaluate queryset once
     grand_total = float(sum(r['total_qty'] or 0 for r in rows))
 
-    # Break each crop type down by farm so the dashboard can show where the
-    # harvested quantity came from.
     crop_types = [row['crop_type'] for row in rows if row['crop_type']]
     farm_rows = (
         harvests.filter(crop_type__in=crop_types)
@@ -429,6 +427,22 @@ def _harvest_calendar_widget(user, today):
         'summary': summary,
         'agenda': _calendar_agenda(events, today),
     }
+
+# --- NEW HELPER FUNCTION FOR DYNAMIC TIME ---
+def _get_relative_time(created_at):
+    """Returns a human-readable string for how long ago a record was created."""
+    if not created_at:
+        return 'Recently'
+        
+    delta = timezone.now() - created_at
+    if delta.days == 0:
+        return 'Today'
+    elif delta.days == 1:
+        return 'Yesterday'
+    elif delta.days < 7:
+        return f'{delta.days} days ago'
+    else:
+        return created_at.strftime('%b %d, %Y')
 
 
 def build_dashboard_context(user, year=None):
@@ -848,7 +862,7 @@ def build_dashboard_context(user, year=None):
             'title': 'New Farm Registered',
             'description': f"{latest_farm_rec.name} was registered.",
             'meta': f"{latest_farm_rec.size_hectares:g} ha · {latest_farm_rec.location}",
-            'time': 'Today',
+            'time': _get_relative_time(latest_farm_rec.created_at),
             'icon': 'fas fa-tractor',
             'color': '#22c55e',
             'bg': 'rgba(34, 197, 94, 0.15)',
@@ -866,11 +880,13 @@ def build_dashboard_context(user, year=None):
 
     # 2. New crops
     if latest_crop_rec:
+        # Fix: Only show parentheses if a variety exists
+        variety_text = f" ({latest_crop_rec.variety})" if latest_crop_rec.variety else ""
         recent_activities.append({
             'title': 'New Crop Added',
-            'description': f"{latest_crop_rec.name} ({latest_crop_rec.variety}) registered.",
+            'description': f"{latest_crop_rec.name}{variety_text} registered.",
             'meta': f"{latest_crop_rec.farm.name if latest_crop_rec.farm else 'Farm'} · {latest_crop_rec.area_hectares:g} ha",
-            'time': 'Yesterday',
+            'time': _get_relative_time(latest_crop_rec.created_at),
             'icon': 'fas fa-seedling',
             'color': '#0ea5e9',
             'bg': 'rgba(14, 165, 233, 0.15)',
@@ -892,7 +908,7 @@ def build_dashboard_context(user, year=None):
             'title': 'Recent Harvest',
             'description': f"Harvested {latest_harvest_rec.quantity_harvested:g} {latest_harvest_rec.unit} of {latest_harvest_rec.crop_type}.",
             'meta': f"{latest_harvest_rec.farm.name if latest_harvest_rec.farm else 'Farm'} · {latest_harvest_rec.harvest_date.strftime('%b %d, %Y')}",
-            'time': '2 days ago',
+            'time': _get_relative_time(latest_harvest_rec.created_at),
             'icon': 'fas fa-wheat-awn',
             'color': '#f59e0b',
             'bg': 'rgba(245, 158, 11, 0.15)',
@@ -914,7 +930,7 @@ def build_dashboard_context(user, year=None):
             'title': 'Latest Farm Activity',
             'description': f"{latest_activity_rec.get_activity_type_display()} performed.",
             'meta': f"{latest_activity_rec.farm.name if latest_activity_rec.farm else 'Farm'} · {latest_activity_rec.assigned_worker or 'Staff'}",
-            'time': '3 days ago',
+            'time': _get_relative_time(latest_activity_rec.created_at),
             'icon': 'fas fa-calendar-check',
             'color': '#a855f7',
             'bg': 'rgba(168, 85, 247, 0.15)',

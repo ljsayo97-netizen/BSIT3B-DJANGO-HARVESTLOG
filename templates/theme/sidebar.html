@@ -34,36 +34,26 @@
             <span class="dh-nav-label">Crop Management</span>
           </a>
         </li>
+         <li>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'hectares' %}is-active{% endif %}"
+             href="{% url 'hectares:hectare_monitoring' %}"
+             data-tooltip="Hectare Monitoring"
+             title="Hectare Monitoring"
+             {% if request.resolver_match.app_name == 'hectares' %}aria-current="page"{% endif %}>
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span class="dh-nav-label">Hectare Monitoring</span>
+          </a>
+        </li>
         <li>
-          <a class="dh-nav-link {% if request.resolver_match.app_name == 'harvests' %}is-active{% endif %}"
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'harvests' and request.resolver_match.url_name == 'harvest_list' %}is-active{% endif %}"
              href="{% url 'harvests:harvest_list' %}"
              data-tooltip="Harvests"
              title="Harvests"
-             {% if request.resolver_match.app_name == 'harvests' %}aria-current="page"{% endif %}>
+             {% if request.resolver_match.app_name == 'harvests' and request.resolver_match.url_name == 'harvest_list' %}aria-current="page"{% endif %}>
             <i class="fas fa-clipboard-list" aria-hidden="true"></i>
             <span class="dh-nav-label">Harvests</span>
           </a>
         </li>
-        {% comment %} <li>
-          <a class="dh-nav-link {% if request.resolver_match.app_name == 'harvest_calendar' %}is-active{% endif %}"
-             href="{% url 'harvest_calendar:calendar' %}"
-             data-tooltip="Harvest Calendar"
-             title="Harvest Calendar"
-             {% if request.resolver_match.app_name == 'harvest_calendar' %}aria-current="page"{% endif %}>
-            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
-            <span class="dh-nav-label">Harvest Calendar</span>
-          </a>
-        </li> {% endcomment %}
-                {% comment %} <li>
-          <a class="dh-nav-link {% if request.resolver_match.app_name == 'activities' %}is-active{% endif %}"
-             href="{% url 'activities:activity_list' %}"
-             data-tooltip="Activity Schedule"
-             title="Activity Schedule"
-             {% if request.resolver_match.app_name == 'activities' %}aria-current="page"{% endif %}>
-            <i class="fas fa-calendar-days" aria-hidden="true"></i>
-            <span class="dh-nav-label">Activity Schedule</span>
-          </a>
-        </li> {% endcomment %}
         <li>
           <a class="dh-nav-link {% if request.resolver_match.app_name == 'revenue' and request.resolver_match.url_name != 'revenue_analytics' %}is-active{% endif %}"
              href="{% url 'revenue:revenue_list' %}"
@@ -84,17 +74,16 @@
             <span class="dh-nav-label">Revenue Analytics</span>
           </a>
         </li>
-        {% comment %} 
         <li>
-          <a class="dh-nav-link {% if request.resolver_match.app_name == 'reports' %}is-active{% endif %}"
-             href="{% url 'reports:farm_progress' %}"
-             data-tooltip="Farm Reports"
-             title="Farm Reports"
-             {% if request.resolver_match.app_name == 'reports' %}aria-current="page"{% endif %}>
-            <i class="fas fa-chart-line" aria-hidden="true"></i>
-            <span class="dh-nav-label">Farm Reports</span>
+          <a class="dh-nav-link {% if request.resolver_match.app_name == 'harvests' and request.resolver_match.url_name == 'harvest_history' %}is-active{% endif %}"
+             href="{% url 'harvests:harvest_history' %}"
+             data-tooltip="Harvest History"
+             title="Harvest History"
+             {% if request.resolver_match.app_name == 'harvests' and request.resolver_match.url_name == 'harvest_history' %}aria-current="page"{% endif %}>
+            <i class="fas fa-history" aria-hidden="true"></i>
+            <span class="dh-nav-label">Harvest History</span>
           </a>
-        </li> {% endcomment %}
+        </li>
          <li>
           <a class="dh-nav-link {% if request.resolver_match.url_name == 'notification_center' %}is-active{% endif %}"
              href="{% url 'notification_center' %}"
@@ -108,20 +97,9 @@
             {% endif %}
           </a>
         </li>
-        <li>
-          <a class="dh-nav-link {% if request.resolver_match.app_name == 'hectares' %}is-active{% endif %}"
-             href="{% url 'hectares:hectare_monitoring' %}"
-             data-tooltip="Hectare Monitoring"
-             title="Hectare Monitoring"
-             {% if request.resolver_match.app_name == 'hectares' %}aria-current="page"{% endif %}>
-            <i class="fas fa-layer-group" aria-hidden="true"></i>
-            <span class="dh-nav-label">Hectare Monitoring</span>
-          </a>
-        </li>
       </ul>
     </nav>
-
-    <nav class="dh-nav-group dh-nav-admin" aria-label="Admin">
+   <nav class="dh-nav-group dh-nav-admin" aria-label="Admin">
       <div class="dh-nav-section">Account Management</div>
       <ul class="dh-nav-list">
         <li>
@@ -136,7 +114,5 @@
         </li>
       </ul>
     </nav>
-
-    
   </div>
 </aside>
