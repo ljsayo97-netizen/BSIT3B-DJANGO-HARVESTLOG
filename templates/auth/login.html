@@ -19,6 +19,38 @@
   <link href="{% static 'css/app-theme.css' %}" rel="stylesheet" />
   <link href="{% static 'css/harvest-light.css' %}" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    /* Center the logo block */
+    .login-brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Hide the brand name text, keep the logo */
+    .login-brand > a,
+    .login-brand .navbar-brand,
+    .login-brand .brand-text {
+      font-size: 0;              /* collapses the text node */
+      letter-spacing: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      gap: 0;
+    }
+
+    /* Keep the logo a sane size after the text is collapsed */
+    .login-brand img,
+    .login-brand svg {
+      height: 48px;
+      width: auto;
+      max-width: 100%;
+      display: block;
+    }
+  </style>
 </head>
 
 <body>
@@ -28,10 +60,9 @@
      <div class="card card-md">
       <div class="card-body">
 
-        <center class="mt-n4">
-        <i class='fas fa-tractor' style='font-size:50px'></i>
-        </center>
-        <h2 class="h3 text-center mb-4">Harvest System</h2>
+        <div class="login-brand">
+          {% include 'theme/brand.html' %}
+        </div>
 
         <form method="post" id="login-form" autocomplete="off">
           {% csrf_token %}

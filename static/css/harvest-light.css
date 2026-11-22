@@ -749,6 +749,37 @@ body.dh-app ::selection {
   color: #047857 !important;
 }
 
+/* Shared brand mark (login page + app shell) ------------------------------ */
+.dh-brand-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: #16a34a !important;
+}
+
+.dh-brand-icon svg {
+  display: block;
+  width: 50px;
+  height: 50px;
+}
+
+.dh-brand-icon i {
+  font-size: 50px;
+  line-height: 1;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
 .dh-tone-info {
   background-color: rgba(14, 165, 233, 0.12) !important;
   color: #0369a1 !important;

@@ -156,25 +156,7 @@
       </section>
       {% endif %}
 
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex gap-2">
-            <i class="fas fa-circle-info text-info mt-1"></i>
-            <div class="text-muted small">
-              {% if source == 'activities' %}
-              Activities appear on their scheduled date and keep their current status.
-              Changing an activity's schedule or status updates this calendar automatically.
-              {% elif source == 'harvests' %}
-              Harvest dates are calculated from each crop's planting date and days to maturity.
-              When a harvest is recorded, its actual date replaces the expected date on this calendar.
-              {% else %}
-              Harvest dates are calculated from each crop's planting date and days to maturity.
-              Activities appear on their scheduled date and keep their current status.
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
+      
     </div>
   </div>
 </div>
